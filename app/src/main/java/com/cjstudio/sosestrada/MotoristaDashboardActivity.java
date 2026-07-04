@@ -1,7 +1,10 @@
 package com.cjstudio.sosestrada;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -14,7 +17,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class MotoristaDashboardActivity extends AppCompatActivity {
 
-    private MaterialButton btnSocorro, btnCadastrar;
+    private MaterialButton btnSocorro, btnCadastrar, btnExcluir;
     private TextView btnVoltar;
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
@@ -37,9 +40,9 @@ public class MotoristaDashboardActivity extends AppCompatActivity {
 
         btnSocorro = findViewById(R.id.btnSocorro);
         btnCadastrar = findViewById(R.id.btnCadastrar);
+        btnExcluir = findViewById(R.id.btnExcluir);
         btnVoltar = findViewById(R.id.btnVoltar);
 
-        // ✅ CORRIGIDO: abre a tela de solicitar socorro
         btnSocorro.setOnClickListener(v -> {
             startActivity(new Intent(MotoristaDashboardActivity.this, SocorroActivity.class));
         });
@@ -66,9 +69,79 @@ public class MotoristaDashboardActivity extends AppCompatActivity {
                     });
         });
 
+        // NOVO: Excluir cadastro
+        btnExcluir.setOnClickListener(v -> confirmarExclusao());
+
         btnVoltar.setOnClickListener(v -> {
             startActivity(new Intent(MotoristaDashboardActivity.this, LoginMotoristaActivity.class));
             finish();
         });
+    }
+
+    private void confirmarExclusao() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Excluir Cadastro");
+        builder.setMessage("Tem certeza que deseja excluir permanentemente seu cadastro e conta? Esta ação não pode ser desfeita.");
+
+        final EditText inputSenha = new EditText(this);
+        inputSenha.setHint("Digite sua senha atual");
+        inputSenha.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        builder.setView(inputSenha);
+
+        builder.setPositiveButton("Excluir", (dialog, which) -> {
+            String senha = inputSenha.getText().toString().trim();
+            if (TextUtils.isEmpty(senha)) {
+                Toast.makeText(this, "Digite sua senha", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            reautenticarEExcluir(senha);
+        });
+        builder.setNegativeButton("Cancelar", (dialog, which) -> dialog.dismiss());
+        builder.show();
+    }
+
+    private void reautenticarEExcluir(String senha) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
+
+        String email = user.getEmail();
+        if (email == null) {
+            Toast.makeText(this, "E-mail não encontrado", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        mAuth.signInWithEmailAndPassword(email, senha)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        excluirDados(user.getUid());
+                    } else {
+                        Toast.makeText(this, "Senha incorreta. Tente novamente.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void excluirDados(String uid) {
+        db.collection("motoristas").document(uid)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    FirebaseUser user = mAuth.getCurrentUser();
+                    if (user != null) {
+                        user.delete()
+                                .addOnCompleteListener(task -> {
+                                    if (task.isSuccessful()) {
+                                        Toast.makeText(this, "Cadastro e conta excluídos com sucesso.", Toast.LENGTH_LONG).show();
+                                        startActivity(new Intent(MotoristaDashboardActivity.this, MainActivity.class));
+                                        finishAffinity();
+                                    } else {
+                                        Toast.makeText(this, "Erro ao excluir conta: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                    } else {
+                        Toast.makeText(this, "Usuário não encontrado.", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Erro ao excluir dados: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 }

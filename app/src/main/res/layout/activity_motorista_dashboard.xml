@@ -18,7 +18,7 @@
         android:orientation="vertical"
         android:gravity="center_horizontal">
 
-        <!-- Ícone (menor) -->
+        <!-- Ícone -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -26,7 +26,7 @@
             android:textSize="56sp"
             android:layout_marginBottom="4dp" />
 
-        <!-- Título (menor) -->
+        <!-- Título -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -68,9 +68,22 @@
             android:textColor="@android:color/white"
             android:backgroundTint="#2196F3"
             app:cornerRadius="10dp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- NOVO: Botão EXCLUIR CADASTRO -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExcluir"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="🗑️ EXCLUIR CADASTRO"
+            android:textSize="15sp"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#D32F2F"
+            app:cornerRadius="10dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- Botão Voltar no FINAL (como você tinha) -->
+        <!-- Botão Voltar -->
         <TextView
             android:id="@+id/btnVoltar"
             android:layout_width="wrap_content"
