@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "306157945282",
+    "project_id": "sos-estrada-dc55d",
+    "storage_bucket": "sos-estrada-dc55d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:306157945282:android:a24f5b9acb005e5ac3965b",
+        "android_client_info": {
+          "package_name": "com.cjstudio.sosestrada"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2tWfnk0lQVMiszuS0uWLr7eM6kkFRTwM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

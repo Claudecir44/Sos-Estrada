@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <ImageView
+                android:id="@+id/ivLogoPrestador"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:src="@drawable/ic_placeholder_logo"
+                android:scaleType="centerCrop"
+                android:layout_marginEnd="16dp"/>
+
+            <TextView
+                android:id="@+id/tvNomePrestador"
+                style="@style/AdminItemText"
+                android:text="Nome: ..."
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/tvCnpjPrestador" style="@style/AdminItemText" android:text="CNPJ: ..." />
+        <TextView android:id="@+id/tvTelefonePrestador" style="@style/AdminItemText" android:text="Telefone: ..." />
+        <TextView android:id="@+id/tvEmailPrestador" style="@style/AdminItemText" android:text="E-mail: ..." />
+        <TextView android:id="@+id/tvServicoPrestador" style="@style/AdminItemText" android:text="Serviço: ..." />
+        <TextView android:id="@+id/tvLocalizacaoPrestador" style="@style/AdminItemText" android:text="Localização: ..." />
+        <TextView android:id="@+id/tvEnderecoPrestador" style="@style/AdminItemText" android:text="Endereço: ..." />
+        <TextView android:id="@+id/tvPrecoPrestador" style="@style/AdminItemText" android:text="Preço: ..." />
+        <TextView android:id="@+id/tvUidPrestador" style="@style/AdminItemText" android:text="ID: ..." android:textSize="12sp" android:textColor="#888" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

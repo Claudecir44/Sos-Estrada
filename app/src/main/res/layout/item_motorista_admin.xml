@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView android:id="@+id/tvNomeMotorista" style="@style/AdminItemText" android:text="Nome: ..." />
+        <TextView android:id="@+id/tvTelefoneMotorista" style="@style/AdminItemText" android:text="Telefone: ..." />
+        <TextView android:id="@+id/tvEmailMotorista" style="@style/AdminItemText" android:text="E-mail: ..." />
+        <TextView android:id="@+id/tvVeiculoMotorista" style="@style/AdminItemText" android:text="Veículo: ..." />
+        <TextView android:id="@+id/tvPlacaMotorista" style="@style/AdminItemText" android:text="Placa: ..." />
+        <TextView android:id="@+id/tvCorMotorista" style="@style/AdminItemText" android:text="Cor: ..." />
+        <TextView android:id="@+id/tvUidMotorista" style="@style/AdminItemText" android:text="ID: ..." android:textSize="12sp" android:textColor="#888" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

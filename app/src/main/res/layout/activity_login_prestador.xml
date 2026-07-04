@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:paddingTop="48dp"
+    android:background="@android:color/white"
+    android:fitsSystemWindows="true"
+    tools:context=".LoginPrestadorActivity">
+
+    <!-- Ícone -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🔧"
+        android:textSize="40sp"
+        android:layout_marginBottom="2dp"
+        android:layout_gravity="center_horizontal" />
+
+    <!-- Título -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Acesso Prestador"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#FF9800"
+        android:layout_marginBottom="16dp"
+        android:layout_gravity="center_horizontal" />
+
+    <!-- Email -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        app:hintEnabled="true"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edtEmailLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="E-mail"
+            android:inputType="textEmailAddress"
+            android:maxLines="1"
+            android:textSize="13sp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Senha -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:hintEnabled="true"
+        app:passwordToggleEnabled="true"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edtSenhaLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Senha"
+            android:inputType="textPassword"
+            android:maxLines="1"
+            android:textSize="13sp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Botão Entrar -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnEntrar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="ENTRAR"
+        android:textSize="13sp"
+        android:padding="10dp"
+        android:backgroundTint="#FF9800"
+        app:cornerRadius="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Botão Criar Conta -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCriarConta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="CRIAR CADASTRO"
+        android:textSize="13sp"
+        android:padding="10dp"
+        android:backgroundTint="#E65100"
+        app:cornerRadius="8dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Mensagem de erro -->
+    <TextView
+        android:id="@+id/tvMensagem"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#D32F2F"
+        android:textSize="12sp"
+        android:visibility="gone"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Botão Voltar centralizado -->
+    <TextView
+        android:id="@+id/btnVoltarLogin"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="← Voltar"
+        android:textSize="13sp"
+        android:textColor="#999999"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackground"
+        android:layout_gravity="center_horizontal"
+        android:padding="4dp" />
+
+</LinearLayout>

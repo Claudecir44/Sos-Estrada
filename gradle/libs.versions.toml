@@ -1,0 +1,30 @@
+[versions]
+agp = "8.5.1"
+kotlin = "1.9.0"
+appcompat = "1.7.0"
+material = "1.12.0"
+activity = "1.9.0"
+constraintlayout = "2.1.4"
+cardview = "1.0.0"
+core-ktx = "1.13.0"
+firebase-bom = "32.7.0"
+junit = "4.13.2"
+ext-junit = "1.2.1"
+espresso-core = "3.6.1"
+
+[libraries]
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
+core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "ext-junit" }
+espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
+
+[plugins]
+google-services = { id = "com.google.gms.google-services", version = "4.4.2" }

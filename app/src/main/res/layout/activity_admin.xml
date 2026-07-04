@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F5F5"
+    android:padding="16dp">
+
+    <!-- Título com margem superior maior -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Painel Administrativo"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:gravity="center"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Botões -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btnMotoristas"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Motoristas"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@android:color/holo_blue_light"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btnPrestadores"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Prestadores"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#9E9E9E"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
+
+    <!-- Mensagem padrão (inicial) -->
+    <TextView
+        android:id="@+id/tvMensagemInicial"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Selecione uma opção acima para visualizar os cadastros."
+        android:textSize="16sp"
+        android:textColor="#999"
+        android:gravity="center"
+        android:layout_marginTop="32dp"
+        android:visibility="visible" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tvEmptyMotoristas"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nenhum motorista cadastrado ainda."
+        android:textSize="16sp"
+        android:textColor="#666"
+        android:gravity="center"
+        android:visibility="gone"
+        android:layout_marginTop="32dp" />
+
+    <TextView
+        android:id="@+id/tvEmptyPrestadores"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nenhum prestador cadastrado ainda."
+        android:textSize="16sp"
+        android:textColor="#666"
+        android:gravity="center"
+        android:visibility="gone"
+        android:layout_marginTop="32dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMotoristas"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPrestadores"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+</LinearLayout>

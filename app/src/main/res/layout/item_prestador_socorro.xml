@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Cabeçalho com logo e nome -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <ImageView
+                android:id="@+id/ivLogoPrestador"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@drawable/ic_placeholder_logo"
+                android:scaleType="centerCrop"
+                android:layout_marginEnd="12dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNomePrestador"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nome do prestador"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333" />
+
+                <TextView
+                    android:id="@+id/tvServicoPrestador"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Serviço: ..."
+                    android:textSize="14sp"
+                    android:textColor="#555555" />
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Distância -->
+        <TextView
+            android:id="@+id/tvDistanciaPrestador"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📏 Distância: calculando..."
+            android:textSize="14sp"
+            android:textColor="#2196F3"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Localização -->
+        <TextView
+            android:id="@+id/tvLocalizacaoPrestador"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📍 Localização: ..."
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Telefone -->
+        <TextView
+            android:id="@+id/tvTelefonePrestador"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📞 Telefone: ..."
+            android:textSize="14sp"
+            android:textColor="#555555"
+            android:layout_marginBottom="12dp" />
+
+        <!-- NOVO: Status da solicitação -->
+        <TextView
+            android:id="@+id/tvStatusSolicitacao"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="@drawable/bg_status_solicitacao"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
+
+        <!-- Botões Chamar e Localizar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnChamar"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:paddingHorizontal="16dp"
+                android:gravity="center"
+                android:text="📞 Chamar"
+                android:backgroundTint="#4CAF50"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:layout_marginEnd="8dp"
+                app:cornerRadius="8dp" />
+
+            <Button
+                android:id="@+id/btnLocalizar"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:paddingHorizontal="16dp"
+                android:gravity="center"
+                android:text="📍 Localizar"
+                android:backgroundTint="#2196F3"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+        <!-- Botão Solicitar serviço -->
+        <Button
+            android:id="@+id/btnSolicitar"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:paddingHorizontal="16dp"
+            android:gravity="center"
+            android:text="🚨 Solicitar serviço"
+            android:backgroundTint="#FF9800"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginTop="8dp"
+            app:cornerRadius="8dp" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>
