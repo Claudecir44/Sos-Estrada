@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="📩 Solicitações Pendentes"
+        android:text="📋 Solicitações Recebidas"
         android:textSize="22sp"
         android:textStyle="bold"
         android:textColor="#D32F2F"
@@ -29,7 +29,7 @@
         android:id="@+id/tvEmptySolicitacoes"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Nenhuma solicitação pendente."
+        android:text="Nenhuma solicitação recebida ainda."
         android:textSize="16sp"
         android:textColor="#666"
         android:gravity="center"

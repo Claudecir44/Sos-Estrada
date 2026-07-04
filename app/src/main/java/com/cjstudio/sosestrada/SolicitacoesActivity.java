@@ -2,12 +2,10 @@ package com.cjstudio.sosestrada;
 
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -18,12 +16,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
-public class SolicitacoesActivity extends AppCompatActivity {
+public class SolicitacoesActivity extends AppCompatActivity implements SolicitacaoAdapter.OnAcaoListener {
 
     private RecyclerView recyclerView;
     private ProgressBar progressBar;
@@ -46,7 +42,8 @@ public class SolicitacoesActivity extends AppCompatActivity {
         tvEmpty = findViewById(R.id.tvEmptySolicitacoes);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new SolicitacaoAdapter(solicitacaoList, this);
+        // ✅ Passa o listener (this) como terceiro argumento
+        adapter = new SolicitacaoAdapter(solicitacaoList, this, this);
         recyclerView.setAdapter(adapter);
 
         carregarSolicitacoes();
@@ -77,7 +74,7 @@ public class SolicitacoesActivity extends AppCompatActivity {
                             s.setId(doc.getId());
                             solicitacaoList.add(s);
                         }
-                        adapter.notifyDataSetChanged();
+                        adapter.updateList(solicitacaoList);
                         if (solicitacaoList.isEmpty()) {
                             tvEmpty.setVisibility(View.VISIBLE);
                         }
@@ -85,6 +82,44 @@ public class SolicitacoesActivity extends AppCompatActivity {
                         Toast.makeText(this, "Erro ao carregar: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                         tvEmpty.setVisibility(View.VISIBLE);
                     }
+                });
+    }
+
+    // ---------- Implementação dos métodos do listener ----------
+    @Override
+    public void onStatusChanged(String id, String novoStatus) {
+        db.collection("solicitacoes").document(id)
+                .update("status", novoStatus)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Solicitação " + (novoStatus.equals("aceito") ? "aceita" : "recusada") + "!", Toast.LENGTH_SHORT).show();
+                    // Remove da lista local (já que só mostramos pendentes)
+                    solicitacaoList.removeIf(s -> s.getId().equals(id));
+                    adapter.updateList(solicitacaoList);
+                    if (solicitacaoList.isEmpty()) {
+                        tvEmpty.setVisibility(View.VISIBLE);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Erro ao atualizar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    @Override
+    public void onExcluirPermanente(String id) {
+        // Esta tela só mostra pendentes, não permite exclusão permanente aqui.
+        // Mas implementamos para consistência.
+        db.collection("solicitacoes").document(id)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show();
+                    solicitacaoList.removeIf(s -> s.getId().equals(id));
+                    adapter.updateList(solicitacaoList);
+                    if (solicitacaoList.isEmpty()) {
+                        tvEmpty.setVisibility(View.VISIBLE);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Erro ao excluir: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 }

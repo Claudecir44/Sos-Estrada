@@ -56,7 +56,23 @@
             android:textColor="#555"
             android:layout_marginBottom="12dp" />
 
+        <!-- NOVO: Mensagem de cancelamento (só aparece se status for "cancelado") -->
+        <TextView
+            android:id="@+id/tvCancelamento"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⛔ Motorista cancelou o serviço"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#D32F2F"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="#FFEBEE"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp" />
+
         <LinearLayout
+            android:id="@+id/layoutBotoes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">

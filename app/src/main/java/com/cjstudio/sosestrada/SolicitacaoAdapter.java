@@ -1,10 +1,13 @@
 package com.cjstudio.sosestrada;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,11 +23,18 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
     private List<Solicitacao> solicitacoes;
     private Context context;
     private FirebaseFirestore db;
+    private OnAcaoListener listener;
 
-    public SolicitacaoAdapter(List<Solicitacao> solicitacoes, Context context) {
+    public interface OnAcaoListener {
+        void onStatusChanged(String id, String novoStatus);
+        void onExcluirPermanente(String id);
+    }
+
+    public SolicitacaoAdapter(List<Solicitacao> solicitacoes, Context context, OnAcaoListener listener) {
         this.solicitacoes = solicitacoes;
         this.context = context;
-        db = FirebaseFirestore.getInstance();
+        this.db = FirebaseFirestore.getInstance();
+        this.listener = listener;
     }
 
     @NonNull
@@ -37,6 +47,7 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Solicitacao s = solicitacoes.get(position);
+        String status = s.getStatus();
 
         holder.tvMotoristaNome.setText("Motorista: " + s.getMotoristaNome());
         holder.tvMotoristaVeiculo.setText("🚗 Veículo: " + s.getMotoristaVeiculo());
@@ -44,41 +55,81 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
         holder.tvMotoristaTelefone.setText("📞 Telefone: " + s.getMotoristaTelefone());
         holder.tvMotoristaEndereco.setText("📍 Endereço: " + s.getEnderecoMotorista());
 
-        // Oculta os botões se já estiver respondida
-        if ("aceito".equals(s.getStatus()) || "recusado".equals(s.getStatus())) {
-            holder.btnAceitar.setVisibility(View.GONE);
-            holder.btnRecusar.setVisibility(View.GONE);
+        // Se status for "cancelado", mostra mensagem e esconde os botões
+        if ("cancelado".equals(status)) {
+            holder.tvCancelamento.setVisibility(View.VISIBLE);
+            holder.layoutBotoes.setVisibility(View.GONE);
         } else {
-            holder.btnAceitar.setVisibility(View.VISIBLE);
-            holder.btnRecusar.setVisibility(View.VISIBLE);
+            holder.tvCancelamento.setVisibility(View.GONE);
+            holder.layoutBotoes.setVisibility(View.VISIBLE);
         }
 
+        // Se já foi aceito ou recusado, esconde os botões (mantém comportamento anterior)
+        if ("aceito".equals(status) || "recusado".equals(status)) {
+            holder.layoutBotoes.setVisibility(View.GONE);
+        }
+
+        // Clique em Aceitar → exibe diálogo com checkbox
         holder.btnAceitar.setOnClickListener(v -> {
-            atualizarStatus(s.getId(), "aceito");
+            if ("pendente".equals(status)) {
+                mostrarDialogoConfirmacao(s);
+            } else {
+                Toast.makeText(context, "Esta solicitação já foi respondida.", Toast.LENGTH_SHORT).show();
+            }
         });
 
         holder.btnRecusar.setOnClickListener(v -> {
-            atualizarStatus(s.getId(), "recusado");
+            if (listener != null && "pendente".equals(status)) {
+                listener.onStatusChanged(s.getId(), "recusado");
+            } else {
+                Toast.makeText(context, "Esta solicitação já foi respondida.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Long press para excluir permanentemente (apenas se status for "cancelado")
+        holder.itemView.setOnLongClickListener(v -> {
+            if ("cancelado".equals(status)) {
+                new AlertDialog.Builder(context)
+                        .setTitle("Excluir permanentemente")
+                        .setMessage("Deseja excluir esta solicitação cancelada?")
+                        .setPositiveButton("Sim", (dialog, which) -> {
+                            if (listener != null) {
+                                listener.onExcluirPermanente(s.getId());
+                            }
+                        })
+                        .setNegativeButton("Não", null)
+                        .show();
+                return true;
+            }
+            return false;
         });
     }
 
-    private void atualizarStatus(String id, String status) {
-        db.collection("solicitacoes").document(id)
-                .update("status", status)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(context, "Solicitação " + status + "!", Toast.LENGTH_SHORT).show();
-                    // Atualiza a lista localmente
-                    for (Solicitacao s : solicitacoes) {
-                        if (s.getId().equals(id)) {
-                            s.setStatus(status);
-                            break;
-                        }
-                    }
-                    notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(context, "Erro ao atualizar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+    private void mostrarDialogoConfirmacao(Solicitacao s) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Confirmar atendimento");
+
+        // Mensagem + CheckBox
+        View view = LayoutInflater.from(context).inflate(R.layout.dialog_aceitar_solicitacao, null);
+        CheckBox checkBox = view.findViewById(R.id.checkBoxConfirmacao);
+        TextView tvMensagem = view.findViewById(R.id.tvMensagemConfirmacao);
+
+        tvMensagem.setText("Ao aceitar você concorda que estará indo socorrer o motorista, e será enviada uma mensagem ao mesmo, confirmando seu deslocamento.");
+
+        builder.setView(view);
+
+        builder.setPositiveButton("Aceitar", (dialog, which) -> {
+            if (checkBox.isChecked()) {
+                if (listener != null) {
+                    listener.onStatusChanged(s.getId(), "aceito");
+                }
+            } else {
+                Toast.makeText(context, "Marque a checkbox para confirmar.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        builder.setNegativeButton("Cancelar", null);
+        builder.show();
     }
 
     @Override
@@ -92,8 +143,9 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvMotoristaNome, tvMotoristaVeiculo, tvMotoristaPlaca, tvMotoristaTelefone, tvMotoristaEndereco;
+        TextView tvMotoristaNome, tvMotoristaVeiculo, tvMotoristaPlaca, tvMotoristaTelefone, tvMotoristaEndereco, tvCancelamento;
         Button btnAceitar, btnRecusar;
+        LinearLayout layoutBotoes;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -102,8 +154,10 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
             tvMotoristaPlaca = itemView.findViewById(R.id.tvMotoristaPlaca);
             tvMotoristaTelefone = itemView.findViewById(R.id.tvMotoristaTelefone);
             tvMotoristaEndereco = itemView.findViewById(R.id.tvMotoristaEndereco);
+            tvCancelamento = itemView.findViewById(R.id.tvCancelamento);
             btnAceitar = itemView.findViewById(R.id.btnAceitar);
             btnRecusar = itemView.findViewById(R.id.btnRecusar);
+            layoutBotoes = itemView.findViewById(R.id.layoutBotoes);
         }
     }
 }

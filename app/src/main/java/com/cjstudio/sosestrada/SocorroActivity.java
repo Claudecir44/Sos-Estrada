@@ -8,9 +8,13 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -325,22 +329,103 @@ public class SocorroActivity extends AppCompatActivity implements
     // ---------- OnItemLongClickListener ----------
     @Override
     public void onItemLongClick(Prestador prestador) {
-        new AlertDialog.Builder(this)
-                .setTitle("Excluir solicitação")
-                .setMessage("Deseja cancelar a solicitação para " + prestador.getNome() + "?")
-                .setPositiveButton("Sim, excluir", (dialog, which) -> {
-                    excluirSolicitacao(prestador);
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
+        if (prestador.getStatusSolicitacao() == null) {
+            Toast.makeText(this, "Não há solicitação ativa para este prestador.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if ("cancelado".equals(prestador.getStatusSolicitacao())) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Excluir permanentemente")
+                    .setMessage("Esta solicitação já foi cancelada. Deseja excluí-la permanentemente?")
+                    .setPositiveButton("Sim", (dialog, which) -> excluirPermanentemente(prestador))
+                    .setNegativeButton("Não", null)
+                    .show();
+            return;
+        }
+
+        mostrarDialogoCancelamento(prestador);
     }
 
-    private void excluirSolicitacao(Prestador prestador) {
+    private void mostrarDialogoCancelamento(Prestador prestador) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_cancelar_solicitacao, null);
+        CheckBox checkBox = view.findViewById(R.id.checkBoxConfirmacaoCancelamento);
+        EditText edtSenha = view.findViewById(R.id.edtSenhaCancelamento);
+
+        builder.setView(view);
+        builder.setTitle("Cancelar solicitação");
+
+        builder.setPositiveButton("Cancelar solicitação", (dialog, which) -> {
+            if (!checkBox.isChecked()) {
+                Toast.makeText(this, "Marque a checkbox para confirmar.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            String senha = edtSenha.getText().toString().trim();
+            if (TextUtils.isEmpty(senha)) {
+                Toast.makeText(this, "Digite sua senha.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            reautenticarECancelar(prestador, senha);
+        });
+
+        builder.setNegativeButton("Voltar", null);
+        builder.show();
+    }
+
+    private void reautenticarECancelar(Prestador prestador, String senha) {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) {
             Toast.makeText(this, "Usuário não logado", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        String email = user.getEmail();
+        if (email == null) {
+            Toast.makeText(this, "E-mail não disponível", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        mAuth.signInWithEmailAndPassword(email, senha)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        cancelarSolicitacao(prestador);
+                    } else {
+                        Toast.makeText(this, "Senha incorreta. Tente novamente.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void cancelarSolicitacao(Prestador prestador) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
+
+        db.collection("solicitacoes")
+                .whereEqualTo("motoristaUid", user.getUid())
+                .whereEqualTo("prestadorUid", prestador.getUid())
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                        for (QueryDocumentSnapshot doc : task.getResult()) {
+                            doc.getReference().update("status", "cancelado")
+                                    .addOnSuccessListener(aVoid -> {
+                                        Toast.makeText(this, "Solicitação cancelada com sucesso.", Toast.LENGTH_SHORT).show();
+                                        prestador.setStatusSolicitacao("cancelado");
+                                        adapter.notifyDataSetChanged();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Toast.makeText(this, "Erro ao cancelar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                    });
+                        }
+                    } else {
+                        Toast.makeText(this, "Nenhuma solicitação encontrada.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void excluirPermanentemente(Prestador prestador) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
 
         db.collection("solicitacoes")
                 .whereEqualTo("motoristaUid", user.getUid())
@@ -351,7 +436,7 @@ public class SocorroActivity extends AppCompatActivity implements
                         for (QueryDocumentSnapshot doc : task.getResult()) {
                             doc.getReference().delete()
                                     .addOnSuccessListener(aVoid -> {
-                                        Toast.makeText(this, "Solicitação excluída com sucesso.", Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(this, "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show();
                                         prestador.setStatusSolicitacao(null);
                                         adapter.notifyDataSetChanged();
                                     })

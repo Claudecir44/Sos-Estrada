@@ -18,7 +18,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AtendimentoActivity extends AppCompatActivity {
+public class AtendimentoActivity extends AppCompatActivity implements SolicitacaoAdapter.OnAcaoListener {
 
     private RecyclerView rvAtendimento;
     private ProgressBar progressBar;
@@ -41,7 +41,7 @@ public class AtendimentoActivity extends AppCompatActivity {
         tvEmpty = findViewById(R.id.tvEmptyAtendimento);
 
         rvAtendimento.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new SolicitacaoAdapter(solicitacaoList, this);
+        adapter = new SolicitacaoAdapter(solicitacaoList, this, this);
         rvAtendimento.setAdapter(adapter);
 
         carregarSolicitacoes();
@@ -58,9 +58,6 @@ public class AtendimentoActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         tvEmpty.setVisibility(View.GONE);
 
-        // ✅ Removido o orderBy() para evitar erro de índice.
-        // Para ordenar, você pode criar o índice no Firebase Console usando o link:
-        // https://console.firebase.google.com/v1/r/project/sos-estrada-dc55d/firestore/indexes?create_composite=...
         db.collection("solicitacoes")
                 .whereEqualTo("prestadorUid", user.getUid())
                 .get()
@@ -73,8 +70,6 @@ public class AtendimentoActivity extends AppCompatActivity {
                             s.setId(doc.getId());
                             solicitacaoList.add(s);
                         }
-                        // Ordenação local (opcional)
-                        // solicitacaoList.sort((a, b) -> a.getTimestamp().compareTo(b.getTimestamp()));
                         adapter.updateList(solicitacaoList);
                         if (solicitacaoList.isEmpty()) {
                             tvEmpty.setVisibility(View.VISIBLE);
@@ -83,6 +78,45 @@ public class AtendimentoActivity extends AppCompatActivity {
                         Toast.makeText(this, "Erro ao carregar: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                         tvEmpty.setVisibility(View.VISIBLE);
                     }
+                });
+    }
+
+    // ---------- OnAcaoListener ----------
+    @Override
+    public void onStatusChanged(String id, String novoStatus) {
+        db.collection("solicitacoes").document(id)
+                .update("status", novoStatus)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Status atualizado para: " + novoStatus, Toast.LENGTH_SHORT).show();
+                    // Atualiza a lista local
+                    for (Solicitacao s : solicitacaoList) {
+                        if (s.getId().equals(id)) {
+                            s.setStatus(novoStatus);
+                            break;
+                        }
+                    }
+                    adapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Erro ao atualizar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    @Override
+    public void onExcluirPermanente(String id) {
+        db.collection("solicitacoes").document(id)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show();
+                    // Remove da lista
+                    solicitacaoList.removeIf(s -> s.getId().equals(id));
+                    adapter.notifyDataSetChanged();
+                    if (solicitacaoList.isEmpty()) {
+                        tvEmpty.setVisibility(View.VISIBLE);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Erro ao excluir: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 }
