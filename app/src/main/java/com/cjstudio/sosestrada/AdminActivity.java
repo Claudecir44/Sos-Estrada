@@ -1,5 +1,6 @@
 package com.cjstudio.sosestrada;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -68,7 +69,15 @@ public class AdminActivity extends AppCompatActivity {
             showPrestadores();
             carregarPrestadores();
         });
+
+        // Adicione no onCreate:
+        Button btnVerSolicitacoes = findViewById(R.id.btnVerSolicitacoes);
+        btnVerSolicitacoes.setOnClickListener(v -> {
+            startActivity(new Intent(AdminActivity.this, AdminSolicitacoesActivity.class));
+        });
     }
+
+
 
     private void showMensagemInicial() {
         rvMotoristas.setVisibility(View.GONE);
