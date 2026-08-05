@@ -25,6 +25,13 @@
             android:name=".AdminSolicitacoesActivity"
             android:exported="false" />
         <activity
+            android:name=".AdminMensagensActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".AtendimentoActivity"
             android:exported="false" />
         <activity
@@ -35,13 +42,7 @@
             android:exported="false" />
         <activity
             android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:exported="false" />
         <activity
             android:name=".AdminActivity"
             android:exported="false" />

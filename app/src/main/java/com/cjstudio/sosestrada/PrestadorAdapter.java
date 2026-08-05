@@ -112,6 +112,20 @@ public class PrestadorAdapter extends RecyclerView.Adapter<PrestadorAdapter.View
             holder.btnSolicitar.setVisibility(View.VISIBLE);
         }
 
+        // Botão de mensagem: só aparece quando já existe uma solicitação com este prestador
+        if (!TextUtils.isEmpty(p.getSolicitacaoId())) {
+            holder.btnMensagem.setVisibility(View.VISIBLE);
+            holder.btnMensagem.setOnClickListener(v -> {
+                Intent intent = new Intent(context, ChatActivity.class);
+                intent.putExtra(ChatActivity.EXTRA_SOLICITACAO_ID, p.getSolicitacaoId());
+                intent.putExtra(ChatActivity.EXTRA_MEU_TIPO, "motorista");
+                intent.putExtra(ChatActivity.EXTRA_TITULO, p.getNome());
+                context.startActivity(intent);
+            });
+        } else {
+            holder.btnMensagem.setVisibility(View.GONE);
+        }
+
         // Long press para excluir solicitação (apenas se houver status)
         holder.itemView.setOnLongClickListener(v -> {
             if (longClickListener != null && !TextUtils.isEmpty(p.getStatusSolicitacao())) {
@@ -215,7 +229,7 @@ public class PrestadorAdapter extends RecyclerView.Adapter<PrestadorAdapter.View
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView ivLogo;
         TextView tvNome, tvServico, tvDistancia, tvLocalizacao, tvTelefone, tvStatusSolicitacao;
-        Button btnChamar, btnLocalizar, btnSolicitar;
+        Button btnChamar, btnLocalizar, btnSolicitar, btnMensagem;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -229,6 +243,7 @@ public class PrestadorAdapter extends RecyclerView.Adapter<PrestadorAdapter.View
             btnChamar = itemView.findViewById(R.id.btnChamar);
             btnLocalizar = itemView.findViewById(R.id.btnLocalizar);
             btnSolicitar = itemView.findViewById(R.id.btnSolicitar);
+            btnMensagem = itemView.findViewById(R.id.btnMensagem);
         }
     }
 }

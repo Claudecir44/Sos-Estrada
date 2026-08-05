@@ -2,6 +2,7 @@ package com.cjstudio.sosestrada;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -59,9 +60,11 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
         if ("cancelado".equals(status)) {
             holder.tvCancelamento.setVisibility(View.VISIBLE);
             holder.layoutBotoes.setVisibility(View.GONE);
+            holder.btnMensagem.setVisibility(View.GONE);
         } else {
             holder.tvCancelamento.setVisibility(View.GONE);
             holder.layoutBotoes.setVisibility(View.VISIBLE);
+            holder.btnMensagem.setVisibility(View.VISIBLE);
         }
 
         // Se já foi aceito ou recusado, esconde os botões (mantém comportamento anterior)
@@ -84,6 +87,14 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
             } else {
                 Toast.makeText(context, "Esta solicitação já foi respondida.", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        holder.btnMensagem.setOnClickListener(v -> {
+            Intent intent = new Intent(context, ChatActivity.class);
+            intent.putExtra(ChatActivity.EXTRA_SOLICITACAO_ID, s.getId());
+            intent.putExtra(ChatActivity.EXTRA_MEU_TIPO, "prestador");
+            intent.putExtra(ChatActivity.EXTRA_TITULO, s.getMotoristaNome());
+            context.startActivity(intent);
         });
 
         // Long press para excluir permanentemente (apenas se status for "cancelado")
@@ -144,7 +155,7 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvMotoristaNome, tvMotoristaVeiculo, tvMotoristaPlaca, tvMotoristaTelefone, tvMotoristaEndereco, tvCancelamento;
-        Button btnAceitar, btnRecusar;
+        Button btnAceitar, btnRecusar, btnMensagem;
         LinearLayout layoutBotoes;
 
         public ViewHolder(@NonNull View itemView) {
@@ -158,6 +169,7 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
             btnAceitar = itemView.findViewById(R.id.btnAceitar);
             btnRecusar = itemView.findViewById(R.id.btnRecusar);
             layoutBotoes = itemView.findViewById(R.id.layoutBotoes);
+            btnMensagem = itemView.findViewById(R.id.btnMensagem);
         }
     }
 }

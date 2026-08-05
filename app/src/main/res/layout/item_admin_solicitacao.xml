@@ -87,5 +87,20 @@
             android:textSize="14sp"
             android:textColor="#555" />
 
+        <Button
+            android:id="@+id/btnVerMensagensAdmin"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:paddingHorizontal="16dp"
+            android:gravity="center"
+            android:text="💬 Ver mensagens"
+            android:backgroundTint="#9C27B0"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginTop="8dp"
+            app:cornerRadius="8dp" />
+
     </LinearLayout>
 </androidx.cardview.widget.CardView>

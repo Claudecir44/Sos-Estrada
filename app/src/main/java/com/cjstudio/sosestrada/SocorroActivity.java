@@ -237,16 +237,19 @@ public class SocorroActivity extends AppCompatActivity implements
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     Map<String, String> statusMap = new HashMap<>();
+                    Map<String, String> idMap = new HashMap<>();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         String prestadorUid = doc.getString("prestadorUid");
                         String status = doc.getString("status");
                         if (prestadorUid != null && status != null) {
                             statusMap.put(prestadorUid, status);
+                            idMap.put(prestadorUid, doc.getId());
                         }
                     }
                     for (Prestador p : tempList) {
                         String status = statusMap.get(p.getUid());
                         p.setStatusSolicitacao(status);
+                        p.setSolicitacaoId(idMap.get(p.getUid()));
                     }
                     prestadorList.clear();
                     prestadorList.addAll(tempList);

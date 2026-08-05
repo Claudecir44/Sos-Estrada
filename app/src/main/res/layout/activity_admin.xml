@@ -50,6 +50,24 @@
             android:textColor="@android:color/white"
             android:backgroundTint="#FF9800"
             android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnVerMensagensAdmin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="💬 Ver Mensagens"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#9C27B0"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnSairAdmin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🚪 Sair"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#D32F2F"
+            android:layout_marginBottom="8dp" />
     </LinearLayout>
 
     <!-- Mensagem padrão (inicial) -->

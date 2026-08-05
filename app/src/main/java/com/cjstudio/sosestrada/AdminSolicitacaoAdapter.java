@@ -1,8 +1,10 @@
 package com.cjstudio.sosestrada;
 
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -64,6 +66,14 @@ public class AdminSolicitacaoAdapter extends RecyclerView.Adapter<AdminSolicitac
         } else {
             holder.tvDataHora.setText("Data/Hora: não informada");
         }
+
+        holder.btnVerMensagens.setOnClickListener(v -> {
+            Intent intent = new Intent(v.getContext(), ChatActivity.class);
+            intent.putExtra(ChatActivity.EXTRA_SOLICITACAO_ID, s.getId());
+            intent.putExtra(ChatActivity.EXTRA_READ_ONLY, true);
+            intent.putExtra(ChatActivity.EXTRA_TITULO, s.getMotoristaNome() + " ↔ " + s.getPrestadorNome());
+            v.getContext().startActivity(intent);
+        });
     }
 
     @Override
@@ -79,6 +89,7 @@ public class AdminSolicitacaoAdapter extends RecyclerView.Adapter<AdminSolicitac
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvMotoristaNome, tvMotoristaTelefone, tvMotoristaVeiculo, tvMotoristaPlaca, tvMotoristaEndereco;
         TextView tvPrestadorNome, tvStatus, tvDataHora;
+        Button btnVerMensagens;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -90,6 +101,7 @@ public class AdminSolicitacaoAdapter extends RecyclerView.Adapter<AdminSolicitac
             tvPrestadorNome = itemView.findViewById(R.id.tvPrestadorNomeAdmin);
             tvStatus = itemView.findViewById(R.id.tvStatusAdmin);
             tvDataHora = itemView.findViewById(R.id.tvDataHoraAdmin);
+            btnVerMensagens = itemView.findViewById(R.id.btnVerMensagensAdmin);
         }
     }
 }

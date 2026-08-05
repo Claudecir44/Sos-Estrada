@@ -9,6 +9,8 @@ public class Prestador {
     private double distancia;
     // Status da solicitação (pendente, aceito, recusado ou null)
     private String statusSolicitacao;
+    // Id da solicitação ativa com este prestador (usado para abrir o chat)
+    private String solicitacaoId;
 
     public Prestador() {}
 
@@ -58,6 +60,9 @@ public class Prestador {
     // Getter e Setter para statusSolicitacao
     public String getStatusSolicitacao() { return statusSolicitacao; }
     public void setStatusSolicitacao(String statusSolicitacao) { this.statusSolicitacao = statusSolicitacao; }
+
+    public String getSolicitacaoId() { return solicitacaoId; }
+    public void setSolicitacaoId(String solicitacaoId) { this.solicitacaoId = solicitacaoId; }
 
     // Método que monta o endereço completo (com fallback)
     public String getEnderecoCompleto() {

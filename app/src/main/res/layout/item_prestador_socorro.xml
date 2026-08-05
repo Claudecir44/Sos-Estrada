@@ -137,6 +137,23 @@
 
         </LinearLayout>
 
+        <!-- Botão Mensagem (só aparece quando há uma solicitação ativa com este prestador) -->
+        <Button
+            android:id="@+id/btnMensagem"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:paddingHorizontal="16dp"
+            android:gravity="center"
+            android:text="💬 Mensagem"
+            android:backgroundTint="#9C27B0"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            app:cornerRadius="8dp" />
+
         <!-- Botão Solicitar serviço -->
         <Button
             android:id="@+id/btnSolicitar"

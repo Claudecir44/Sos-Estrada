@@ -20,6 +20,22 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "app"
+    productFlavors {
+        create("usuarios") {
+            dimension = "app"
+            // App completo: motorista, prestador e admin (comportamento atual)
+        }
+        create("admin") {
+            dimension = "app"
+            // APK separado: abre direto no Painel Administrativo
+            // applicationId próprio (com.cjstudio.sosestrada.admin), já cadastrado
+            // no Firebase, permitindo instalar os dois APKs no mesmo aparelho.
+            applicationIdSuffix = ".admin"
+            versionNameSuffix = "-admin"
+        }
+    }
+
     buildFeatures {
         viewBinding = true
     }
