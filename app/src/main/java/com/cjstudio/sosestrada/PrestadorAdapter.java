@@ -115,6 +115,16 @@ public class PrestadorAdapter extends RecyclerView.Adapter<PrestadorAdapter.View
         // Botão de mensagem: só aparece quando já existe uma solicitação com este prestador
         if (!TextUtils.isEmpty(p.getSolicitacaoId())) {
             holder.btnMensagem.setVisibility(View.VISIBLE);
+            if (p.getNaoLidasMotorista() > 0) {
+                holder.btnMensagem.setText("💬 Mensagem (" + p.getNaoLidasMotorista() + " nova"
+                        + (p.getNaoLidasMotorista() > 1 ? "s" : "") + ")");
+                holder.btnMensagem.setBackgroundTintList(
+                        android.content.res.ColorStateList.valueOf(0xFFD32F2F));
+            } else {
+                holder.btnMensagem.setText("💬 Mensagem");
+                holder.btnMensagem.setBackgroundTintList(
+                        android.content.res.ColorStateList.valueOf(0xFF9C27B0));
+            }
             holder.btnMensagem.setOnClickListener(v -> {
                 Intent intent = new Intent(context, ChatActivity.class);
                 intent.putExtra(ChatActivity.EXTRA_SOLICITACAO_ID, p.getSolicitacaoId());

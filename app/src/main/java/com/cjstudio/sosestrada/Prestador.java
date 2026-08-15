@@ -11,6 +11,8 @@ public class Prestador {
     private String statusSolicitacao;
     // Id da solicitação ativa com este prestador (usado para abrir o chat)
     private String solicitacaoId;
+    // Mensagens do prestador ainda não lidas pelo motorista, na solicitação ativa acima.
+    private int naoLidasMotorista;
 
     public Prestador() {}
 
@@ -63,6 +65,9 @@ public class Prestador {
 
     public String getSolicitacaoId() { return solicitacaoId; }
     public void setSolicitacaoId(String solicitacaoId) { this.solicitacaoId = solicitacaoId; }
+
+    public int getNaoLidasMotorista() { return naoLidasMotorista; }
+    public void setNaoLidasMotorista(int naoLidasMotorista) { this.naoLidasMotorista = naoLidasMotorista; }
 
     // Método que monta o endereço completo (com fallback)
     public String getEnderecoCompleto() {

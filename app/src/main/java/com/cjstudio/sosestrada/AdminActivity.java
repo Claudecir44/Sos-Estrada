@@ -25,7 +25,14 @@ import java.util.List;
 
 public class AdminActivity extends AppCompatActivity {
 
-    // Credenciais fixas para acesso administrativo
+    // TEMPORÁRIO (voltou por decisão do usuário em 2026-08-15): login por
+    // usuário/senha fixos + Auth anônimo, só até o plano Blaze ser ativado
+    // e a conta real de admin (Firebase Auth por e-mail/senha, criada pela
+    // Cloud Function provisionarAdminInicial) puder ser provisionada. Uma
+    // sessão assim é indistinguível de qualquer usuário anônimo qualquer
+    // nas regras do Firestore — firestore.rules tem um bypass temporário
+    // equivalente (ehAdminTemporario()), que precisa ser removido junto com
+    // isto aqui. Ver [[project-sos-estrada]] na memória.
     private static final String ADMIN_USER = "Programador";
     private static final String ADMIN_PASSWORD = "SENHA_REMOVIDA";
 

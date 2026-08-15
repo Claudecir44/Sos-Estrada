@@ -16,6 +16,10 @@ public class Solicitacao {
     private double latitudeMotorista;
     private double longitudeMotorista;
     private String enderecoMotorista;
+    // Contadores de mensagens não lidas por lado, mantidos pelo ChatActivity
+    // (incrementados ao enviar, zerados ao abrir o chat do respectivo lado).
+    private int naoLidasMotorista;
+    private int naoLidasPrestador;
 
     public Solicitacao() {}
 
@@ -46,4 +50,8 @@ public class Solicitacao {
     public void setLongitudeMotorista(double longitudeMotorista) { this.longitudeMotorista = longitudeMotorista; }
     public String getEnderecoMotorista() { return enderecoMotorista; }
     public void setEnderecoMotorista(String enderecoMotorista) { this.enderecoMotorista = enderecoMotorista; }
+    public int getNaoLidasMotorista() { return naoLidasMotorista; }
+    public void setNaoLidasMotorista(int naoLidasMotorista) { this.naoLidasMotorista = naoLidasMotorista; }
+    public int getNaoLidasPrestador() { return naoLidasPrestador; }
+    public void setNaoLidasPrestador(int naoLidasPrestador) { this.naoLidasPrestador = naoLidasPrestador; }
 }

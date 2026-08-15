@@ -67,6 +67,17 @@ public class SolicitacaoAdapter extends RecyclerView.Adapter<SolicitacaoAdapter.
             holder.btnMensagem.setVisibility(View.VISIBLE);
         }
 
+        if (s.getNaoLidasPrestador() > 0) {
+            holder.btnMensagem.setText("💬 Mensagem (" + s.getNaoLidasPrestador() + " nova"
+                    + (s.getNaoLidasPrestador() > 1 ? "s" : "") + ")");
+            holder.btnMensagem.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFFD32F2F));
+        } else {
+            holder.btnMensagem.setText("💬 Mensagem");
+            holder.btnMensagem.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(0xFF9C27B0));
+        }
+
         // Se já foi aceito ou recusado, esconde os botões (mantém comportamento anterior)
         if ("aceito".equals(status) || "recusado".equals(status)) {
             holder.layoutBotoes.setVisibility(View.GONE);
