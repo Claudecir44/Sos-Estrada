@@ -17,7 +17,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class PrestadorDashboardActivity extends AppCompatActivity {
 
-    private MaterialButton btnAtender, btnEditar, btnExcluir;
+    private MaterialButton btnAtender, btnEditar, btnAssinatura, btnExcluir;
     private TextView btnVoltar;
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
@@ -40,8 +40,12 @@ public class PrestadorDashboardActivity extends AppCompatActivity {
 
         btnAtender = findViewById(R.id.btnAtender);
         btnEditar = findViewById(R.id.btnEditar);
+        btnAssinatura = findViewById(R.id.btnAssinatura);
         btnExcluir = findViewById(R.id.btnExcluir);
         btnVoltar = findViewById(R.id.btnVoltar);
+
+        btnAssinatura.setOnClickListener(v ->
+                startActivity(new Intent(PrestadorDashboardActivity.this, AssinaturaActivity.class)));
 
         // ✅ CORRIGIDO: abre a tela de solicitações recebidas
         btnAtender.setOnClickListener(v -> {

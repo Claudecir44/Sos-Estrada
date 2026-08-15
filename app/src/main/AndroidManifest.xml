@@ -59,6 +59,23 @@
             android:name=".PrestadorDashboardActivity"
             android:exported="false" />
         <activity
+            android:name=".AssinaturaActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <!-- Retorno do checkout do Mercado Pago (back_urls em
+                 criarPreferenciaPagamentoPrestador, functions/index.js). A
+                 confirmação de verdade vem do webhook via Firestore — esse
+                 deep link só traz o usuário de volta pro app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sosestrada" android:host="payment_success" />
+                <data android:scheme="sosestrada" android:host="payment_failure" />
+                <data android:scheme="sosestrada" android:host="payment_pending" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".CadastroMotoristaActivity"
             android:exported="false" />
         <activity

@@ -57,7 +57,11 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
-        freeCompilerArgs += listOf("-Xjvm-default=enable")
+        // "enable" era o nome antigo dessa flag — o Kotlin Gradle Plugin
+        // 1.9 só aceita disable/all-compatibility/all. Nunca tinha dado
+        // erro porque não existia nenhum arquivo .kt no projeto até agora
+        // (compileKotlin sempre rodava como NO-SOURCE).
+        freeCompilerArgs += listOf("-Xjvm-default=all")
     }
 }
 
@@ -74,7 +78,15 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.functions)
     implementation("com.google.firebase:firebase-storage:20.3.0")
+
+    // Kotlin/corrotinas — usado pelo módulo de assinatura (AssinaturaActivity)
+    // e pela migração do SocorroActivity pra Kotlin.
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.lifecycle.runtime.ktx)
 
     // ✅ Google Play Services – Localização (FusedLocationProviderClient)
     implementation("com.google.android.gms:play-services-location:21.0.1")

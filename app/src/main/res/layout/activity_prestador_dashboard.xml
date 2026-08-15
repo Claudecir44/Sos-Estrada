@@ -66,6 +66,18 @@
             android:layout_marginBottom="12dp" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAssinatura"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:text="💳 ASSINATURA"
+            android:textSize="15sp"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#FF9800"
+            app:cornerRadius="10dp"
+            android:layout_marginBottom="12dp" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExcluir"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
