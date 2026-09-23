@@ -17,4 +17,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindMotoristaRepository(impl: MotoristaRepository): IMotoristaRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPrestadorRepository(impl: PrestadorRepository): IPrestadorRepository
 }

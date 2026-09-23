@@ -94,6 +94,9 @@ service cloud.firestore {
       allow create: if ehDono(uid) && !request.resource.data.keys().hasAny(camposDoServidorPrestador());
       allow update: if ehAdmin()
         || (ehDono(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(camposDoServidorPrestador()));
+      // "Excluir cadastro" (PrestadorDashboardActivity) — sem esta linha a
+      // exclusão sempre falhava, porque não havia regra de delete.
+      allow delete: if ehDono(uid) || ehAdmin();
       // Leitura ampla e proposital: é um diretório de prestadores — todo
       // motorista logado precisa listar/buscar todos pra pedir socorro
       // (SocorroActivity lê "prestadores" filtrando só por ativo==true,
