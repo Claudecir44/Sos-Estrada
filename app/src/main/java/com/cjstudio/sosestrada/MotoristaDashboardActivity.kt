@@ -45,8 +45,27 @@ class MotoristaDashboardActivity : AppCompatActivity() {
         }
         binding.btnExcluir.setOnClickListener { confirmarExclusao() }
         binding.btnVoltar.setOnClickListener {
+            authRepository.sair()
             startActivity(Intent(this, LoginMotoristaActivity::class.java))
             finish()
+        }
+    }
+
+    // Volta da edição do cadastro: atualiza nome e veículo do cabeçalho.
+    override fun onResume() {
+        super.onResume()
+        if (::binding.isInitialized) carregarCabecalho()
+    }
+
+    private fun carregarCabecalho() {
+        lifecycleScope.launch {
+            val motorista = motoristaRepository.buscarMeuCadastro().getOrNull()
+            val primeiroNome = motorista?.nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
+            binding.tvSaudacaoMotorista.text = if (primeiroNome != null) "Olá, $primeiroNome!" else "Olá!"
+            binding.tvAvatarMotoristaPainel.text = if (primeiroNome != null) iniciais(motorista?.nome) else "🚗"
+            val veiculo = listOfNotNull(motorista?.veiculo, motorista?.placa, motorista?.cor)
+                .filter { it.isNotBlank() }.joinToString(" • ")
+            binding.tvVeiculoPainel.text = if (veiculo.isNotEmpty()) "🚗 $veiculo" else "🚗 Cadastre seu veículo em Editar cadastro"
         }
     }
 

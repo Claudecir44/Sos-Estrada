@@ -1,99 +1,304 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Tela principal do motorista: cabeçalho azul com saudação e veículo, o
+     cartão de socorro em destaque e as opções do cadastro. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:paddingTop="56dp"
-    android:background="@android:color/white"
+    android:background="@color/motorista_fundo"
+    android:fillViewport="true"
     android:fitsSystemWindows="true"
     tools:context=".MotoristaDashboardActivity">
 
-    <!-- Conteúdo centralizado horizontalmente, alinhado ao topo -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal">
+        android:orientation="vertical">
 
-        <!-- Ícone -->
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Cabeçalho -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🚗"
-            android:textSize="56sp"
-            android:layout_marginBottom="4dp" />
+            android:background="@drawable/bg_motorista_header"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="56dp">
 
-        <!-- Título -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Painel do Motorista"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="#D32F2F"
-            android:layout_marginBottom="4dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="O que você deseja fazer?"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginBottom="32dp" />
+                <TextView
+                    android:id="@+id/tvAvatarMotoristaPainel"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_admin_avatar"
+                    android:backgroundTint="#33FFFFFF"
+                    android:gravity="center"
+                    android:text="🚗"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
 
-        <!-- Botão SOCORRO -->
-        <com.google.android.material.button.MaterialButton
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.1"
+                        android:text="🛡️ SOS ESTRADA"
+                        android:textColor="#CCFFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvSaudacaoMotorista"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Olá!"
+                        android:textColor="@android:color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Painel do Motorista"
+                        android:textColor="#E6FFFFFF"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnVoltar"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:text="Sair"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    app:cornerRadius="15dp"
+                    app:strokeColor="#99FFFFFF" />
+            </LinearLayout>
+
+            <!-- Veículo cadastrado -->
+            <TextView
+                android:id="@+id/tvVeiculoPainel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_admin_chip"
+                android:backgroundTint="#26FFFFFF"
+                android:paddingStart="12dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="6dp"
+                android:text="🚗 Carregando veículo…"
+                android:textColor="@android:color/white"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Socorro: a ação principal, sobre a base do cabeçalho -->
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/btnSocorro"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:text="🚨 PRECISO DE SOCORRO"
-            android:textSize="15sp"
-            android:textColor="@android:color/white"
-            android:backgroundTint="#D32F2F"
-            app:cornerRadius="10dp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Botão EDITAR CADASTRO -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCadastrar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:text="📝 EDITAR CADASTRO"
-            android:textSize="15sp"
-            android:textColor="@android:color/white"
-            android:backgroundTint="#2196F3"
-            app:cornerRadius="10dp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- NOVO: Botão EXCLUIR CADASTRO -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnExcluir"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:text="🗑️ EXCLUIR CADASTRO"
-            android:textSize="15sp"
-            android:textColor="@android:color/white"
-            android:backgroundTint="#D32F2F"
-            app:cornerRadius="10dp"
-            android:layout_marginBottom="24dp" />
-
-        <!-- Botão Voltar -->
-        <TextView
-            android:id="@+id/btnVoltar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="← Voltar"
-            android:textSize="14sp"
-            android:textColor="#999999"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="-40dp"
+            android:layout_marginEnd="16dp"
             android:clickable="true"
             android:focusable="true"
-            android:background="?attr/selectableItemBackground" />
+            app:cardCornerRadius="20dp"
+            app:cardElevation="8dp">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_motorista_socorro"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:background="@drawable/bg_admin_avatar"
+                    android:backgroundTint="#33FFFFFF"
+                    android:gravity="center"
+                    android:text="🚨"
+                    android:textSize="30sp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Preciso de socorro"
+                        android:textColor="@android:color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Encontre prestadores perto de você"
+                        android:textColor="#F2FFFFFF"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="@android:color/white"
+                    android:textSize="34sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:text="Meu cadastro"
+            android:textColor="@color/admin_texto"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!-- Editar cadastro -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnCadastrar"
+            style="@style/AdminCard"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AdminAvatar"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:backgroundTint="@color/motorista_azul_claro"
+                    android:text="📝"
+                    android:textSize="18sp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/AdminTitulo"
+                        android:text="Editar cadastro"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Nome, telefone e dados do veículo"
+                        android:textColor="@color/admin_texto_secundario"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#9CA3AF"
+                    android:textSize="28sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Excluir cadastro -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnExcluir"
+            style="@style/AdminCard"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="24dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AdminAvatar"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:backgroundTint="@color/admin_vermelho_claro"
+                    android:text="🗑️"
+                    android:textSize="18sp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/AdminTitulo"
+                        android:text="Excluir cadastro"
+                        android:textColor="#B91C1C"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Apaga sua conta e seus dados"
+                        android:textColor="@color/admin_texto_secundario"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#9CA3AF"
+                    android:textSize="28sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
-</LinearLayout>
+</ScrollView>

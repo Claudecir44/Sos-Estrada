@@ -1,10 +1,12 @@
 package com.cjstudio.sosestrada
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.cjstudio.sosestrada.databinding.ActivityLoginMotoristaBinding
 import dagger.hilt.android.AndroidEntryPoint
@@ -58,11 +60,10 @@ class LoginMotoristaActivity : AppCompatActivity() {
                 }
                 .onFailure { e ->
                     binding.btnEntrar.isEnabled = true
-                    binding.tvMensagem.visibility = View.VISIBLE
-                    binding.tvMensagem.text = if (e is EmailNaoVerificadoException) {
-                        "📧 ${e.message}"
+                    if (e is EmailNaoVerificadoException) {
+                        mostrarMensagem("📧 ${e.message}", erro = false)
                     } else {
-                        "❌ Falha no login: ${e.message ?: "Erro desconhecido"}"
+                        mostrarMensagem("❌ Falha no login: ${e.message ?: "Erro desconhecido"}", erro = true)
                     }
                 }
         }
@@ -78,13 +79,20 @@ class LoginMotoristaActivity : AppCompatActivity() {
         lifecycleScope.launch {
             authRepository.enviarRedefinicaoSenha(email)
                 .onSuccess {
-                    binding.tvMensagem.visibility = View.VISIBLE
-                    binding.tvMensagem.text = "📧 Enviamos um link para redefinir sua senha para $email. Confira também o spam."
+                    mostrarMensagem("📧 Enviamos um link para redefinir sua senha para $email. Confira também o spam.", erro = false)
                 }
                 .onFailure { e ->
-                    binding.tvMensagem.visibility = View.VISIBLE
-                    binding.tvMensagem.text = "❌ Não foi possível enviar: ${e.message}"
+                    mostrarMensagem("❌ Não foi possível enviar: ${e.message}", erro = true)
                 }
         }
+    }
+
+    // Caixa de mensagem do cartão: vermelha pra erro, azul pra aviso.
+    private fun mostrarMensagem(texto: String, erro: Boolean) {
+        val (fundo, cor) = if (erro) R.color.admin_vermelho_claro to 0xFFB91C1C.toInt() else R.color.motorista_azul_claro to 0xFF0D47A1.toInt()
+        binding.tvMensagem.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, fundo))
+        binding.tvMensagem.setTextColor(cor)
+        binding.tvMensagem.text = texto
+        binding.tvMensagem.visibility = View.VISIBLE
     }
 }

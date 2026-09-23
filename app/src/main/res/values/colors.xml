@@ -25,4 +25,12 @@
     <color name="admin_verde">#15803D</color>
     <color name="admin_verde_claro">#DCFCE7</color>
     <color name="admin_vermelho_claro">#FEE2E2</color>
+
+    <!-- Área do motorista (tema azul) -->
+    <color name="motorista_azul">#1E88E5</color>
+    <color name="motorista_azul_escuro">#0D47A1</color>
+    <color name="motorista_azul_claro">#E3F2FD</color>
+    <color name="motorista_fundo">#F2F6FC</color>
+    <color name="motorista_socorro_inicio">#FF8F00</color>
+    <color name="motorista_socorro_fim">#F4511E</color>
 </resources>
