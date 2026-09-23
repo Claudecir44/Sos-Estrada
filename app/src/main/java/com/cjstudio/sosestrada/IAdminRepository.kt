@@ -23,6 +23,14 @@ interface IAdminRepository {
     // Cadastro (admins/{uid}) do admin logado — nome pra saudação do painel.
     suspend fun buscarMeuCadastro(): Result<Admin?>
 
+    // "Meu Perfil": atualiza nome, sobrenome, telefone, CPF e foto do admin
+    // logado (e-mail e senha de login não mudam por aqui).
+    suspend fun atualizarMeuCadastro(admin: Admin): Result<Unit>
+
+    // "Meu Perfil" > Excluir: confirma a senha, remove o acesso de admin e,
+    // se a conta não for também de motorista/prestador, apaga o login.
+    suspend fun excluirMeuCadastro(senha: String): Result<Unit>
+
     suspend fun listarMotoristas(): Result<List<Motorista>>
 
     suspend fun listarPrestadores(): Result<List<Prestador>>

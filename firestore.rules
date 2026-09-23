@@ -52,15 +52,21 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow read: if ehDono(adminId) || ehAdmin();
       allow create: if ehDono(adminId)
-        && request.resource.data.keys().hasOnly(['nome', 'sobrenome', 'email', 'telefone', 'cpf', 'criadoEm', 'autorizacao'])
+        && request.resource.data.keys().hasOnly(['nome', 'sobrenome', 'email', 'telefone', 'cpf', 'foto', 'criadoEm', 'autorizacao'])
+        // Foto obrigatória no cadastro (JPEG pequeno em base64, ver FotoUtil).
+        && request.resource.data.foto is string && request.resource.data.foto.size() > 0
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.autorizacao is string
         && hashing.sha256(request.resource.data.autorizacao).toHexString() == '__HASH_SENHA_MASTER__';
-      // Só pra apagar o campo "autorizacao" logo depois do cadastro.
+      // Dono: apagar o campo "autorizacao" logo depois do cadastro e editar
+      // o próprio perfil ("Meu Perfil") — nunca e-mail nem criadoEm, e sem
+      // poder recolocar "autorizacao".
       allow update: if ehDono(adminId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['autorizacao'])
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['autorizacao', 'nome', 'sobrenome', 'telefone', 'cpf', 'foto'])
         && !('autorizacao' in request.resource.data);
-      allow delete: if ehAdmin();
+      // "Meu Perfil" > Excluir (o próprio acesso) ou outro admin.
+      allow delete: if ehDono(adminId) || ehAdmin();
     }
 
     // ---------------- motoristas ----------------

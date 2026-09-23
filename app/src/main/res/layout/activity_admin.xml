@@ -28,9 +28,23 @@
             android:orientation="horizontal"
             android:paddingStart="4dp">
 
+            <!-- Foto do admin logado -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivFotoAdminCabecalho"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="#33FFFFFF"
+                android:padding="2dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_admin"
+                app:shapeAppearanceOverlay="@style/AdminLogoCircular"
+                app:strokeColor="#CCFFFFFF"
+                app:strokeWidth="2dp" />
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -49,7 +63,7 @@
                     android:layout_marginTop="4dp"
                     android:text="Painel Administrativo"
                     android:textColor="@android:color/white"
-                    android:textSize="22sp"
+                    android:textSize="19sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -64,16 +78,40 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSairAdmin"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sair"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                app:cornerRadius="20dp"
-                app:strokeColor="#99FFFFFF" />
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMeuPerfil"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="@android:color/white"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Meu Perfil"
+                    android:textAllCaps="false"
+                    android:textColor="@color/admin_vermelho"
+                    android:textSize="13sp"
+                    app:cornerRadius="20dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSairAdmin"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Sair"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    app:cornerRadius="20dp"
+                    app:strokeColor="#99FFFFFF" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Totais: quadrados fixos, só informativos -->

@@ -68,6 +68,7 @@ class AdminRepository @Inject constructor(
                 "email" to email,
                 "telefone" to admin.telefone,
                 "cpf" to admin.cpf,
+                "foto" to admin.foto,
                 "criadoEm" to FieldValue.serverTimestamp(),
                 CAMPO_AUTORIZACAO to senhaMaster
             )
@@ -97,6 +98,33 @@ class AdminRepository @Inject constructor(
     override suspend fun buscarMeuCadastro(): Result<Admin?> = runCatching {
         val uid = auth.currentUser?.uid ?: throw IllegalStateException("Não há sessão ativa.")
         documentoAdmin(uid).get().await().toObject(Admin::class.java)
+    }
+
+    override suspend fun atualizarMeuCadastro(admin: Admin): Result<Unit> = runCatching {
+        val uid = auth.currentUser?.uid ?: throw IllegalStateException("Não há sessão ativa.")
+        val dados = mutableMapOf<String, Any?>(
+            "nome" to admin.nome,
+            "sobrenome" to admin.sobrenome,
+            "telefone" to admin.telefone,
+            "cpf" to admin.cpf
+        )
+        // Sem foto nova, fica a que já estava.
+        if (!admin.foto.isNullOrEmpty()) dados["foto"] = admin.foto
+        documentoAdmin(uid).update(dados).await()
+        Unit
+    }
+
+    override suspend fun excluirMeuCadastro(senha: String): Result<Unit> = runCatching {
+        val uid = auth.currentUser?.uid ?: throw IllegalStateException("Não há sessão ativa.")
+        authRepository.reautenticar(senha).getOrElse { throw IllegalArgumentException("Senha incorreta.") }
+        // A mesma conta pode ser também motorista/prestador: nesse caso só o
+        // acesso de admin sai, e o login continua valendo pro outro perfil.
+        val temOutroPerfil = db.collection("motoristas").document(uid).get().await().exists() ||
+            db.collection("prestadores").document(uid).get().await().exists()
+        documentoAdmin(uid).delete().await()
+        if (!temOutroPerfil) authRepository.excluirConta().getOrThrow()
+        authRepository.sair()
+        Unit
     }
 
     override suspend fun listarMotoristas(): Result<List<Motorista>> = runCatching {

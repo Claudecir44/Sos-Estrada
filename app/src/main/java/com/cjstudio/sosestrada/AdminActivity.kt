@@ -129,15 +129,25 @@ class AdminActivity : AppCompatActivity() {
             adminRepository.sair()
             finish()
         }
+        binding.btnMeuPerfil.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
+        binding.ivFotoAdminCabecalho.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
         painelIniciado = true
         carregarTudo()
     }
 
-    // Só o primeiro nome do cadastro de admin ("Olá, Claudecir"); sem
-    // cadastro, cai no começo do e-mail.
+    // Volta do Meu Perfil: perfil excluído -> sem acesso, volta pro login;
+    // salvo -> atualiza foto e nome do cabeçalho.
+    private val meuPerfil = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { resultado ->
+        if (resultado.resultCode == CadastroAdminActivity.RESULTADO_EXCLUIDO) recreate() else carregarSaudacao()
+    }
+
+    // Foto + só o primeiro nome do cadastro de admin ("Olá, Claudecir");
+    // sem cadastro, cai no começo do e-mail.
     private fun carregarSaudacao() {
         lifecycleScope.launch {
-            val nome = adminRepository.buscarMeuCadastro().getOrNull()?.nome
+            val cadastro = adminRepository.buscarMeuCadastro().getOrNull()
+            FotoUtil.mostrar(binding.ivFotoAdminCabecalho, cadastro?.foto)
+            val nome = cadastro?.nome
             val primeiroNome = nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
                 ?: adminRepository.emailLogado()?.substringBefore("@")
             binding.tvSaudacaoAdmin.text = if (primeiroNome != null) "Olá, $primeiroNome" else "Olá!"

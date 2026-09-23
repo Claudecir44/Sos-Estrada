@@ -8,5 +8,7 @@ data class Admin(
     var sobrenome: String? = null,
     var email: String? = null,
     var telefone: String? = null,
-    var cpf: String? = null
+    var cpf: String? = null,
+    // JPEG pequeno em base64 (ver FotoUtil) — não há Firebase Storage.
+    var foto: String? = null
 )
