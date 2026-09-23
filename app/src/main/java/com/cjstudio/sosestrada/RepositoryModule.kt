@@ -33,4 +33,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindLocalizacaoRepository(impl: LocalizacaoRepository): ILocalizacaoRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAssinaturaRepository(impl: AssinaturaRepository): IAssinaturaRepository
 }
