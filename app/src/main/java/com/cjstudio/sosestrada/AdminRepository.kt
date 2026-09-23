@@ -9,30 +9,44 @@ import javax.inject.Singleton
 @Singleton
 class AdminRepository @Inject constructor(
     private val auth: FirebaseAuth,
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val authRepository: IAuthRepository
 ) : IAdminRepository {
 
-    override fun temSessao(): Boolean = auth.currentUser != null
+    // Quem é admin de verdade quem decide são as regras do Firestore
+    // (ehAdmin(): e-mail autorizado e validado, ou um documento em admins/).
+    // Aqui é só pra barrar logo no login quem não tem acesso, com uma
+    // mensagem clara em vez de listas vazias com erro de permissão.
+    private fun ehEmailDeAdmin(email: String?) = email != null && email.trim().lowercase() in EMAILS_ADMIN
 
-    // ============================================================
-    // TEMPORÁRIO (decisão do usuário em 2026-08-15): o projeto está no plano
-    // Spark, então a Cloud Function provisionarAdminInicial (conta real de
-    // admin por e-mail/senha + coleção admins/) não pode rodar. Até lá o
-    // login compara usuário/senha fixos aqui e abre uma sessão anônima — que
-    // nas regras do Firestore é indistinguível de qualquer usuário anônimo
-    // (ver ehAdminTemporario() em firestore.rules). Trocar por
-    // auth.signInWithEmailAndPassword assim que o Blaze for ativado, e
-    // remover o bypass das regras junto.
-    // ============================================================
-    override suspend fun entrar(usuario: String, senha: String): Result<Unit> = runCatching {
-        if (usuario != ADMIN_USER || senha != ADMIN_PASSWORD) {
-            throw IllegalArgumentException("Usuário ou senha incorretos.")
+    override fun temSessaoDeAdmin(): Boolean {
+        val usuario = auth.currentUser ?: return false
+        return usuario.isEmailVerified && ehEmailDeAdmin(usuario.email)
+    }
+
+    override suspend fun entrar(email: String, senha: String): Result<Unit> = runCatching {
+        // Sessão antiga (login fixo + anônimo das versões anteriores) não serve mais.
+        if (auth.currentUser?.isAnonymous == true) auth.signOut()
+        authRepository.entrar(email, senha).getOrThrow()
+        if (!ehEmailDeAdmin(auth.currentUser?.email)) {
+            auth.signOut()
+            throw IllegalStateException("Esta conta não tem acesso ao painel administrativo.")
         }
-        if (auth.currentUser == null) auth.signInAnonymously().await()
         Unit
     }
 
-    override fun sair() = auth.signOut()
+    override suspend fun criarConta(email: String, senha: String): Result<Unit> = runCatching {
+        if (!ehEmailDeAdmin(email)) throw IllegalArgumentException("Este e-mail não está autorizado como administrador.")
+        if (auth.currentUser?.isAnonymous == true) auth.signOut()
+        authRepository.criarConta(email, senha).getOrThrow()
+        authRepository.enviarVerificacaoEmail()
+        authRepository.sair()
+        Unit
+    }
+
+    override suspend fun enviarRedefinicaoSenha(email: String): Result<Unit> = authRepository.enviarRedefinicaoSenha(email)
+
+    override fun sair() = authRepository.sair()
 
     override suspend fun listarMotoristas(): Result<List<Motorista>> = runCatching {
         db.collection("motoristas").get().await().documents
@@ -53,7 +67,8 @@ class AdminRepository @Inject constructor(
     }
 
     companion object {
-        private const val ADMIN_USER = "Programador"
-        private const val ADMIN_PASSWORD = "SENHA_REMOVIDA"
+        // Mesma lista de ehAdmin() em firestore.rules e do painel web
+        // (web-admin/app.js) — mudar nos três lugares juntos.
+        val EMAILS_ADMIN = setOf("claudecirwitkoski@gmail.com")
     }
 }

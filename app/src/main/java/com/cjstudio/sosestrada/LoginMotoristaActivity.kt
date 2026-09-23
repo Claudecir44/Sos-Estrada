@@ -30,6 +30,7 @@ class LoginMotoristaActivity : AppCompatActivity() {
             startActivity(Intent(this, CadastroMotoristaActivity::class.java))
         }
         binding.btnVoltarLogin.setOnClickListener { finish() }
+        binding.btnEsqueciSenha.setOnClickListener { enviarRedefinicaoSenha() }
     }
 
     private fun fazerLogin() {
@@ -58,7 +59,31 @@ class LoginMotoristaActivity : AppCompatActivity() {
                 .onFailure { e ->
                     binding.btnEntrar.isEnabled = true
                     binding.tvMensagem.visibility = View.VISIBLE
-                    binding.tvMensagem.text = "❌ Falha no login: ${e.message ?: "Erro desconhecido"}"
+                    binding.tvMensagem.text = if (e is EmailNaoVerificadoException) {
+                        "📧 ${e.message}"
+                    } else {
+                        "❌ Falha no login: ${e.message ?: "Erro desconhecido"}"
+                    }
+                }
+        }
+    }
+
+    private fun enviarRedefinicaoSenha() {
+        val email = binding.edtEmailLogin.text.toString().trim()
+        if (email.isEmpty()) {
+            binding.edtEmailLogin.error = "Digite seu e-mail para redefinir a senha"
+            binding.edtEmailLogin.requestFocus()
+            return
+        }
+        lifecycleScope.launch {
+            authRepository.enviarRedefinicaoSenha(email)
+                .onSuccess {
+                    binding.tvMensagem.visibility = View.VISIBLE
+                    binding.tvMensagem.text = "📧 Enviamos um link para redefinir sua senha para $email. Confira também o spam."
+                }
+                .onFailure { e ->
+                    binding.tvMensagem.visibility = View.VISIBLE
+                    binding.tvMensagem.text = "❌ Não foi possível enviar: ${e.message}"
                 }
         }
     }

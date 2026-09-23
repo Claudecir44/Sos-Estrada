@@ -24,37 +24,21 @@ service cloud.firestore {
       return estaLogado() && request.auth.uid == uid;
     }
 
-    // Só reconhece admin com conta real (Firebase Auth por e-mail/senha)
-    // provisionada pela function provisionarAdminInicial — ver
-    // functions/index.js e AdminActivity.java. Antes disso, o "login" de
-    // admin comparava usuário/senha fixos no código do app e depois
-    // autenticava anonimamente, o que tornava uma sessão de admin
-    // indistinguível de qualquer usuário anônimo qualquer.
-    function ehAdmin() {
-      return estaLogado() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-
-    // ============================================================
-    // TEMPORÁRIO (decisão do usuário em 2026-08-15): o projeto está no
-    // plano Spark (gratuito), então a Cloud Function provisionarAdminInicial
-    // não pode rodar (exige Blaze) e admins/ está vazia — ehAdmin() nunca é
-    // true. Pra reverter o painel admin ao comportamento de antes (login
-    // fixo + Auth anônimo, AdminActivity.java), esta função dá o mesmo
-    // acesso de leitura do ehAdmin() pra QUALQUER sessão anônima — não só
-    // pra quem passou pela senha no app, porque não existe like nenhum
-    // client-side que o servidor consiga verificar. Ou seja, enquanto isto
-    // estiver aqui, qualquer pessoa (não só o admin) que chamar
-    // signInAnonymously() direto no Firebase Auth, sem precisar do app,
-    // consegue ler motoristas/solicitações/mensagens de todo mundo.
+    // Admin = conta por e-mail e senha com o e-mail JÁ VALIDADO e na lista
+    // abaixo (mesma lista do AdminRepository.EMAILS_ADMIN no app e do
+    // web-admin/app.js — mudar nos três juntos), ou com documento em
+    // admins/{uid} (pra quando a Cloud Function provisionarAdminInicial
+    // puder rodar). Não depende do plano Blaze.
     //
-    // REMOVER (junto com o autenticarEIniciarPainel()/signInAnonymously()
-    // em AdminActivity.java) assim que o Blaze for ativado e
-    // provisionarAdminInicial rodar — ver [[project-sos-estrada]] na
-    // memória do Claude.
-    function ehAdminTemporario() {
-      return estaLogado() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    // Substitui o login antigo de usuário/senha fixos + sessão anônima, em
+    // que qualquer sessão anônima conseguia ler tudo.
+    function ehAdmin() {
+      return estaLogado() && (
+        (request.auth.token.email_verified == true
+          && request.auth.token.email in ['claudecirwitkoski@gmail.com'])
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
-    // ============================================================
 
     // ---------------- admins ----------------
     // Só a Cloud Function provisionarAdminInicial cria (Admin SDK, ignora
@@ -73,7 +57,7 @@ service cloud.firestore {
       // lido por outro usuário — os dados relevantes (nome, telefone,
       // veículo, placa) são copiados pra dentro de "solicitacoes" na hora
       // da solicitação (SocorroActivity.onSolicitarServico).
-      allow read: if ehDono(uid) || ehAdmin() || ehAdminTemporario();
+      allow read: if ehDono(uid) || ehAdmin();
       allow write: if ehDono(uid) || ehAdmin();
     }
 
@@ -113,7 +97,7 @@ service cloud.firestore {
         return estaLogado() && resource.data.prestadorUid == request.auth.uid;
       }
 
-      allow read: if ehAdmin() || ehAdminTemporario() || souMotorista() || souPrestador();
+      allow read: if ehAdmin() || souMotorista() || souPrestador();
 
       // Só o motorista cria (SocorroActivity.onSolicitarServico), sempre
       // com o próprio uid.
@@ -147,7 +131,7 @@ service cloud.firestore {
           return estaLogado() && (request.auth.uid == s.motoristaUid || request.auth.uid == s.prestadorUid);
         }
 
-        allow read: if ehAdmin() || ehAdminTemporario() || souParticipante();
+        allow read: if ehAdmin() || souParticipante();
 
         // remetenteTipo precisa bater com qual dos dois lados o uid
         // realmente é na solicitação (não um valor livre) — ver
@@ -181,7 +165,7 @@ service cloud.firestore {
     // próprio histórico; pagamentosProcessados nunca é lido pelo cliente
     // (é só controle interno do webhook).
     match /pagamentos/{id} {
-      allow read: if ehAdmin() || ehAdminTemporario()
+      allow read: if ehAdmin()
         || (estaLogado() && resource.data.prestadorId == request.auth.uid);
       allow write: if false;
     }

@@ -3,7 +3,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/fireba
 import {
   getAuth,
   onAuthStateChanged,
-  signInAnonymously,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
@@ -22,8 +24,13 @@ import {
   deleteObject,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
-const ADMIN_USER = "Programador";
-const ADMIN_PASSWORD = "SENHA_REMOVIDA";
+// Mesma lista de ehAdmin() em firestore.rules e do AdminRepository.EMAILS_ADMIN
+// no app — mudar nos três juntos. A conta é criada pelo app admin ("Criar conta").
+const EMAILS_ADMIN = ["claudecirwitkoski@gmail.com"];
+
+function ehAdmin(user) {
+  return !!user && user.emailVerified && EMAILS_ADMIN.includes((user.email || "").toLowerCase());
+}
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -47,30 +54,67 @@ document.querySelectorAll("[data-voltar]").forEach((el) => {
 
 // ---------- Login ----------
 
+// Só abre o painel pra admin com e-mail validado (sessões anônimas das
+// versões antigas caem no login).
 onAuthStateChanged(auth, (user) => {
+  if (user && !ehAdmin(user)) {
+    signOut(auth);
+    return;
+  }
   mostrarView(user ? "view-panel" : "view-login");
 });
 
 document.getElementById("btnEntrar").addEventListener("click", async () => {
-  const usuario = document.getElementById("loginUsuario").value.trim();
-  const senha = document.getElementById("loginSenha").value.trim();
+  const email = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginSenha").value;
   const erroEl = document.getElementById("loginErro");
   erroEl.textContent = "";
 
-  if (!usuario || !senha) {
+  if (!email || !senha) {
     erroEl.textContent = "Preencha todos os campos.";
     return;
   }
-
-  if (usuario !== ADMIN_USER || senha !== ADMIN_PASSWORD) {
-    erroEl.textContent = "❌ Usuário ou senha incorretos.";
+  if (senha.length < 6 || senha.length > 10) {
+    erroEl.textContent = "A senha deve ter de 6 a 10 caracteres.";
     return;
   }
 
   try {
-    await signInAnonymously(auth);
+    const { user } = await signInWithEmailAndPassword(auth, email, senha);
+    // reload(): a validação do e-mail acontece fora daqui, no link recebido.
+    await user.reload();
+    if (!user.emailVerified) {
+      try {
+        await sendEmailVerification(user);
+        erroEl.textContent = "📧 Valide seu e-mail para entrar. Reenviamos o e-mail de verificação — confira também o spam.";
+      } catch (_) {
+        erroEl.textContent = "📧 Valide seu e-mail para entrar. Confira a caixa de entrada e o spam do e-mail já enviado.";
+      }
+      await signOut(auth);
+      return;
+    }
+    if (!ehAdmin(user)) {
+      erroEl.textContent = "❌ Esta conta não tem acesso ao painel administrativo.";
+      await signOut(auth);
+    }
   } catch (e) {
-    erroEl.textContent = "Erro ao autenticar: " + e.message;
+    erroEl.textContent = "❌ E-mail ou senha incorretos.";
+  }
+});
+
+document.getElementById("btnEsqueciSenha").addEventListener("click", async (evento) => {
+  evento.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const erroEl = document.getElementById("loginErro");
+  if (!email) {
+    erroEl.textContent = "Digite seu e-mail para redefinir a senha.";
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    erroEl.textContent = "📧 Enviamos um link para redefinir sua senha. Confira também o spam.";
+  } catch (e) {
+    erroEl.textContent = "❌ Não foi possível enviar: " + e.message;
   }
 });
 

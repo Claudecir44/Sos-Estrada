@@ -1,10 +1,18 @@
 package com.cjstudio.sosestrada
 
-// Painel administrativo (app admin): login e listagens de tudo.
+// Painel administrativo (app admin e painel web): login por e-mail e senha
+// e listagens de tudo.
 interface IAdminRepository {
-    fun temSessao(): Boolean
+    // Sessão aberta de um admin com e-mail já validado.
+    fun temSessaoDeAdmin(): Boolean
 
-    suspend fun entrar(usuario: String, senha: String): Result<Unit>
+    // Entra, exige e-mail validado e confere se a conta é de admin.
+    suspend fun entrar(email: String, senha: String): Result<Unit>
+
+    // Cria a conta de admin (só o e-mail autorizado) e manda a verificação.
+    suspend fun criarConta(email: String, senha: String): Result<Unit>
+
+    suspend fun enviarRedefinicaoSenha(email: String): Result<Unit>
 
     fun sair()
 

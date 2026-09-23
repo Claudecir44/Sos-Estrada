@@ -1,5 +1,6 @@
 package com.cjstudio.sosestrada
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -34,7 +35,13 @@ class CadastroMotoristaActivity : AppCompatActivity() {
 
         editando = intent.getBooleanExtra(EXTRA_EDITANDO, false)
         binding.btnCadastrar.text = if (editando) "ATUALIZAR CADASTRO" else "CADASTRAR"
-        if (editando) carregarCadastro()
+        if (editando) {
+            // O e-mail é o login da conta — mudar só no cadastro deixaria os
+            // dois diferentes. A senha também não muda por aqui.
+            binding.edtEmail.isEnabled = false
+            binding.edtSenha.isEnabled = false
+            carregarCadastro()
+        }
 
         binding.btnVoltar.setOnClickListener { finish() }
         binding.btnCadastrar.setOnClickListener { realizarCadastro() }
@@ -72,8 +79,7 @@ class CadastroMotoristaActivity : AppCompatActivity() {
             telefone.isEmpty() -> return binding.edtTelefone.erro("Telefone obrigatório")
             email.isEmpty() -> return binding.edtEmail.erro("E-mail obrigatório")
             !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> return binding.edtEmail.erro("E-mail inválido")
-            !editando && senha.isEmpty() -> return binding.edtSenha.erro("Senha obrigatória para novo cadastro")
-            !editando && senha.length < 6 -> return binding.edtSenha.erro("Senha deve ter pelo menos 6 caracteres")
+            !editando && SenhaUtil.validar(senha) != null -> return binding.edtSenha.erro(SenhaUtil.validar(senha)!!)
             veiculo.isEmpty() -> return binding.edtVeiculo.erro("Modelo do veículo obrigatório")
             placa.isEmpty() -> return binding.edtPlaca.erro("Placa obrigatória")
             cor.isEmpty() -> return binding.edtCor.erro("Cor do veículo obrigatória")
@@ -93,9 +99,12 @@ class CadastroMotoristaActivity : AppCompatActivity() {
             }
             motoristaRepository.salvarMeuCadastro(motorista)
                 .onSuccess {
-                    val mensagem = if (editando) "✅ Dados atualizados!" else "✅ Cadastro realizado!"
-                    Toast.makeText(this@CadastroMotoristaActivity, mensagem, Toast.LENGTH_LONG).show()
-                    finish()
+                    if (editando) {
+                        Toast.makeText(this@CadastroMotoristaActivity, "✅ Dados atualizados!", Toast.LENGTH_LONG).show()
+                        finish()
+                    } else {
+                        concluirCadastroNovo(email)
+                    }
                 }
                 .onFailure { e ->
                     binding.btnCadastrar.isEnabled = true
@@ -103,6 +112,19 @@ class CadastroMotoristaActivity : AppCompatActivity() {
                     Toast.makeText(this@CadastroMotoristaActivity, "$prefixo: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         }
+    }
+
+    // Conta nova só entra depois de validar o e-mail: manda a verificação,
+    // encerra a sessão e volta pro login com o aviso.
+    private suspend fun concluirCadastroNovo(email: String) {
+        authRepository.enviarVerificacaoEmail()
+        authRepository.sair()
+        AlertDialog.Builder(this)
+            .setTitle("✅ Cadastro realizado!")
+            .setMessage("Enviamos um e-mail de verificação para $email.\n\nAbra o link do e-mail (confira também o spam) e depois entre com seu e-mail e senha.")
+            .setCancelable(false)
+            .setPositiveButton("OK") { _, _ -> finish() }
+            .show()
     }
 
     private fun EditText.textoLimpo() = text.toString().trim()

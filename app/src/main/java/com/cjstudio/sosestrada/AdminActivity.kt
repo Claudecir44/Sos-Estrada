@@ -33,52 +33,101 @@ class AdminActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // Sessão de um login anterior: mantém o admin logado entre aberturas.
-        if (adminRepository.temSessao()) inicializarPainel() else pedirLogin()
+        if (adminRepository.temSessaoDeAdmin()) inicializarPainel() else pedirLogin()
     }
 
-    // Cancelar ou errar a senha fecha a tela (não há conteúdo sem autenticar).
-    private fun pedirLogin() {
+    // Login por e-mail e senha. O diálogo fica aberto até entrar (ou
+    // cancelar, que fecha a tela — não há conteúdo sem autenticar).
+    private fun pedirLogin(emailInicial: String = "") {
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_admin_login, null)
-        val edtUsuario = view.findViewById<EditText>(R.id.edtUsuario)
-        val edtSenha = view.findViewById<EditText>(R.id.edtSenha)
-        AlertDialog.Builder(this)
+        val edtEmail = view.findViewById<EditText>(R.id.edtEmailAdmin)
+        val edtSenha = view.findViewById<EditText>(R.id.edtSenhaAdmin)
+        edtEmail.setText(emailInicial)
+
+        val dialogo = AlertDialog.Builder(this)
             .setCancelable(false)
             .setTitle("🔐 Acesso Administrativo")
             .setView(view)
-            .setPositiveButton("Entrar") { _, _ ->
-                val usuario = edtUsuario.text.toString().trim()
-                val senha = edtSenha.text.toString().trim()
-                if (usuario.isEmpty() || senha.isEmpty()) {
-                    Toast.makeText(this, "Preencha todos os campos.", Toast.LENGTH_SHORT).show()
-                    finish()
-                } else {
-                    entrar(usuario, senha)
-                }
-            }
+            .setPositiveButton("Entrar", null)
+            .setNeutralButton("Criar conta", null)
             .setNegativeButton("Cancelar") { _, _ -> finish() }
-            .show()
+            .create()
+
+        view.findViewById<View>(R.id.btnEsqueciSenhaAdmin).setOnClickListener {
+            val email = edtEmail.text.toString().trim()
+            if (email.isEmpty()) {
+                edtEmail.error = "Digite seu e-mail para redefinir a senha"
+                return@setOnClickListener
+            }
+            lifecycleScope.launch {
+                adminRepository.enviarRedefinicaoSenha(email)
+                    .onSuccess { avisar("📧 Enviamos um link para redefinir sua senha para $email. Confira também o spam.") }
+                    .onFailure { e -> avisar("❌ Não foi possível enviar: ${e.message}") }
+            }
+        }
+
+        // Botões ligados depois do show(): assim um erro de validação não fecha o diálogo.
+        dialogo.setOnShowListener {
+            dialogo.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                lerCampos(edtEmail, edtSenha)?.let { (email, senha) -> entrar(dialogo, email, senha) }
+            }
+            dialogo.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                lerCampos(edtEmail, edtSenha)?.let { (email, senha) -> criarConta(dialogo, email, senha) }
+            }
+        }
+        dialogo.show()
     }
 
-    private fun entrar(usuario: String, senha: String) {
+    private fun lerCampos(edtEmail: EditText, edtSenha: EditText): Pair<String, String>? {
+        val email = edtEmail.text.toString().trim()
+        val senha = edtSenha.text.toString()
+        if (email.isEmpty()) {
+            edtEmail.error = "E-mail obrigatório"
+            return null
+        }
+        SenhaUtil.validar(senha)?.let {
+            edtSenha.error = it
+            return null
+        }
+        return email to senha
+    }
+
+    private fun entrar(dialogo: AlertDialog, email: String, senha: String) {
         lifecycleScope.launch {
-            adminRepository.entrar(usuario, senha)
-                .onSuccess { inicializarPainel() }
+            adminRepository.entrar(email, senha)
+                .onSuccess {
+                    dialogo.dismiss()
+                    inicializarPainel()
+                }
                 .onFailure { e ->
-                    if (e is IllegalArgumentException) {
-                        Toast.makeText(this@AdminActivity, "❌ Usuário ou senha incorretos.", Toast.LENGTH_SHORT).show()
-                        finish()
+                    val mensagem = if (e is EmailNaoVerificadoException || e is IllegalStateException) {
+                        e.message
                     } else {
-                        // Falha do login anônimo: abre mesmo assim (como antes), mas
-                        // as leituras vão falhar até habilitar o provedor no Console.
-                        Toast.makeText(
-                            this@AdminActivity,
-                            "Erro ao autenticar admin: ${e.message}\nHabilite o login Anônimo no Firebase Console (Authentication > Sign-in method).",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        inicializarPainel()
+                        "❌ E-mail ou senha incorretos."
                     }
+                    avisar(mensagem ?: "❌ Não foi possível entrar.")
                 }
         }
+    }
+
+    private fun criarConta(dialogo: AlertDialog, email: String, senha: String) {
+        lifecycleScope.launch {
+            adminRepository.criarConta(email, senha)
+                .onSuccess {
+                    dialogo.dismiss()
+                    AlertDialog.Builder(this@AdminActivity)
+                        .setTitle("✅ Conta criada!")
+                        .setMessage("Enviamos um e-mail de verificação para $email.\n\nAbra o link do e-mail (confira também o spam) e depois entre com seu e-mail e senha.")
+                        .setCancelable(false)
+                        .setPositiveButton("OK") { _, _ -> pedirLogin(email) }
+                        .show()
+                }
+                .onFailure { e -> avisar("❌ ${e.message}") }
+        }
+    }
+
+    private fun avisar(mensagem: String) {
+        Toast.makeText(this, mensagem, Toast.LENGTH_LONG).show()
     }
 
     private fun inicializarPainel() {

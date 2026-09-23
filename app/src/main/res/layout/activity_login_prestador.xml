@@ -96,6 +96,21 @@
         app:cornerRadius="8dp"
         android:layout_marginBottom="16dp" />
 
+    <!-- Esqueci a senha: manda o link de redefinição pro e-mail digitado acima -->
+    <TextView
+        android:id="@+id/btnEsqueciSenha"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Esqueci minha senha"
+        android:textSize="13sp"
+        android:textColor="#1976D2"
+        android:padding="6dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackground"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp" />
+
     <!-- Mensagem de erro -->
     <TextView
         android:id="@+id/tvMensagem"
