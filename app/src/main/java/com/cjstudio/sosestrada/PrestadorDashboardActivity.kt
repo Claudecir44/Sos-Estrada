@@ -47,9 +47,29 @@ class PrestadorDashboardActivity : AppCompatActivity() {
             startActivity(Intent(this, AssinaturaActivity::class.java))
         }
         binding.btnExcluir.setOnClickListener { confirmarExclusao() }
+        binding.btnMeuPerfilPrestador.setOnClickListener { startActivity(CadastroPrestadorActivity.intentEdicao(this)) }
+        binding.ivFotoPrestadorPainel.setOnClickListener { startActivity(CadastroPrestadorActivity.intentEdicao(this)) }
         binding.btnVoltar.setOnClickListener {
+            authRepository.sair()
             startActivity(Intent(this, LoginPrestadorActivity::class.java))
             finish()
+        }
+    }
+
+    // Volta da edição do cadastro: atualiza logo, nome e serviço do cabeçalho.
+    override fun onResume() {
+        super.onResume()
+        if (::binding.isInitialized) carregarCabecalho()
+    }
+
+    // Logo (foto) + primeiro nome embaixo dela, e o serviço oferecido.
+    private fun carregarCabecalho() {
+        lifecycleScope.launch {
+            val prestador = prestadorRepository.buscarMeuCadastro().getOrNull()
+            FotoUtil.mostrar(binding.ivFotoPrestadorPainel, prestador?.logo)
+            val primeiroNome = prestador?.nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
+            binding.tvNomePrestadorPainel.text = primeiroNome ?: "Prestador"
+            binding.tvServicoPainel.text = "🔧 " + (prestador?.servico?.takeIf { it.isNotBlank() } ?: "Cadastre seu serviço em Meu Perfil")
         }
     }
 

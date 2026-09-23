@@ -33,4 +33,11 @@
     <color name="motorista_fundo">#F2F6FC</color>
     <color name="motorista_socorro_inicio">#FF8F00</color>
     <color name="motorista_socorro_fim">#F4511E</color>
+
+    <!-- Área do prestador (tema verde clarinho) -->
+    <color name="prestador_verde_inicio">#81C784</color>
+    <color name="prestador_verde">#43A047</color>
+    <color name="prestador_verde_escuro">#2E7D32</color>
+    <color name="prestador_verde_claro">#E8F5E9</color>
+    <color name="prestador_fundo">#F4FAF4</color>
 </resources>

@@ -1,20 +1,16 @@
 package com.cjstudio.sosestrada
 
-import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
-import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PrestadorRepository @Inject constructor(
     private val auth: FirebaseAuth,
-    private val db: FirebaseFirestore,
-    private val storage: FirebaseStorage
+    private val db: FirebaseFirestore
 ) : IPrestadorRepository {
 
     private fun uidLogado(): String = auth.currentUser?.uid ?: throw IllegalStateException("Não há sessão ativa.")
@@ -54,12 +50,6 @@ class PrestadorRepository @Inject constructor(
             documento.set(dados, SetOptions.merge()).await()
         }
         Unit
-    }
-
-    override suspend fun enviarLogo(imagem: Uri): Result<String> = runCatching {
-        val referencia = storage.reference.child("logos/${uidLogado()}/${UUID.randomUUID()}.jpg")
-        referencia.putFile(imagem).await()
-        referencia.downloadUrl.await().toString()
     }
 
     override suspend fun excluirMeuCadastro(): Result<Unit> = runCatching {

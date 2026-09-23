@@ -37,9 +37,18 @@ object FotoUtil {
         Base64.encodeToString(bytes, Base64.NO_WRAP)
     }
 
-    // Mostra a foto em círculo; sem foto, o ícone padrão.
-    fun mostrar(imagem: ImageView, fotoBase64: String?, semFoto: Int = R.drawable.ic_admin) {
-        val bytes = fotoBase64?.takeIf { it.isNotEmpty() }?.let { runCatching { Base64.decode(it, Base64.DEFAULT) }.getOrNull() }
+    // Mostra a foto em círculo; sem foto, o ícone padrão. Aceita também um
+    // link (logos antigas de prestador, de quando havia upload pro Storage).
+    fun mostrar(imagem: ImageView, foto: String?, semFoto: Int = R.drawable.ic_admin) {
+        if (foto.isNullOrEmpty()) {
+            imagem.setImageResource(semFoto)
+            return
+        }
+        if (foto.startsWith("http")) {
+            Glide.with(imagem).load(foto).circleCrop().placeholder(semFoto).error(semFoto).into(imagem)
+            return
+        }
+        val bytes = runCatching { Base64.decode(foto, Base64.DEFAULT) }.getOrNull()
         if (bytes == null) {
             imagem.setImageResource(semFoto)
             return

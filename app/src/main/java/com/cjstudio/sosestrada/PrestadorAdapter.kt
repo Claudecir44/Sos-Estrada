@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.ACEITO
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.CANCELADO
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.PENDENTE
@@ -48,11 +47,7 @@ class PrestadorAdapter(
             else -> String.format(Locale.getDefault(), "%.1f km", p.distancia)
         }
 
-        if (!p.logo.isNullOrEmpty()) {
-            Glide.with(context).load(p.logo).placeholder(R.drawable.ic_placeholder_logo).into(b.ivLogoPrestador)
-        } else {
-            b.ivLogoPrestador.setImageResource(R.drawable.ic_placeholder_logo)
-        }
+        FotoUtil.mostrar(b.ivLogoPrestador, p.logo, R.drawable.ic_placeholder_logo)
 
         mostrarStatus(b, p.statusSolicitacao)
         mostrarBotaoMensagem(b, p)

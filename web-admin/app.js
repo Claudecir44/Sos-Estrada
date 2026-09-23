@@ -205,6 +205,11 @@ async function carregarMotoristas() {
 
 // ---------- Prestadores ----------
 
+// Logo nova vem como JPEG em base64 (o projeto não tem Storage); a antiga, como link.
+function srcFoto(foto) {
+  return foto.startsWith("http") ? foto : "data:image/jpeg;base64," + foto;
+}
+
 function enderecoCompletoPrestador(p) {
   let sb = "";
   if (p.rua) sb += p.rua;
@@ -248,7 +253,7 @@ async function carregarPrestadores() {
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
-        ${p.logo ? `<img class="logo" src="${escapeHtml(p.logo)}" />` : ""}
+        ${p.logo ? `<img class="logo" src="${escapeHtml(srcFoto(p.logo))}" />` : ""}
         <p class="nome">${escapeHtml(p.nome)}</p>
         <p>CNPJ: ${escapeHtml(p.cnpj)}</p>
         <p>Telefone: ${escapeHtml(p.telefone)}</p>

@@ -98,12 +98,8 @@ class CadastroPrestadorActivity : AppCompatActivity() {
                     binding.edtPais.setText(prestador.pais)
                     logoUrlAtual = prestador.logo
                     // Só mostra a logo salva se o prestador ainda não escolheu outra.
-                    if (!prestador.logo.isNullOrEmpty() && imagemSelecionada == null) {
-                        Glide.with(this@CadastroPrestadorActivity)
-                            .load(prestador.logo)
-                            .centerCrop()
-                            .placeholder(R.drawable.ic_placeholder_logo)
-                            .into(binding.ivLogo)
+                    if (imagemSelecionada == null) {
+                        FotoUtil.mostrar(binding.ivLogo, prestador.logo, R.drawable.ic_placeholder_logo)
                     }
                 }
                 .onFailure { e ->
@@ -179,16 +175,9 @@ class CadastroPrestadorActivity : AppCompatActivity() {
                 }
             }
 
-            // Logo nova é opcional: se o upload falhar, salva o resto e mantém a anterior.
-            var logo = logoUrlAtual
-            imagemSelecionada?.let { imagem ->
-                prestadorRepository.enviarLogo(imagem)
-                    .onSuccess { url -> logo = url }
-                    .onFailure { e ->
-                        Toast.makeText(this@CadastroPrestadorActivity, "Erro no upload: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-            }
-            prestador.logo = logo
+            // Logo nova (opcional) vai reduzida dentro do próprio cadastro — o
+            // projeto não tem Firebase Storage. Sem logo nova, fica a anterior.
+            prestador.logo = imagemSelecionada?.let { FotoUtil.paraBase64(this@CadastroPrestadorActivity, it) } ?: logoUrlAtual
 
             prestadorRepository.salvarMeuCadastro(prestador, cadastroNovo = !editando)
                 .onSuccess {

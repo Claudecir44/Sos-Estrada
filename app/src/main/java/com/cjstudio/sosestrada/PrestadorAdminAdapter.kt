@@ -3,7 +3,6 @@ package com.cjstudio.sosestrada
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.cjstudio.sosestrada.databinding.ItemPrestadorAdminBinding
 
 class PrestadorAdminAdapter : RecyclerView.Adapter<PrestadorAdminAdapter.ViewHolder>() {
@@ -35,11 +34,7 @@ class PrestadorAdminAdapter : RecyclerView.Adapter<PrestadorAdminAdapter.ViewHol
                 p.preco?.takeIf { it.isNotBlank() }?.let { "💲 $it" }
             ).joinToString("  •  ").ifEmpty { "CNPJ não informado" }
             tvUidPrestador.text = "ID ${p.uid.orEmpty()}"
-            if (!p.logo.isNullOrEmpty()) {
-                Glide.with(root).load(p.logo).placeholder(R.drawable.ic_placeholder_logo).into(ivLogoPrestador)
-            } else {
-                ivLogoPrestador.setImageResource(R.drawable.ic_placeholder_logo)
-            }
+            FotoUtil.mostrar(ivLogoPrestador, p.logo, R.drawable.ic_placeholder_logo)
         }
     }
 }
