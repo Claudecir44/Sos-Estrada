@@ -141,7 +141,7 @@ class AdminActivity : AppCompatActivity() {
         if (resultado.resultCode == CadastroAdminActivity.RESULTADO_EXCLUIDO) recreate() else carregarSaudacao()
     }
 
-    // Foto + só o primeiro nome do cadastro de admin ("Olá, Claudecir");
+    // Foto + só o primeiro nome do cadastro de admin (embaixo da foto);
     // sem cadastro, cai no começo do e-mail.
     private fun carregarSaudacao() {
         lifecycleScope.launch {
@@ -150,7 +150,7 @@ class AdminActivity : AppCompatActivity() {
             val nome = cadastro?.nome
             val primeiroNome = nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
                 ?: adminRepository.emailLogado()?.substringBefore("@")
-            binding.tvSaudacaoAdmin.text = if (primeiroNome != null) "Olá, $primeiroNome" else "Olá!"
+            binding.tvSaudacaoAdmin.text = primeiroNome ?: "Admin"
         }
     }
 

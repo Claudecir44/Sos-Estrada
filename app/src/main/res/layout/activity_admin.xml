@@ -16,35 +16,55 @@
         android:layout_height="wrap_content"
         android:background="@drawable/bg_admin_header"
         android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingTop="20dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="12dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="12dp"
         android:paddingBottom="20dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="4dp">
+            android:gravity="top"
+            android:orientation="horizontal">
 
-            <!-- Foto do admin logado -->
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/ivFotoAdminCabecalho"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:background="#33FFFFFF"
-                android:padding="2dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_admin"
-                app:shapeAppearanceOverlay="@style/AdminLogoCircular"
-                app:strokeColor="#CCFFFFFF"
-                app:strokeWidth="2dp" />
+            <!-- Foto do admin no canto, com o primeiro nome embaixo -->
+            <LinearLayout
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivFotoAdminCabecalho"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="#33FFFFFF"
+                    android:padding="2dp"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_admin"
+                    app:shapeAppearanceOverlay="@style/AdminLogoCircular"
+                    app:strokeColor="#CCFFFFFF"
+                    app:strokeWidth="2dp" />
+
+                <TextView
+                    android:id="@+id/tvSaudacaoAdmin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="Olá!"
+                    android:textColor="@android:color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="6dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -54,62 +74,64 @@
                     android:letterSpacing="0.1"
                     android:text="🛡️ SOS ESTRADA"
                     android:textColor="#CCFFFFFF"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textStyle="bold" />
 
+                <!-- Sempre numa linha: diminui a fonte em tela estreita -->
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="28dp"
+                    android:layout_marginTop="2dp"
+                    android:maxLines="1"
                     android:text="Painel Administrativo"
                     android:textColor="@android:color/white"
-                    android:textSize="19sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvSaudacaoAdmin"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="Olá!"
-                    android:textColor="#E6FFFFFF"
-                    android:textSize="14sp" />
+                    android:textStyle="bold"
+                    app:autoSizeMaxTextSize="20sp"
+                    app:autoSizeMinTextSize="13sp"
+                    app:autoSizeTextType="uniform" />
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:orientation="vertical">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMeuPerfil"
                     style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="30dp"
                     android:backgroundTint="@android:color/white"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
                     android:text="Meu Perfil"
                     android:textAllCaps="false"
                     android:textColor="@color/admin_vermelho"
-                    android:textSize="13sp"
-                    app:cornerRadius="20dp" />
+                    android:textSize="11sp"
+                    app:cornerRadius="15dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSairAdmin"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="30dp"
                     android:layout_marginTop="6dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
                     android:text="Sair"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
-                    android:textSize="13sp"
-                    app:cornerRadius="20dp"
+                    android:textSize="11sp"
+                    app:cornerRadius="15dp"
                     app:strokeColor="#99FFFFFF" />
             </LinearLayout>
         </LinearLayout>
@@ -118,7 +140,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp">
+            android:layout_marginTop="14dp">
 
             <LinearLayout
                 android:id="@+id/quadroMotoristas"
