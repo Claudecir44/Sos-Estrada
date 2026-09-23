@@ -94,6 +94,11 @@ class AdminRepository @Inject constructor(
 
     override fun emailLogado(): String? = auth.currentUser?.email
 
+    override suspend fun buscarMeuCadastro(): Result<Admin?> = runCatching {
+        val uid = auth.currentUser?.uid ?: throw IllegalStateException("Não há sessão ativa.")
+        documentoAdmin(uid).get().await().toObject(Admin::class.java)
+    }
+
     override suspend fun listarMotoristas(): Result<List<Motorista>> = runCatching {
         db.collection("motoristas").get().await().documents
             .mapNotNull { it.toObject(Motorista::class.java) }

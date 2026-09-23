@@ -1,7 +1,6 @@
 package com.cjstudio.sosestrada
 
 import android.app.AlertDialog
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -27,9 +26,6 @@ class AdminActivity : AppCompatActivity() {
     lateinit var adminRepository: IAdminRepository
 
     private lateinit var binding: ActivityAdminBinding
-    private val motoristaAdapter = MotoristaAdminAdapter()
-    private val prestadorAdapter = PrestadorAdminAdapter()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAdminBinding.inflate(layoutInflater)
@@ -126,43 +122,37 @@ class AdminActivity : AppCompatActivity() {
     }
 
     private fun inicializarPainel() {
-        binding.tvSaudacaoAdmin.text = "Olá, ${adminRepository.emailLogado().orEmpty()}"
-        binding.rvMotoristas.layoutManager = LinearLayoutManager(this)
-        binding.rvPrestadores.layoutManager = LinearLayoutManager(this)
-        binding.rvMotoristas.adapter = motoristaAdapter
-        binding.rvPrestadores.adapter = prestadorAdapter
-
-        binding.toggleListas.addOnButtonCheckedListener { _, id, marcado ->
-            if (marcado) mostrarLista(motoristas = id == R.id.btnMotoristas)
-        }
-        binding.cardTotalMotoristas.setOnClickListener { binding.toggleListas.check(R.id.btnMotoristas) }
-        binding.cardTotalPrestadores.setOnClickListener { binding.toggleListas.check(R.id.btnPrestadores) }
-        binding.cardTotalSolicitacoes.setOnClickListener {
-            startActivity(Intent(this, AdminSolicitacoesActivity::class.java))
-        }
-        binding.btnVerSolicitacoes.setOnClickListener {
-            startActivity(Intent(this, AdminSolicitacoesActivity::class.java))
-        }
-        binding.btnVerMensagensAdmin.setOnClickListener {
-            startActivity(Intent(this, AdminMensagensActivity::class.java))
-        }
+        carregarSaudacao()
+        binding.rvLista.layoutManager = LinearLayoutManager(this)
+        binding.grupoListas.setOnCheckedStateChangeListener { _, _ -> mostrarListaEscolhida() }
         binding.btnSairAdmin.setOnClickListener {
             adminRepository.sair()
             finish()
         }
-
         painelIniciado = true
         carregarTudo()
     }
 
-    // Volta das telas de solicitações/mensagens: atualiza os totais e as listas.
+    // Só o primeiro nome do cadastro de admin ("Olá, Claudecir"); sem
+    // cadastro, cai no começo do e-mail.
+    private fun carregarSaudacao() {
+        lifecycleScope.launch {
+            val nome = adminRepository.buscarMeuCadastro().getOrNull()?.nome
+            val primeiroNome = nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
+                ?: adminRepository.emailLogado()?.substringBefore("@")
+            binding.tvSaudacaoAdmin.text = if (primeiroNome != null) "Olá, $primeiroNome" else "Olá!"
+        }
+    }
+
+    // Volta do chat: atualiza os totais e as listas.
     override fun onResume() {
         super.onResume()
         if (painelIniciado) carregarTudo()
     }
 
-    // Motoristas, prestadores e solicitações de uma vez (em paralelo) — os
-    // totais do resumo saem das próprias listas.
+    // As quatro listas de uma vez (em paralelo) — os totais do cabeçalho
+    // saem delas. Conversas e solicitações são a mesma coleção, mostradas
+    // de dois jeitos.
     private fun carregarTudo() {
         binding.progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
@@ -173,44 +163,49 @@ class AdminActivity : AppCompatActivity() {
                 Triple(m.await(), p.await(), s.await())
             }
             binding.progressBar.visibility = View.GONE
-            binding.tvMensagemInicial.visibility = View.GONE
 
             motoristas.onSuccess { motoristaAdapter.atualizarLista(it) }
             prestadores.onSuccess { prestadorAdapter.atualizarLista(it) }
+            solicitacoes.onSuccess {
+                solicitacaoAdapter.atualizarLista(it)
+                conversaAdapter.atualizarLista(it)
+            }
             binding.tvTotalMotoristas.text = motoristas.getOrNull()?.size?.toString() ?: "—"
             binding.tvTotalPrestadores.text = prestadores.getOrNull()?.size?.toString() ?: "—"
             binding.tvTotalSolicitacoes.text = solicitacoes.getOrNull()?.size?.toString() ?: "—"
 
-            erroMotoristas = motoristas.exceptionOrNull()?.message
-            erroPrestadores = prestadores.exceptionOrNull()?.message
-            (erroMotoristas ?: erroPrestadores)?.let { avisar("Erro ao carregar cadastros: $it") }
-
-            mostrarLista(motoristas = binding.toggleListas.checkedButtonId != R.id.btnPrestadores)
+            erros = mapOf(
+                R.id.chipMotoristas to motoristas.exceptionOrNull()?.message,
+                R.id.chipPrestadores to prestadores.exceptionOrNull()?.message,
+                R.id.chipSolicitacoes to solicitacoes.exceptionOrNull()?.message,
+                R.id.chipMensagens to solicitacoes.exceptionOrNull()?.message
+            )
+            erros.values.firstOrNull { it != null }?.let { avisar("Erro ao carregar: $it") }
+            mostrarListaEscolhida()
         }
     }
 
     private var painelIniciado = false
-    private var erroMotoristas: String? = null
-    private var erroPrestadores: String? = null
+    private var erros: Map<Int, String?> = emptyMap()
+    private val motoristaAdapter = MotoristaAdminAdapter()
+    private val prestadorAdapter = PrestadorAdminAdapter()
+    private val solicitacaoAdapter = AdminSolicitacaoAdapter()
+    private val conversaAdapter = AdminConversaAdapter()
 
-    private fun mostrarLista(motoristas: Boolean) {
+    // Troca a lista abaixo do seletor (sem abrir outra tela).
+    private fun mostrarListaEscolhida() {
+        val escolhido = binding.grupoListas.checkedChipId
+        val (adapter, vazio) = when (escolhido) {
+            R.id.chipPrestadores -> prestadorAdapter to "Nenhum prestador cadastrado ainda."
+            R.id.chipSolicitacoes -> solicitacaoAdapter to "Nenhuma solicitação encontrada."
+            R.id.chipMensagens -> conversaAdapter to "Nenhuma conversa encontrada."
+            else -> motoristaAdapter to "Nenhum motorista cadastrado ainda."
+        }
+        if (binding.rvLista.adapter !== adapter) binding.rvLista.adapter = adapter
         if (binding.progressBar.visibility == View.VISIBLE) return
-        binding.rvMotoristas.visibility = if (motoristas) View.VISIBLE else View.GONE
-        binding.rvPrestadores.visibility = if (motoristas) View.GONE else View.VISIBLE
 
-        val (vazio, erro, total) = if (motoristas) {
-            Triple(binding.tvEmptyMotoristas, erroMotoristas, motoristaAdapter.itemCount)
-        } else {
-            Triple(binding.tvEmptyPrestadores, erroPrestadores, prestadorAdapter.itemCount)
-        }
-        binding.tvEmptyMotoristas.visibility = View.GONE
-        binding.tvEmptyPrestadores.visibility = View.GONE
-        if (erro != null) {
-            vazio.text = "Erro ao carregar.\n$erro"
-            vazio.visibility = View.VISIBLE
-        } else if (total == 0) {
-            vazio.text = if (motoristas) "Nenhum motorista cadastrado ainda." else "Nenhum prestador cadastrado ainda."
-            vazio.visibility = View.VISIBLE
-        }
+        val erro = erros[escolhido]
+        binding.tvListaVazia.text = if (erro != null) "Erro ao carregar.\n$erro" else vazio
+        binding.tvListaVazia.visibility = if (erro != null || adapter.itemCount == 0) View.VISIBLE else View.GONE
     }
 }

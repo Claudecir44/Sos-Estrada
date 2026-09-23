@@ -64,4 +64,45 @@
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
     </style>
+
+    <!-- Totais do cabeçalho (quadrados, só informativos) -->
+    <style name="AdminQuadroTotal">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">0dp</item>
+        <item name="android:layout_marginStart">5dp</item>
+        <item name="android:layout_marginEnd">5dp</item>
+        <item name="android:background">@drawable/bg_admin_quadro</item>
+        <item name="android:gravity">center</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="AdminNumeroTotal">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:text">—</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="AdminRotuloTotal">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#E6FFFFFF</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Chips do seletor de listas -->
+    <style name="AdminChipSeletor" parent="Widget.MaterialComponents.Chip.Choice">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/admin_chip_texto</item>
+        <item name="chipBackgroundColor">@color/admin_chip_fundo</item>
+        <item name="chipStrokeColor">@color/admin_chip_borda</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipMinHeight">40dp</item>
+        <item name="checkedIconVisible">false</item>
+    </style>
 </resources>

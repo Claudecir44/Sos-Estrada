@@ -20,6 +20,9 @@ interface IAdminRepository {
 
     fun emailLogado(): String?
 
+    // Cadastro (admins/{uid}) do admin logado — nome pra saudação do painel.
+    suspend fun buscarMeuCadastro(): Result<Admin?>
+
     suspend fun listarMotoristas(): Result<List<Motorista>>
 
     suspend fun listarPrestadores(): Result<List<Prestador>>
