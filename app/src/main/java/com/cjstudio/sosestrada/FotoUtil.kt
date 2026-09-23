@@ -14,7 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
-// Foto de perfil do admin guardada dentro do próprio documento admins/{uid}
+// Foto de perfil (admin e motorista) guardada dentro do próprio documento
 // (texto base64 de um JPEG pequeno), porque o projeto não tem Firebase
 // Storage (criar o bucket exige o plano Blaze). Recortada em quadrado e
 // reduzida pra LADO px — fica em torno de 20–40 KB, bem abaixo do limite de
@@ -38,10 +38,10 @@ object FotoUtil {
     }
 
     // Mostra a foto em círculo; sem foto, o ícone padrão.
-    fun mostrar(imagem: ImageView, fotoBase64: String?) {
+    fun mostrar(imagem: ImageView, fotoBase64: String?, semFoto: Int = R.drawable.ic_admin) {
         val bytes = fotoBase64?.takeIf { it.isNotEmpty() }?.let { runCatching { Base64.decode(it, Base64.DEFAULT) }.getOrNull() }
         if (bytes == null) {
-            imagem.setImageResource(R.drawable.ic_admin)
+            imagem.setImageResource(semFoto)
             return
         }
         Glide.with(imagem).load(bytes).circleCrop().into(imagem)

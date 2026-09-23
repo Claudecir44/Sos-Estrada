@@ -54,6 +54,13 @@ class AuthRepository @Inject constructor(
         Unit
     }
 
+    override suspend fun trocarEmail(novoEmail: String, senha: String): Result<Unit> = runCatching {
+        reautenticar(senha).getOrElse { throw IllegalArgumentException("Senha incorreta.") }
+        val usuario = auth.currentUser ?: throw IllegalStateException("Não há sessão ativa.")
+        usuario.verifyBeforeUpdateEmail(novoEmail.trim().lowercase()).await()
+        Unit
+    }
+
     override suspend fun reautenticar(senha: String): Result<Unit> = runCatching {
         val usuario = auth.currentUser ?: throw IllegalStateException("Não há sessão ativa.")
         val email = usuario.email ?: throw IllegalStateException("E-mail não encontrado.")

@@ -9,5 +9,7 @@ data class Motorista(
     var email: String? = null,
     var veiculo: String? = null,
     var placa: String? = null,
-    var cor: String? = null
+    var cor: String? = null,
+    // JPEG pequeno em base64 (ver FotoUtil) — não há Firebase Storage.
+    var foto: String? = null
 )

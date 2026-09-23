@@ -44,6 +44,8 @@ class MotoristaDashboardActivity : AppCompatActivity() {
             startActivity(CadastroMotoristaActivity.intentEdicao(this))
         }
         binding.btnExcluir.setOnClickListener { confirmarExclusao() }
+        binding.btnMeuPerfilMotorista.setOnClickListener { startActivity(CadastroMotoristaActivity.intentEdicao(this)) }
+        binding.ivFotoMotoristaPainel.setOnClickListener { startActivity(CadastroMotoristaActivity.intentEdicao(this)) }
         binding.btnVoltar.setOnClickListener {
             authRepository.sair()
             startActivity(Intent(this, LoginMotoristaActivity::class.java))
@@ -57,15 +59,18 @@ class MotoristaDashboardActivity : AppCompatActivity() {
         if (::binding.isInitialized) carregarCabecalho()
     }
 
+    // Foto + primeiro nome (embaixo da foto) e o veículo do cadastro.
     private fun carregarCabecalho() {
         lifecycleScope.launch {
+            // Se o motorista confirmou um e-mail novo, acerta o cadastro.
+            authRepository.emailLogado()?.let { motoristaRepository.sincronizarEmail(it) }
             val motorista = motoristaRepository.buscarMeuCadastro().getOrNull()
+            FotoUtil.mostrar(binding.ivFotoMotoristaPainel, motorista?.foto)
             val primeiroNome = motorista?.nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
-            binding.tvSaudacaoMotorista.text = if (primeiroNome != null) "Olá, $primeiroNome!" else "Olá!"
-            binding.tvAvatarMotoristaPainel.text = if (primeiroNome != null) iniciais(motorista?.nome) else "🚗"
+            binding.tvNomeMotoristaPainel.text = primeiroNome ?: "Motorista"
             val veiculo = listOfNotNull(motorista?.veiculo, motorista?.placa, motorista?.cor)
                 .filter { it.isNotBlank() }.joinToString(" • ")
-            binding.tvVeiculoPainel.text = if (veiculo.isNotEmpty()) "🚗 $veiculo" else "🚗 Cadastre seu veículo em Editar cadastro"
+            binding.tvVeiculoPainel.text = if (veiculo.isNotEmpty()) "🚗 $veiculo" else "🚗 Cadastre seu veículo em Meu Perfil"
         }
     }
 

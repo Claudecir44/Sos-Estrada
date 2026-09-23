@@ -36,20 +36,42 @@
             android:gravity="center_horizontal">
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🚗"
-                android:textSize="64sp"
-                android:layout_marginBottom="8dp" />
-
-            <TextView
+                android:id="@+id/tvTituloCadastro"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Cadastro do Motorista"
                 android:textSize="24sp"
                 android:textStyle="bold"
-                android:textColor="#D32F2F"
-                android:layout_marginBottom="32dp" />
+                android:textColor="@color/motorista_azul_escuro"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Foto (obrigatória no cadastro) -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivFotoMotorista"
+                android:layout_width="112dp"
+                android:layout_height="112dp"
+                android:background="@color/motorista_azul_claro"
+                android:padding="2dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_admin"
+                app:shapeAppearanceOverlay="@style/AdminLogoCircular"
+                app:strokeColor="@color/motorista_azul"
+                app:strokeWidth="2dp" />
+
+            <TextView
+                android:id="@+id/tvSelecionarFotoMotorista"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="24dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="6dp"
+                android:text="📷 Selecionar foto *"
+                android:textColor="@color/motorista_azul"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <!-- Nome -->
             <com.google.android.material.textfield.TextInputLayout
@@ -99,8 +121,9 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Senha (opcional na edição) -->
+            <!-- Senha: só no cadastro (some na edição) -->
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilSenha"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"

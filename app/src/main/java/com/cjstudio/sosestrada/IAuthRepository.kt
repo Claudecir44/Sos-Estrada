@@ -21,6 +21,10 @@ interface IAuthRepository {
 
     suspend fun enviarRedefinicaoSenha(email: String): Result<Unit>
 
+    // Troca o e-mail de login: confirma a senha atual e manda um link pro
+    // e-mail NOVO — o login só muda depois que a pessoa abre esse link.
+    suspend fun trocarEmail(novoEmail: String, senha: String): Result<Unit>
+
     // Confirma a senha atual antes de ações sensíveis (excluir conta).
     suspend fun reautenticar(senha: String): Result<Unit>
 
