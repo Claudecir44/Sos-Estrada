@@ -58,7 +58,7 @@ class MotoristaDashboardActivity : AppCompatActivity() {
             // Se o motorista confirmou um e-mail novo, acerta o cadastro.
             authRepository.emailLogado()?.let { motoristaRepository.sincronizarEmail(it) }
             val motorista = motoristaRepository.buscarMeuCadastro().getOrNull()
-            if (motorista?.bloqueado == true) {
+            if (motorista?.bloqueado == true || authRepository.contaBloqueada()) {
                 // Bloqueado pelo admin com a sessão já aberta: volta pro login.
                 Toast.makeText(this@MotoristaDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()
                 authRepository.sair()

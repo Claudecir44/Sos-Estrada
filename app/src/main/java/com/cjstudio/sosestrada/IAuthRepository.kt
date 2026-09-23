@@ -33,6 +33,10 @@ interface IAuthRepository {
     suspend fun excluirConta(): Result<Unit>
 
     fun sair()
+
+    // Conta bloqueada pelo admin (bloqueados/{uid}) — vale mesmo depois de o
+    // admin excluir o cadastro, pra pessoa não se recadastrar.
+    suspend fun contaBloqueada(): Boolean
 }
 
 class EmailNaoVerificadoException(mensagem: String) : Exception(mensagem)

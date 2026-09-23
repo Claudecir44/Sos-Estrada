@@ -59,7 +59,7 @@ class PrestadorDashboardActivity : AppCompatActivity() {
     private fun carregarCabecalho() {
         lifecycleScope.launch {
             val prestador = prestadorRepository.buscarMeuCadastro().getOrNull()
-            if (prestador?.bloqueado == true) {
+            if (prestador?.bloqueado == true || authRepository.contaBloqueada()) {
                 // Bloqueado pelo admin com a sessão já aberta: volta pro login.
                 Toast.makeText(this@PrestadorDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()
                 authRepository.sair()

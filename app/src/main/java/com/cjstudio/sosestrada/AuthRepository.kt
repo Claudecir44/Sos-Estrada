@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -12,6 +13,7 @@ import javax.inject.Singleton
 @Singleton
 class AuthRepository @Inject constructor(
     private val auth: FirebaseAuth,
+    private val db: FirebaseFirestore,
     @ApplicationContext private val context: Context
 ) : IAuthRepository {
 
@@ -20,6 +22,12 @@ class AuthRepository @Inject constructor(
     override fun uidLogado(): String? = auth.currentUser?.uid
 
     override fun emailLogado(): String? = auth.currentUser?.email
+
+    override suspend fun contaBloqueada(): Boolean {
+        val uid = auth.currentUser?.uid ?: return false
+        return runCatching { db.collection(COLECAO_BLOQUEADOS).document(uid).get().await().exists() }
+            .getOrDefault(false)
+    }
 
     override suspend fun entrar(email: String, senha: String): Result<Unit> = runCatching {
         val usuario = auth.signInWithEmailAndPassword(email, senha).await().user
@@ -100,6 +108,7 @@ class AuthRepository @Inject constructor(
     }
 
     companion object {
+        const val COLECAO_BLOQUEADOS = "bloqueados"
         private const val PREFS = "sos_estrada_auth"
         private const val KEY_ULTIMO_ENVIO = "ultimo_envio_verificacao"
         private const val INTERVALO_REENVIO_MS = 60_000L

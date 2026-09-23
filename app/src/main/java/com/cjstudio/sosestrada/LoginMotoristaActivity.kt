@@ -19,9 +19,6 @@ class LoginMotoristaActivity : AppCompatActivity() {
     @Inject
     lateinit var authRepository: IAuthRepository
 
-    @Inject
-    lateinit var motoristaRepository: IMotoristaRepository
-
     private lateinit var binding: ActivityLoginMotoristaBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +55,7 @@ class LoginMotoristaActivity : AppCompatActivity() {
             authRepository.entrar(email, senha)
                 .onSuccess {
                     // Conta bloqueada pelo admin não entra.
-                    if (motoristaRepository.buscarMeuCadastro().getOrNull()?.bloqueado == true) {
+                    if (authRepository.contaBloqueada()) {
                         authRepository.sair()
                         binding.btnEntrar.isEnabled = true
                         mostrarMensagem(MENSAGEM_BLOQUEADO, erro = true)

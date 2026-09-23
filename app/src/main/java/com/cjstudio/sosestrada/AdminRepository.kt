@@ -154,7 +154,17 @@ class AdminRepository @Inject constructor(
         executarAcao(COLECAO_PRESTADORES, uid, "editar", senhaMaster) { lote, alvo -> lote.update(alvo, dados) }
 
     override suspend fun definirBloqueio(colecao: String, uid: String, bloquear: Boolean, senhaMaster: String): Result<Unit> =
-        executarAcao(colecao, uid, "bloquear", senhaMaster) { lote, alvo -> lote.update(alvo, "bloqueado", bloquear) }
+        executarAcao(colecao, uid, "bloquear", senhaMaster) { lote, alvo ->
+            lote.update(alvo, "bloqueado", bloquear)
+            // O registro em "bloqueados" é o que impede o recadastro depois
+            // de uma exclusão; desbloquear apaga.
+            val registro = db.collection(AuthRepository.COLECAO_BLOQUEADOS).document(uid)
+            if (bloquear) {
+                lote.set(registro, mapOf("colecao" to colecao, "adminUid" to auth.currentUser?.uid, "em" to FieldValue.serverTimestamp()))
+            } else {
+                lote.delete(registro)
+            }
+        }
 
     override suspend fun excluirCadastro(colecao: String, uid: String, senhaMaster: String): Result<Unit> =
         executarAcao(colecao, uid, "excluir", senhaMaster) { lote, alvo -> lote.delete(alvo) }

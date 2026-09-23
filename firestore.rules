@@ -45,18 +45,35 @@ service cloud.firestore {
     // um admin gravou acoesAdmin/{uid} com a senha master certa. "em" é
     // serverTimestamp, que dentro do lote é igual a request.time — então um
     // registro antigo que tenha sobrado não autoriza nada.
-    function acaoAdminAutorizada(colecao, uid) {
+    function acaoAdminRegistrada(uid) {
       let acao = getAfter(/databases/$(database)/documents/acoesAdmin/$(uid)).data;
       return ehAdmin()
         && acao.adminUid == request.auth.uid
-        && acao.colecao == colecao
         && acao.em == request.time
         && senhaMasterConfere(acao.autorizacao);
     }
 
-    function estaBloqueado(colecao, uid) {
-      return exists(/databases/$(database)/documents/$(colecao)/$(uid))
-        && get(/databases/$(database)/documents/$(colecao)/$(uid)).data.get('bloqueado', false) == true;
+    function acaoAdminAutorizada(colecao, uid) {
+      return acaoAdminRegistrada(uid)
+        && getAfter(/databases/$(database)/documents/acoesAdmin/$(uid)).data.colecao == colecao;
+    }
+
+    // Bloqueado pelo admin: o registro em bloqueados/{uid} continua mesmo
+    // se o admin excluir o cadastro — assim a pessoa não se recadastra.
+    function estaBloqueado(uid) {
+      return exists(/databases/$(database)/documents/bloqueados/$(uid));
+    }
+
+    // ---------------- bloqueados ----------------
+    // Só o admin, com a senha master, no mesmo lote do bloqueio/desbloqueio
+    // (AdminRepository.definirBloqueio). A própria pessoa lê o seu, pro app
+    // avisar no login.
+    match /bloqueados/{uid} {
+      allow read: if ehDono(uid) || ehAdmin();
+      allow create, update: if acaoAdminRegistrada(uid)
+        && request.resource.data.keys().hasOnly(['colecao', 'adminUid', 'em'])
+        && request.resource.data.colecao == getAfter(/databases/$(database)/documents/acoesAdmin/$(uid)).data.colecao;
+      allow delete: if acaoAdminRegistrada(uid);
     }
 
     // ---------------- acoesAdmin ----------------
@@ -120,7 +137,7 @@ service cloud.firestore {
       allow read: if ehDono(uid) || ehAdmin();
       // Dono: cria e edita o próprio perfil, mas nunca mexe em "bloqueado"
       // e, bloqueado, não edita mais nada. Admin: só com a senha master.
-      allow create: if ehDono(uid) && !('bloqueado' in request.resource.data);
+      allow create: if ehDono(uid) && !('bloqueado' in request.resource.data) && !estaBloqueado(uid);
       allow update: if acaoAdminAutorizada('motoristas', uid)
         || (ehDono(uid)
             && resource.data.get('bloqueado', false) != true
@@ -142,7 +159,8 @@ service cloud.firestore {
 
       // Cadastro e edição do próprio perfil (CadastroPrestadorActivity,
       // PrestadorDashboardActivity).
-      allow create: if ehDono(uid) && !request.resource.data.keys().hasAny(camposDoServidorPrestador());
+      allow create: if ehDono(uid) && !request.resource.data.keys().hasAny(camposDoServidorPrestador())
+        && !estaBloqueado(uid);
       // Admin só com a senha master (editar/bloquear no painel). Dono
       // bloqueado não edita mais nada.
       allow update: if acaoAdminAutorizada('prestadores', uid)
@@ -173,7 +191,7 @@ service cloud.firestore {
       // Só o motorista cria (SocorroActivity.onSolicitarServico), sempre
       // com o próprio uid.
       allow create: if estaLogado() && request.resource.data.motoristaUid == request.auth.uid
-        && !estaBloqueado('motoristas', request.auth.uid);
+        && !estaBloqueado(request.auth.uid);
 
       // Update é sempre parcial e feito por quem participa da solicitação:
       // - status: motorista cancela (SocorroActivity) ou prestador
