@@ -24,29 +24,38 @@ service cloud.firestore {
       return estaLogado() && request.auth.uid == uid;
     }
 
-    // Admin = conta por e-mail e senha com o e-mail JÁ VALIDADO e na lista
-    // abaixo (mesma lista do AdminRepository.EMAILS_ADMIN no app e do
-    // web-admin/app.js — mudar nos três juntos), ou com documento em
-    // admins/{uid} (pra quando a Cloud Function provisionarAdminInicial
-    // puder rodar). Não depende do plano Blaze.
-    //
-    // Substitui o login antigo de usuário/senha fixos + sessão anônima, em
-    // que qualquer sessão anônima conseguia ler tudo.
+    // Admin = conta por e-mail e senha com o e-mail JÁ VALIDADO e cadastro
+    // em admins/{uid} — que só é criado com a senha do administrador master
+    // (ver match /admins abaixo). Não depende do plano Blaze.
     function ehAdmin() {
-      return estaLogado() && (
-        (request.auth.token.email_verified == true
-          && request.auth.token.email in ['claudecirwitkoski@gmail.com'])
-        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      return estaLogado()
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     // ---------------- admins ----------------
-    // Só a Cloud Function provisionarAdminInicial cria (Admin SDK, ignora
-    // esta regra) — nunca o cliente. Sem leitura/edição pelo cliente: o
-    // único uso é o exists() acima, que não depende de permissão de
-    // leitura da coleção.
+    // Cadastro de admin feito pelo próprio app admin (CadastroAdminActivity,
+    // mesmo modelo do Caronas): a pessoa cria a conta e grava admins/{uid}
+    // mandando junto, no campo "autorizacao", a senha do administrador
+    // master. Aqui só fica o SHA-256 dela (em hexadecimal maiúsculo) — nunca a senha — e a
+    // criação só passa se o hash bater. Logo depois o app apaga o campo
+    // (update abaixo), então a senha master não fica guardada.
+    //
+    // Pra trocar a senha master: gerar o novo hash
+    //   node -e "console.log(require('crypto').createHash('sha256').update('NOVA_SENHA').digest('hex').toUpperCase())"
+    // e trocar o valor abaixo (e publicar as regras).
     match /admins/{adminId} {
-      allow read, write: if false;
+      allow read: if ehDono(adminId) || ehAdmin();
+      allow create: if ehDono(adminId)
+        && request.resource.data.keys().hasOnly(['nome', 'sobrenome', 'email', 'telefone', 'cpf', 'criadoEm', 'autorizacao'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.autorizacao is string
+        && hashing.sha256(request.resource.data.autorizacao).toHexString() == '__HASH_SENHA_MASTER__';
+      // Só pra apagar o campo "autorizacao" logo depois do cadastro.
+      allow update: if ehDono(adminId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['autorizacao'])
+        && !('autorizacao' in request.resource.data);
+      allow delete: if ehAdmin();
     }
 
     // ---------------- motoristas ----------------

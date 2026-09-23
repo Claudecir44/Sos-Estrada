@@ -12,6 +12,8 @@ import {
   getFirestore,
   collection,
   getDocs,
+  getDoc,
+  doc,
   query,
   where,
   orderBy,
@@ -24,12 +26,16 @@ import {
   deleteObject,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
-// Mesma lista de ehAdmin() em firestore.rules e do AdminRepository.EMAILS_ADMIN
-// no app — mudar nos três juntos. A conta é criada pelo app admin ("Criar conta").
-const EMAILS_ADMIN = ["claudecirwitkoski@gmail.com"];
-
-function ehAdmin(user) {
-  return !!user && user.emailVerified && EMAILS_ADMIN.includes((user.email || "").toLowerCase());
+// Admin = e-mail validado + cadastro em admins/{uid}, feito pelo app admin
+// ("Criar conta", autorizado pela senha do administrador master). Quem
+// garante o acesso de verdade são as regras do Firestore (ehAdmin()).
+async function ehAdmin(user) {
+  if (!user || user.isAnonymous || !user.emailVerified) return false;
+  try {
+    return (await getDoc(doc(db, "admins", user.uid))).exists();
+  } catch (_) {
+    return false;
+  }
 }
 
 const app = initializeApp(firebaseConfig);
@@ -56,8 +62,13 @@ document.querySelectorAll("[data-voltar]").forEach((el) => {
 
 // Só abre o painel pra admin com e-mail validado (sessões anônimas das
 // versões antigas caem no login).
-onAuthStateChanged(auth, (user) => {
-  if (user && !ehAdmin(user)) {
+// Durante o clique em "Entrar" quem decide é o próprio login (que ainda
+// precisa da sessão aberta pra reenviar a verificação).
+let entrando = false;
+
+onAuthStateChanged(auth, async (user) => {
+  if (entrando) return;
+  if (user && !(await ehAdmin(user))) {
     signOut(auth);
     return;
   }
@@ -79,6 +90,7 @@ document.getElementById("btnEntrar").addEventListener("click", async () => {
     return;
   }
 
+  entrando = true;
   try {
     const { user } = await signInWithEmailAndPassword(auth, email, senha);
     // reload(): a validação do e-mail acontece fora daqui, no link recebido.
@@ -93,12 +105,16 @@ document.getElementById("btnEntrar").addEventListener("click", async () => {
       await signOut(auth);
       return;
     }
-    if (!ehAdmin(user)) {
+    if (!(await ehAdmin(user))) {
       erroEl.textContent = "❌ Esta conta não tem acesso ao painel administrativo.";
       await signOut(auth);
+      return;
     }
+    mostrarView("view-panel");
   } catch (e) {
     erroEl.textContent = "❌ E-mail ou senha incorretos.";
+  } finally {
+    entrando = false;
   }
 });
 

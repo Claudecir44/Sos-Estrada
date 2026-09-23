@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -33,7 +34,14 @@ class AdminActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // Sessão de um login anterior: mantém o admin logado entre aberturas.
-        if (adminRepository.temSessaoDeAdmin()) inicializarPainel() else pedirLogin()
+        lifecycleScope.launch {
+            if (adminRepository.temSessaoDeAdmin()) inicializarPainel() else pedirLogin()
+        }
+    }
+
+    // Volta do cadastro de admin: reabre o login já com o e-mail cadastrado.
+    private val cadastroAdmin = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { resultado ->
+        pedirLogin(resultado.data?.getStringExtra(CadastroAdminActivity.EXTRA_EMAIL).orEmpty())
     }
 
     // Login por e-mail e senha. O diálogo fica aberto até entrar (ou
@@ -72,7 +80,8 @@ class AdminActivity : AppCompatActivity() {
                 lerCampos(edtEmail, edtSenha)?.let { (email, senha) -> entrar(dialogo, email, senha) }
             }
             dialogo.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                lerCampos(edtEmail, edtSenha)?.let { (email, senha) -> criarConta(dialogo, email, senha) }
+                dialogo.dismiss()
+                cadastroAdmin.launch(CadastroAdminActivity.intent(this))
             }
         }
         dialogo.show()
@@ -107,22 +116,6 @@ class AdminActivity : AppCompatActivity() {
                     }
                     avisar(mensagem ?: "❌ Não foi possível entrar.")
                 }
-        }
-    }
-
-    private fun criarConta(dialogo: AlertDialog, email: String, senha: String) {
-        lifecycleScope.launch {
-            adminRepository.criarConta(email, senha)
-                .onSuccess {
-                    dialogo.dismiss()
-                    AlertDialog.Builder(this@AdminActivity)
-                        .setTitle("✅ Conta criada!")
-                        .setMessage("Enviamos um e-mail de verificação para $email.\n\nAbra o link do e-mail (confira também o spam) e depois entre com seu e-mail e senha.")
-                        .setCancelable(false)
-                        .setPositiveButton("OK") { _, _ -> pedirLogin(email) }
-                        .show()
-                }
-                .onFailure { e -> avisar("❌ ${e.message}") }
         }
     }
 

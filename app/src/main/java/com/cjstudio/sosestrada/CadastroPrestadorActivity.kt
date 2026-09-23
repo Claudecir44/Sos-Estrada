@@ -15,7 +15,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.cjstudio.sosestrada.databinding.ActivityCadastroPrestadorBinding
@@ -62,7 +61,7 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         binding = ActivityCadastroPrestadorBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        aplicarMascaraTelefone()
+        TelefoneUtil.aplicarMascara(binding.edtTelefone)
         binding.ivLogo.setOnClickListener { verificarPermissaoEAbrirGaleria() }
         binding.btnSelecionarLogo.setOnClickListener { verificarPermissaoEAbrirGaleria() }
 
@@ -128,22 +127,6 @@ class CadastroPrestadorActivity : AppCompatActivity() {
 
     private fun abrirGaleria() {
         galeriaLauncher.launch(Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI))
-    }
-
-    // Máscara (XX) XXXXX-XXXX
-    private fun aplicarMascaraTelefone() {
-        var atualizando = false
-        binding.edtTelefone.doAfterTextChanged { texto ->
-            if (atualizando || texto == null) return@doAfterTextChanged
-            val digitos = texto.toString().filter { it.isDigit() }.take(11)
-            val formatado = StringBuilder()
-            if (digitos.isNotEmpty()) formatado.append("(").append(digitos.take(2))
-            if (digitos.length >= 3) formatado.append(") ").append(digitos.substring(2, minOf(6, digitos.length)))
-            if (digitos.length >= 7) formatado.append("-").append(digitos.substring(6))
-            atualizando = true
-            texto.replace(0, texto.length, formatado)
-            atualizando = false
-        }
     }
 
     private fun realizarCadastro() {

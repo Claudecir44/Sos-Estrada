@@ -29,6 +29,10 @@
             android:name=".AdminMensagensActivity"
             android:exported="false" />
         <activity
+            android:name=".CadastroAdminActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ChatActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

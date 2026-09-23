@@ -1,7 +1,9 @@
 package com.cjstudio.sosestrada
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,32 +15,60 @@ class AdminRepository @Inject constructor(
     private val authRepository: IAuthRepository
 ) : IAdminRepository {
 
-    // Quem é admin de verdade quem decide são as regras do Firestore
-    // (ehAdmin(): e-mail autorizado e validado, ou um documento em admins/).
-    // Aqui é só pra barrar logo no login quem não tem acesso, com uma
-    // mensagem clara em vez de listas vazias com erro de permissão.
-    private fun ehEmailDeAdmin(email: String?) = email != null && email.trim().lowercase() in EMAILS_ADMIN
+    private fun documentoAdmin(uid: String) = db.collection("admins").document(uid)
 
-    override fun temSessaoDeAdmin(): Boolean {
+    // Quem garante o acesso de verdade são as regras (ehAdmin()); aqui é só
+    // pra barrar logo no login quem não é admin, com uma mensagem clara.
+    private suspend fun ehAdmin(uid: String): Boolean =
+        runCatching { documentoAdmin(uid).get().await().exists() }.getOrDefault(false)
+
+    override suspend fun temSessaoDeAdmin(): Boolean {
         val usuario = auth.currentUser ?: return false
-        return usuario.isEmailVerified && ehEmailDeAdmin(usuario.email)
+        if (usuario.isAnonymous || !usuario.isEmailVerified) return false
+        return ehAdmin(usuario.uid)
     }
 
     override suspend fun entrar(email: String, senha: String): Result<Unit> = runCatching {
         // Sessão antiga (login fixo + anônimo das versões anteriores) não serve mais.
         if (auth.currentUser?.isAnonymous == true) auth.signOut()
         authRepository.entrar(email, senha).getOrThrow()
-        if (!ehEmailDeAdmin(auth.currentUser?.email)) {
+        val uid = auth.currentUser?.uid ?: throw IllegalStateException("Falha ao entrar.")
+        if (!ehAdmin(uid)) {
             auth.signOut()
             throw IllegalStateException("Esta conta não tem acesso ao painel administrativo.")
         }
         Unit
     }
 
-    override suspend fun criarConta(email: String, senha: String): Result<Unit> = runCatching {
-        if (!ehEmailDeAdmin(email)) throw IllegalArgumentException("Este e-mail não está autorizado como administrador.")
+    override suspend fun cadastrarAdmin(admin: Admin, senha: String, senhaMaster: String): Result<Unit> = runCatching {
         if (auth.currentUser?.isAnonymous == true) auth.signOut()
-        authRepository.criarConta(email, senha).getOrThrow()
+        // O Firebase guarda o e-mail em minúsculas no token, e as regras
+        // comparam o do cadastro com o do token.
+        val email = admin.email.orEmpty().trim().lowercase()
+        val uid = authRepository.criarConta(email, senha).getOrThrow()
+        try {
+            // As regras só aceitam criar admins/{uid} com a senha master certa
+            // (comparam o hash dela) — errada, a gravação é negada.
+            val dados = mapOf(
+                "nome" to admin.nome,
+                "sobrenome" to admin.sobrenome,
+                "email" to email,
+                "telefone" to admin.telefone,
+                "cpf" to admin.cpf,
+                "criadoEm" to FieldValue.serverTimestamp(),
+                CAMPO_AUTORIZACAO to senhaMaster
+            )
+            documentoAdmin(uid).set(dados).await()
+        } catch (e: Exception) {
+            // Sem o cadastro de admin a conta não serve pra nada: desfaz.
+            runCatching { authRepository.excluirConta() }
+            authRepository.sair()
+            val permissaoNegada = e is FirebaseFirestoreException &&
+                e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+            throw if (permissaoNegada) SenhaMasterIncorretaException() else e
+        }
+        // A senha master só serviu pra autorizar a criação — não fica guardada.
+        runCatching { documentoAdmin(uid).update(CAMPO_AUTORIZACAO, FieldValue.delete()).await() }
         authRepository.enviarVerificacaoEmail()
         authRepository.sair()
         Unit
@@ -67,8 +97,8 @@ class AdminRepository @Inject constructor(
     }
 
     companion object {
-        // Mesma lista de ehAdmin() em firestore.rules e do painel web
-        // (web-admin/app.js) — mudar nos três lugares juntos.
-        val EMAILS_ADMIN = setOf("claudecirwitkoski@gmail.com")
+        // Campo temporário com a senha master digitada; as regras conferem o
+        // hash dele na criação e só deixam o próprio admin apagá-lo depois.
+        private const val CAMPO_AUTORIZACAO = "autorizacao"
     }
 }
