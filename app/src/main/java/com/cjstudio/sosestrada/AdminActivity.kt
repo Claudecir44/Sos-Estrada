@@ -197,8 +197,10 @@ class AdminActivity : AppCompatActivity() {
 
     private var painelIniciado = false
     private var erros: Map<Int, String?> = emptyMap()
-    private val motoristaAdapter = MotoristaAdminAdapter()
-    private val prestadorAdapter = PrestadorAdminAdapter()
+    // Segurar o cartão: editar, bloquear ou excluir (com a senha master).
+    private val acoes by lazy { AcoesCadastroAdmin(this, adminRepository) { carregarTudo() } }
+    private val motoristaAdapter = MotoristaAdminAdapter { acoes.abrir(it) }
+    private val prestadorAdapter = PrestadorAdminAdapter { acoes.abrir(it) }
     private val solicitacaoAdapter = AdminSolicitacaoAdapter()
     private val conversaAdapter = AdminConversaAdapter()
 

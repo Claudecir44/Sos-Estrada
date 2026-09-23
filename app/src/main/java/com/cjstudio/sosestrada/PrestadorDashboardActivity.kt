@@ -59,6 +59,14 @@ class PrestadorDashboardActivity : AppCompatActivity() {
     private fun carregarCabecalho() {
         lifecycleScope.launch {
             val prestador = prestadorRepository.buscarMeuCadastro().getOrNull()
+            if (prestador?.bloqueado == true) {
+                // Bloqueado pelo admin com a sessão já aberta: volta pro login.
+                Toast.makeText(this@PrestadorDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()
+                authRepository.sair()
+                startActivity(Intent(this@PrestadorDashboardActivity, LoginPrestadorActivity::class.java))
+                finish()
+                return@launch
+            }
             FotoUtil.mostrar(binding.ivFotoPrestadorPainel, prestador?.logo)
             val primeiroNome = prestador?.nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
             binding.tvNomePrestadorPainel.text = primeiroNome ?: "Prestador"

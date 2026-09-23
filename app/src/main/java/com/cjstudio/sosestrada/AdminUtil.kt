@@ -15,11 +15,6 @@ private val formatoDataHora = SimpleDateFormat("dd/MM/yyyy • HH:mm", Locale.ge
 
 internal fun dataHora(data: Date?) = data?.let { formatoDataHora.format(it) } ?: "Sem data"
 
-// Até duas iniciais do nome, pro avatar redondo ("Maria Souza" -> "MS").
-internal fun iniciais(nome: String?): String =
-    nome.orEmpty().trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-        .take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "?" }
-
 // Etiqueta colorida do status da solicitação.
 internal fun TextView.mostrarStatus(status: String?) {
     val (rotulo, fundo, cor) = when (status) {
@@ -43,3 +38,6 @@ fun abrirConversaComoAdmin(context: Context, s: Solicitacao) {
             .putExtra(ChatActivity.EXTRA_TITULO, "${s.motoristaNome} ↔ ${s.prestadorNome}")
     )
 }
+
+// Mostrada ao motorista/prestador bloqueado pelo admin (login e painel).
+const val MENSAGEM_BLOQUEADO = "🚫 Sua conta foi bloqueada pela administração do SOS Estrada."

@@ -33,6 +33,47 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Hash SHA-256 (hex maiúsculo) da senha do administrador master — ver
+    // o bloco de admins abaixo pra como publicar sem pôr o hash no git.
+    function senhaMasterConfere(senha) {
+      return senha is string
+        && hashing.sha256(senha).toHexString() == '__HASH_SENHA_MASTER__';
+    }
+
+    // Ação de admin sobre o cadastro de outra pessoa (editar, bloquear,
+    // excluir — AdminRepository.executarAcao): só vale se, no MESMO lote,
+    // um admin gravou acoesAdmin/{uid} com a senha master certa. "em" é
+    // serverTimestamp, que dentro do lote é igual a request.time — então um
+    // registro antigo que tenha sobrado não autoriza nada.
+    function acaoAdminAutorizada(colecao, uid) {
+      let acao = getAfter(/databases/$(database)/documents/acoesAdmin/$(uid)).data;
+      return ehAdmin()
+        && acao.adminUid == request.auth.uid
+        && acao.colecao == colecao
+        && acao.em == request.time
+        && senhaMasterConfere(acao.autorizacao);
+    }
+
+    function estaBloqueado(colecao, uid) {
+      return exists(/databases/$(database)/documents/$(colecao)/$(uid))
+        && get(/databases/$(database)/documents/$(colecao)/$(uid)).data.get('bloqueado', false) == true;
+    }
+
+    // ---------------- acoesAdmin ----------------
+    // Registro temporário de uma ação de admin (ver acaoAdminAutorizada).
+    // Guarda a senha master digitada só até o fim do lote — o app apaga o
+    // registro logo depois. Ninguém lê.
+    match /acoesAdmin/{uid} {
+      allow create, update: if ehAdmin()
+        && request.resource.data.keys().hasOnly(['adminUid', 'acao', 'colecao', 'autorizacao', 'em'])
+        && request.resource.data.adminUid == request.auth.uid
+        && request.resource.data.colecao in ['motoristas', 'prestadores']
+        && request.resource.data.em == request.time
+        && senhaMasterConfere(request.resource.data.autorizacao);
+      allow delete: if ehAdmin();
+      allow read: if false;
+    }
+
     // ---------------- admins ----------------
     // Cadastro de admin feito pelo próprio app admin (CadastroAdminActivity,
     // mesmo modelo do Caronas): a pessoa cria a conta e grava admins/{uid}
@@ -56,8 +97,7 @@ service cloud.firestore {
         // Foto obrigatória no cadastro (JPEG pequeno em base64, ver FotoUtil).
         && request.resource.data.foto is string && request.resource.data.foto.size() > 0
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.autorizacao is string
-        && hashing.sha256(request.resource.data.autorizacao).toHexString() == '__HASH_SENHA_MASTER__';
+        && senhaMasterConfere(request.resource.data.autorizacao);
       // Dono: apagar o campo "autorizacao" logo depois do cadastro e editar
       // o próprio perfil ("Meu Perfil") — nunca e-mail nem criadoEm, e sem
       // poder recolocar "autorizacao".
@@ -78,7 +118,14 @@ service cloud.firestore {
       // veículo, placa) são copiados pra dentro de "solicitacoes" na hora
       // da solicitação (SocorroActivity.onSolicitarServico).
       allow read: if ehDono(uid) || ehAdmin();
-      allow write: if ehDono(uid) || ehAdmin();
+      // Dono: cria e edita o próprio perfil, mas nunca mexe em "bloqueado"
+      // e, bloqueado, não edita mais nada. Admin: só com a senha master.
+      allow create: if ehDono(uid) && !('bloqueado' in request.resource.data);
+      allow update: if acaoAdminAutorizada('motoristas', uid)
+        || (ehDono(uid)
+            && resource.data.get('bloqueado', false) != true
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['bloqueado']));
+      allow delete: if ehDono(uid) || acaoAdminAutorizada('motoristas', uid);
     }
 
     // ---------------- prestadores ----------------
@@ -90,17 +137,21 @@ service cloud.firestore {
       // isso o prestador poderia se marcar "ativo"/com assinatura em dia
       // sem nunca ter pago.
       function camposDoServidorPrestador() {
-        return ['ativo', 'dataCadastro', 'assinaturaStatus', 'assinaturaExpiraEm', 'assinaturaUltimoPagamento'];
+        return ['ativo', 'dataCadastro', 'assinaturaStatus', 'assinaturaExpiraEm', 'assinaturaUltimoPagamento', 'bloqueado'];
       }
 
       // Cadastro e edição do próprio perfil (CadastroPrestadorActivity,
       // PrestadorDashboardActivity).
       allow create: if ehDono(uid) && !request.resource.data.keys().hasAny(camposDoServidorPrestador());
-      allow update: if ehAdmin()
-        || (ehDono(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(camposDoServidorPrestador()));
+      // Admin só com a senha master (editar/bloquear no painel). Dono
+      // bloqueado não edita mais nada.
+      allow update: if acaoAdminAutorizada('prestadores', uid)
+        || (ehDono(uid)
+            && resource.data.get('bloqueado', false) != true
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(camposDoServidorPrestador()));
       // "Excluir cadastro" (PrestadorDashboardActivity) — sem esta linha a
       // exclusão sempre falhava, porque não havia regra de delete.
-      allow delete: if ehDono(uid) || ehAdmin();
+      allow delete: if ehDono(uid) || acaoAdminAutorizada('prestadores', uid);
       // Leitura ampla e proposital: é um diretório de prestadores — todo
       // motorista logado precisa listar/buscar todos pra pedir socorro
       // (SocorroActivity lê "prestadores" filtrando só por ativo==true,
@@ -121,7 +172,8 @@ service cloud.firestore {
 
       // Só o motorista cria (SocorroActivity.onSolicitarServico), sempre
       // com o próprio uid.
-      allow create: if estaLogado() && request.resource.data.motoristaUid == request.auth.uid;
+      allow create: if estaLogado() && request.resource.data.motoristaUid == request.auth.uid
+        && !estaBloqueado('motoristas', request.auth.uid);
 
       // Update é sempre parcial e feito por quem participa da solicitação:
       // - status: motorista cancela (SocorroActivity) ou prestador

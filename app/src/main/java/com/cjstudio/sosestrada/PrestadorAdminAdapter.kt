@@ -1,11 +1,15 @@
 package com.cjstudio.sosestrada
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.cjstudio.sosestrada.databinding.ItemPrestadorAdminBinding
 
-class PrestadorAdminAdapter : RecyclerView.Adapter<PrestadorAdminAdapter.ViewHolder>() {
+// aoSegurar: segurar o cartão abre editar/bloquear/excluir (AdminActivity).
+class PrestadorAdminAdapter(
+    private val aoSegurar: (Prestador) -> Unit
+) : RecyclerView.Adapter<PrestadorAdminAdapter.ViewHolder>() {
 
     private var prestadores: List<Prestador> = emptyList()
 
@@ -33,7 +37,8 @@ class PrestadorAdminAdapter : RecyclerView.Adapter<PrestadorAdminAdapter.ViewHol
                 p.cnpj?.takeIf { it.isNotBlank() }?.let { "CNPJ $it" },
                 p.preco?.takeIf { it.isNotBlank() }?.let { "💲 $it" }
             ).joinToString("  •  ").ifEmpty { "CNPJ não informado" }
-            tvUidPrestador.text = "ID ${p.uid.orEmpty()}"
+            tvBloqueadoPrestador.visibility = if (p.bloqueado) View.VISIBLE else View.GONE
+            root.setOnLongClickListener { aoSegurar(p); true }
             FotoUtil.mostrar(ivLogoPrestador, p.logo, R.drawable.ic_placeholder_logo)
         }
     }

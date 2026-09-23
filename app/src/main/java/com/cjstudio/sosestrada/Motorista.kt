@@ -11,5 +11,7 @@ data class Motorista(
     var placa: String? = null,
     var cor: String? = null,
     // JPEG pequeno em base64 (ver FotoUtil) — não há Firebase Storage.
-    var foto: String? = null
+    var foto: String? = null,
+    // Bloqueado pelo admin: não entra, não edita e não pede socorro.
+    var bloqueado: Boolean = false
 )

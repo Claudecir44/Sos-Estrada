@@ -13,6 +13,8 @@ data class Prestador(
     var servico: String? = null,
     var preco: String? = null,
     var logo: String? = null,
+    // Bloqueado pelo admin: não entra e some da busca de socorro.
+    var bloqueado: Boolean = false,
     // Campos antigos de endereço (cadastros anteriores aos campos separados)
     var localizacao: String? = null,
     var endereco: String? = null,

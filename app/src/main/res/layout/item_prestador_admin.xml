@@ -36,6 +36,15 @@
                 android:text="Nome" />
 
             <TextView
+                android:id="@+id/tvBloqueadoPrestador"
+                style="@style/AdminChip"
+                android:layout_marginTop="4dp"
+                android:backgroundTint="@color/admin_vermelho_claro"
+                android:textColor="#B91C1C"
+                android:text="🚫 Bloqueado"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/tvServicoPrestador"
                 style="@style/AdminChip"
                 android:layout_marginTop="6dp"
@@ -65,13 +74,6 @@
                 android:id="@+id/tvCnpjPrestador"
                 style="@style/AdminLinha"
                 android:text="CNPJ • Preço" />
-
-            <TextView
-                android:id="@+id/tvUidPrestador"
-                style="@style/AdminLinha"
-                android:textSize="11sp"
-                android:textColor="#9CA3AF"
-                android:text="ID" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

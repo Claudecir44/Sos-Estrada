@@ -2,9 +2,11 @@ package com.cjstudio.sosestrada
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -145,7 +147,58 @@ class AdminRepository @Inject constructor(
             .sortedByDescending { it.timestamp?.time ?: 0L }
     }
 
+    override suspend fun editarMotorista(uid: String, dados: Map<String, Any?>, senhaMaster: String): Result<Unit> =
+        executarAcao(COLECAO_MOTORISTAS, uid, "editar", senhaMaster) { lote, alvo -> lote.update(alvo, dados) }
+
+    override suspend fun editarPrestador(uid: String, dados: Map<String, Any?>, senhaMaster: String): Result<Unit> =
+        executarAcao(COLECAO_PRESTADORES, uid, "editar", senhaMaster) { lote, alvo -> lote.update(alvo, dados) }
+
+    override suspend fun definirBloqueio(colecao: String, uid: String, bloquear: Boolean, senhaMaster: String): Result<Unit> =
+        executarAcao(colecao, uid, "bloquear", senhaMaster) { lote, alvo -> lote.update(alvo, "bloqueado", bloquear) }
+
+    override suspend fun excluirCadastro(colecao: String, uid: String, senhaMaster: String): Result<Unit> =
+        executarAcao(colecao, uid, "excluir", senhaMaster) { lote, alvo -> lote.delete(alvo) }
+
+    // A mudança vai num lote junto com acoesAdmin/{uid}, que carrega a senha
+    // master digitada: as regras só aceitam esse registro se o hash da senha
+    // bater, e só aceitam a mudança no cadastro se o registro foi gravado no
+    // MESMO lote (ver acaoAdminAutorizada em firestore.rules). Depois o
+    // registro é apagado — a senha não fica guardada.
+    private suspend fun executarAcao(
+        colecao: String,
+        uid: String,
+        acao: String,
+        senhaMaster: String,
+        mudanca: (WriteBatch, DocumentReference) -> Unit
+    ): Result<Unit> = runCatching {
+        val adminUid = auth.currentUser?.uid ?: throw IllegalStateException("Não há sessão ativa.")
+        val registro = db.collection("acoesAdmin").document(uid)
+        val lote = db.batch()
+        lote.set(
+            registro,
+            mapOf(
+                "adminUid" to adminUid,
+                "acao" to acao,
+                "colecao" to colecao,
+                CAMPO_AUTORIZACAO to senhaMaster,
+                "em" to FieldValue.serverTimestamp()
+            )
+        )
+        mudanca(lote, db.collection(colecao).document(uid))
+        try {
+            lote.commit().await()
+        } catch (e: FirebaseFirestoreException) {
+            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) throw SenhaMasterIncorretaException()
+            throw e
+        }
+        runCatching { registro.delete().await() }
+        Unit
+    }
+
     companion object {
+        const val COLECAO_MOTORISTAS = "motoristas"
+        const val COLECAO_PRESTADORES = "prestadores"
+
         // Campo temporário com a senha master digitada; as regras conferem o
         // hash dele na criação e só deixam o próprio admin apagá-lo depois.
         private const val CAMPO_AUTORIZACAO = "autorizacao"

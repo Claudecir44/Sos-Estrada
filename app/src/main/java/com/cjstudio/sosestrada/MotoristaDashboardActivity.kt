@@ -58,6 +58,14 @@ class MotoristaDashboardActivity : AppCompatActivity() {
             // Se o motorista confirmou um e-mail novo, acerta o cadastro.
             authRepository.emailLogado()?.let { motoristaRepository.sincronizarEmail(it) }
             val motorista = motoristaRepository.buscarMeuCadastro().getOrNull()
+            if (motorista?.bloqueado == true) {
+                // Bloqueado pelo admin com a sessão já aberta: volta pro login.
+                Toast.makeText(this@MotoristaDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()
+                authRepository.sair()
+                startActivity(Intent(this@MotoristaDashboardActivity, LoginMotoristaActivity::class.java))
+                finish()
+                return@launch
+            }
             FotoUtil.mostrar(binding.ivFotoMotoristaPainel, motorista?.foto)
             val primeiroNome = motorista?.nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
             binding.tvNomeMotoristaPainel.text = primeiroNome ?: "Motorista"

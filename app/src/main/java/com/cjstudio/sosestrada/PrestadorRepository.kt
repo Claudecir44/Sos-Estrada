@@ -64,5 +64,6 @@ class PrestadorRepository @Inject constructor(
     override suspend fun listarAtivos(): Result<List<Prestador>> = runCatching {
         db.collection("prestadores").whereEqualTo("ativo", true).get().await()
             .documents.mapNotNull { it.toObject(Prestador::class.java) }
+            .filter { !it.bloqueado }
     }
 }

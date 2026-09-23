@@ -19,6 +19,9 @@ class LoginPrestadorActivity : AppCompatActivity() {
     @Inject
     lateinit var authRepository: IAuthRepository
 
+    @Inject
+    lateinit var prestadorRepository: IPrestadorRepository
+
     private lateinit var binding: ActivityLoginPrestadorBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +56,13 @@ class LoginPrestadorActivity : AppCompatActivity() {
         lifecycleScope.launch {
             authRepository.entrar(email, senha)
                 .onSuccess {
+                    // Conta bloqueada pelo admin não entra.
+                    if (prestadorRepository.buscarMeuCadastro().getOrNull()?.bloqueado == true) {
+                        authRepository.sair()
+                        binding.btnEntrar.isEnabled = true
+                        mostrarMensagem(MENSAGEM_BLOQUEADO, erro = true)
+                        return@launch
+                    }
                     Toast.makeText(this@LoginPrestadorActivity, "✅ Login realizado!", Toast.LENGTH_SHORT).show()
                     binding.edtEmailLogin.setText("")
                     binding.edtSenhaLogin.setText("")
