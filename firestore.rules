@@ -1,0 +1,212 @@
+rules_version = '2';
+
+// ============================================================
+// Regras de segurança do Firestore — SOS Estrada
+//
+// Escritas com base no acesso real do app (Java, em
+// app/src/main/java/com/cjstudio/sosestrada) e da Cloud Function
+// (functions/index.js). Cloud Functions usam o Admin SDK, que ignora
+// estas regras por completo — elas só valem pra leitura/escrita feita
+// direto pelo app cliente.
+//
+// Coleções: motoristas, prestadores, solicitacoes (+ subcoleção
+// mensagens), admins, pagamentos, pagamentosProcessados.
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function estaLogado() {
+      return request.auth != null;
+    }
+
+    function ehDono(uid) {
+      return estaLogado() && request.auth.uid == uid;
+    }
+
+    // Só reconhece admin com conta real (Firebase Auth por e-mail/senha)
+    // provisionada pela function provisionarAdminInicial — ver
+    // functions/index.js e AdminActivity.java. Antes disso, o "login" de
+    // admin comparava usuário/senha fixos no código do app e depois
+    // autenticava anonimamente, o que tornava uma sessão de admin
+    // indistinguível de qualquer usuário anônimo qualquer.
+    function ehAdmin() {
+      return estaLogado() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ============================================================
+    // TEMPORÁRIO (decisão do usuário em 2026-08-15): o projeto está no
+    // plano Spark (gratuito), então a Cloud Function provisionarAdminInicial
+    // não pode rodar (exige Blaze) e admins/ está vazia — ehAdmin() nunca é
+    // true. Pra reverter o painel admin ao comportamento de antes (login
+    // fixo + Auth anônimo, AdminActivity.java), esta função dá o mesmo
+    // acesso de leitura do ehAdmin() pra QUALQUER sessão anônima — não só
+    // pra quem passou pela senha no app, porque não existe like nenhum
+    // client-side que o servidor consiga verificar. Ou seja, enquanto isto
+    // estiver aqui, qualquer pessoa (não só o admin) que chamar
+    // signInAnonymously() direto no Firebase Auth, sem precisar do app,
+    // consegue ler motoristas/solicitações/mensagens de todo mundo.
+    //
+    // REMOVER (junto com o autenticarEIniciarPainel()/signInAnonymously()
+    // em AdminActivity.java) assim que o Blaze for ativado e
+    // provisionarAdminInicial rodar — ver [[project-sos-estrada]] na
+    // memória do Claude.
+    function ehAdminTemporario() {
+      return estaLogado() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+    // ============================================================
+
+    // ---------------- admins ----------------
+    // Só a Cloud Function provisionarAdminInicial cria (Admin SDK, ignora
+    // esta regra) — nunca o cliente. Sem leitura/edição pelo cliente: o
+    // único uso é o exists() acima, que não depende de permissão de
+    // leitura da coleção.
+    match /admins/{adminId} {
+      allow read, write: if false;
+    }
+
+    // ---------------- motoristas ----------------
+    match /motoristas/{uid} {
+      // Cadastro e edição do próprio perfil (CadastroMotoristaActivity,
+      // MotoristaDashboardActivity) — sempre doc ID == uid. Sem leitura
+      // ampla: diferente de "prestadores", o perfil do motorista nunca é
+      // lido por outro usuário — os dados relevantes (nome, telefone,
+      // veículo, placa) são copiados pra dentro de "solicitacoes" na hora
+      // da solicitação (SocorroActivity.onSolicitarServico).
+      allow read: if ehDono(uid) || ehAdmin() || ehAdminTemporario();
+      allow write: if ehDono(uid) || ehAdmin();
+    }
+
+    // ---------------- prestadores ----------------
+    match /prestadores/{uid} {
+      // Campos do módulo de assinatura (functions/index.js:
+      // aoRegistrarPrestador, paymentWebhookPrestador,
+      // expirarAssinaturasPrestadores) — só a Cloud Function grava, nunca o
+      // cliente, nem o próprio prestador, nem o admin direto pelo app. Sem
+      // isso o prestador poderia se marcar "ativo"/com assinatura em dia
+      // sem nunca ter pago.
+      function camposDoServidorPrestador() {
+        return ['ativo', 'dataCadastro', 'assinaturaStatus', 'assinaturaExpiraEm', 'assinaturaUltimoPagamento'];
+      }
+
+      // Cadastro e edição do próprio perfil (CadastroPrestadorActivity,
+      // PrestadorDashboardActivity).
+      allow create: if ehDono(uid) && !request.resource.data.keys().hasAny(camposDoServidorPrestador());
+      allow update: if ehAdmin()
+        || (ehDono(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(camposDoServidorPrestador()));
+      // Leitura ampla e proposital: é um diretório de prestadores — todo
+      // motorista logado precisa listar/buscar todos pra pedir socorro
+      // (SocorroActivity lê "prestadores" filtrando só por ativo==true,
+      // mas a leitura em si não é restrita por esse campo).
+      allow read: if estaLogado();
+    }
+
+    // ---------------- solicitacoes ----------------
+    match /solicitacoes/{solicitacaoId} {
+      function souMotorista() {
+        return estaLogado() && resource.data.motoristaUid == request.auth.uid;
+      }
+      function souPrestador() {
+        return estaLogado() && resource.data.prestadorUid == request.auth.uid;
+      }
+
+      allow read: if ehAdmin() || ehAdminTemporario() || souMotorista() || souPrestador();
+
+      // Só o motorista cria (SocorroActivity.onSolicitarServico), sempre
+      // com o próprio uid.
+      allow create: if estaLogado() && request.resource.data.motoristaUid == request.auth.uid;
+
+      // Update é sempre parcial e feito por quem participa da solicitação:
+      // - status: motorista cancela (SocorroActivity) ou prestador
+      //   aceita/recusa (AtendimentoActivity) — os dois lados usam o mesmo
+      //   campo, então não dá pra restringir qual valor cada lado escreve
+      //   sem duplicar a regra; qualquer um dos dois já tem que ser
+      //   participante da solicitação pra chegar aqui.
+      // - naoLidasMotorista/naoLidasPrestador: contadores de mensagem não
+      //   lida, mantidos pelo ChatActivity (incrementados ao enviar,
+      //   zerados ao abrir o chat do respectivo lado).
+      allow update: if (souMotorista() || souPrestador())
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'naoLidasMotorista', 'naoLidasPrestador']);
+
+      // Exclusão permanente só de solicitação já cancelada (SocorroActivity
+      // e AtendimentoActivity só mostram essa opção com status=="cancelado"
+      // — reforçado aqui pra não virar só uma checagem de UI).
+      allow delete: if (souMotorista() || souPrestador()) && resource.data.status == 'cancelado';
+
+      match /mensagens/{mensagemId} {
+        function participantesDaSolicitacao() {
+          return get(/databases/$(database)/documents/solicitacoes/$(solicitacaoId)).data;
+        }
+
+        function souParticipante() {
+          let s = participantesDaSolicitacao();
+          return estaLogado() && (request.auth.uid == s.motoristaUid || request.auth.uid == s.prestadorUid);
+        }
+
+        allow read: if ehAdmin() || ehAdminTemporario() || souParticipante();
+
+        // remetenteTipo precisa bater com qual dos dois lados o uid
+        // realmente é na solicitação (não um valor livre) — ver
+        // ChatActivity.salvarMensagem().
+        allow create: if souParticipante() && request.resource.data.remetenteUid == request.auth.uid
+          && (
+            (request.resource.data.remetenteTipo == 'motorista'
+              && request.auth.uid == participantesDaSolicitacao().motoristaUid) ||
+            (request.resource.data.remetenteTipo == 'prestador'
+              && request.auth.uid == participantesDaSolicitacao().prestadorUid)
+          );
+
+        // Só o campo "lida" muda depois de criada (ChatActivity.marcarComoLidas).
+        allow update: if souParticipante()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida']);
+
+        // ChatActivity.limparMensagensAntigas() também apaga direto pelo
+        // cliente (redundante com a limpeza diária via Cloud Function) —
+        // restrito a mensagens já com mais de ~6 meses, igual ao filtro que
+        // o próprio app usa (180 dias aqui é intencionalmente um pouco
+        // menor que os ~182-184 dias reais de "6 meses atrás" do app, pra
+        // nunca bloquear uma exclusão legítima por arredondamento).
+        allow delete: if souParticipante()
+          && resource.data.timestamp < request.time - duration.value(180, 'd');
+      }
+    }
+
+    // ---------------- pagamentos / pagamentosProcessados ----------------
+    // Histórico de pagamento (paymentWebhookPrestador) e o registro de
+    // idempotência do webhook — só o servidor grava. O prestador só lê o
+    // próprio histórico; pagamentosProcessados nunca é lido pelo cliente
+    // (é só controle interno do webhook).
+    match /pagamentos/{id} {
+      allow read: if ehAdmin() || ehAdminTemporario()
+        || (estaLogado() && resource.data.prestadorId == request.auth.uid);
+      allow write: if false;
+    }
+    match /pagamentosProcessados/{id} {
+      allow read, write: if false;
+    }
+
+    // Qualquer coleção não listada acima fica bloqueada por padrão.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ============================================================
+// COMO TESTAR E PUBLICAR (não faça isso sem testar antes)
+//
+// 1) Teste local com o emulador do Firestore antes de publicar:
+//      firebase emulators:start --only firestore
+//    Cubra pelo menos: motorista/prestador só editam o próprio perfil,
+//    leitura de "prestadores" aberta pra qualquer logado, motorista A não
+//    consegue ler/escrever numa solicitação entre motorista B e um
+//    prestador, e um usuário comum tentando escrever em admins/{seu-uid}
+//    (tem que falhar).
+//
+// 2) Publicar só as regras:
+//      firebase deploy --only firestore:rules
+//
+// 3) firebase.json precisa apontar pra este arquivo — ver a chave
+//    "firestore" adicionada nele.
+// ============================================================

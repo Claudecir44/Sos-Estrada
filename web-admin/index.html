@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SOS Estrada - Admin</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Login -->
+<div id="view-login" class="view">
+  <div class="login-box">
+    <h2>🔐 Acesso Administrativo</h2>
+    <input type="text" id="loginUsuario" placeholder="Usuário" autocomplete="username" />
+    <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password" />
+    <div id="loginErro"></div>
+    <button class="btn btn-red" id="btnEntrar">Entrar</button>
+  </div>
+</div>
+
+<!-- Painel principal -->
+<div id="view-panel" class="view hidden">
+  <h1>Painel Administrativo</h1>
+  <button class="btn btn-blue" id="btnMotoristas">Motoristas</button>
+  <button class="btn btn-gray" id="btnPrestadores">Prestadores</button>
+  <button class="btn btn-orange" id="btnVerSolicitacoes">📋 Ver Solicitações</button>
+  <button class="btn btn-purple" id="btnVerMensagens">💬 Ver Mensagens</button>
+  <button class="btn btn-red" id="btnSair">🚪 Sair</button>
+</div>
+
+<!-- Motoristas -->
+<div id="view-motoristas" class="view hidden">
+  <div class="subview-header">
+    <span class="voltar" data-voltar="view-panel">⬅</span>
+    <span class="titulo">Motoristas</span>
+  </div>
+  <div class="subview-body">
+    <div id="motoristasLoading" class="loading hidden">Carregando...</div>
+    <div id="motoristasEmpty" class="empty-msg hidden">Nenhum motorista cadastrado ainda.</div>
+    <div id="motoristasLista"></div>
+  </div>
+</div>
+
+<!-- Prestadores -->
+<div id="view-prestadores" class="view hidden">
+  <div class="subview-header">
+    <span class="voltar" data-voltar="view-panel">⬅</span>
+    <span class="titulo">Prestadores</span>
+  </div>
+  <div class="subview-body">
+    <div id="prestadoresLoading" class="loading hidden">Carregando...</div>
+    <div id="prestadoresEmpty" class="empty-msg hidden">Nenhum prestador cadastrado ainda.</div>
+    <div id="prestadoresLista"></div>
+  </div>
+</div>
+
+<!-- Solicitações -->
+<div id="view-solicitacoes" class="view hidden">
+  <div class="subview-header">
+    <span class="voltar" data-voltar="view-panel">⬅</span>
+    <span class="titulo">📋 Todas as Solicitações</span>
+  </div>
+  <div class="subview-body">
+    <div id="solicitacoesLoading" class="loading hidden">Carregando...</div>
+    <div id="solicitacoesEmpty" class="empty-msg hidden">Nenhuma solicitação encontrada.</div>
+    <div id="solicitacoesLista"></div>
+  </div>
+</div>
+
+<!-- Mensagens (conversas) -->
+<div id="view-mensagens" class="view hidden">
+  <div class="subview-header">
+    <span class="voltar" data-voltar="view-panel">⬅</span>
+    <span class="titulo">💬 Mensagens por Serviço</span>
+  </div>
+  <div class="subview-body">
+    <div id="mensagensLoading" class="loading hidden">Carregando...</div>
+    <div id="mensagensEmpty" class="empty-msg hidden">Nenhuma conversa encontrada.</div>
+    <div id="mensagensLista"></div>
+  </div>
+</div>
+
+<!-- Chat (somente leitura) -->
+<div id="view-chat" class="view hidden">
+  <div class="subview-header">
+    <span class="voltar" id="btnVoltarChat">⬅</span>
+    <span class="titulo" id="chatTitulo">Chat</span>
+  </div>
+  <div id="chatMensagens"></div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

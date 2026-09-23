@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// ============================================================
+// Regras de segurança do Storage — SOS Estrada
+//
+// Depende de firestore.get()/firestore.exists() (regras cross-service) pra
+// checar participante de uma solicitação e admin — mesma fonte da verdade
+// que firestore.rules, sem duplicar lógica.
+// ============================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function ehAdmin() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+
+    function imagemValida() {
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Fotos anexadas no chat (ChatActivity.enviarImagem) — só quem
+    // participa da solicitação (motorista ou prestador) lê/envia/apaga (o
+    // apagar é o mesmo limparMensagensAntigas() do lado do Firestore,
+    // restrito por tempo lá; aqui não dá pra correlacionar o arquivo com a
+    // data da mensagem sem mais informação no path, então fica restrito só
+    // a quem participa).
+    match /mensagens_imagens/{solicitacaoId}/{arquivo} {
+      function souParticipante() {
+        let s = firestore.get(/databases/(default)/documents/solicitacoes/$(solicitacaoId)).data;
+        return request.auth != null
+          && (request.auth.uid == s.motoristaUid || request.auth.uid == s.prestadorUid);
+      }
+
+      allow read: if ehAdmin() || souParticipante();
+      allow write: if souParticipante() && imagemValida();
+      allow delete: if souParticipante();
+    }
+
+    // Logo do prestador (CadastroPrestadorActivity.fazerUploadImagem) — só
+    // o dono envia; leitura aberta pra qualquer logado, igual ao documento
+    // em "prestadores" (é um diretório público de prestadores).
+    match /logos/{uid}/{arquivo} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid && imagemValida();
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Qualquer outro caminho fica bloqueado por padrão.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

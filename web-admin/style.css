@@ -1,0 +1,247 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, Arial, sans-serif;
+  background: #F5F5F5;
+  color: #333;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.view {
+  min-height: 100vh;
+}
+
+/* ---------- Login ---------- */
+
+#view-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #F5F5F5;
+}
+
+.login-box {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 32px;
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.login-box h2 {
+  margin-top: 0;
+}
+
+.login-box input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+#loginErro {
+  color: #D32F2F;
+  font-size: 14px;
+  min-height: 20px;
+  margin-bottom: 8px;
+}
+
+/* ---------- Botões estilo Android ---------- */
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 8px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn:active {
+  opacity: 0.85;
+}
+
+.btn-blue { background: #4FC3F7; }
+.btn-gray { background: #9E9E9E; }
+.btn-orange { background: #FF9800; }
+.btn-purple { background: #9C27B0; }
+.btn-red { background: #D32F2F; }
+.btn-green { background: #4CAF50; }
+
+/* ---------- Painel principal ---------- */
+
+#view-panel {
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+#view-panel h1 {
+  text-align: center;
+  color: #333;
+  font-size: 24px;
+  margin: 32px 0 24px;
+}
+
+/* ---------- Cabeçalho de subtelas ---------- */
+
+.subview-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #D32F2F;
+  color: #fff;
+  padding: 14px 12px;
+}
+
+.subview-header .voltar {
+  cursor: pointer;
+  font-size: 22px;
+  padding: 4px 8px;
+}
+
+.subview-header .titulo {
+  font-size: 18px;
+  font-weight: bold;
+  flex: 1;
+}
+
+.subview-body {
+  padding: 12px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.empty-msg {
+  text-align: center;
+  color: #666;
+  margin-top: 32px;
+  font-size: 15px;
+}
+
+.loading {
+  text-align: center;
+  margin-top: 24px;
+  color: #999;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.card p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+.card .nome {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.card img.logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  float: right;
+}
+
+.card-clickable {
+  cursor: pointer;
+}
+
+.card-clickable:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.status-pendente { color: #FF9800; font-weight: bold; }
+.status-aceito { color: #4CAF50; font-weight: bold; }
+.status-recusado { color: #D32F2F; font-weight: bold; }
+.status-cancelado { color: #9E9E9E; font-weight: bold; }
+
+/* ---------- Chat ---------- */
+
+#view-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#chatMensagens {
+  flex: 1;
+  overflow-y: auto;
+  background: #ECE5DD;
+  padding: 12px;
+}
+
+.bolha {
+  max-width: 70%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  word-wrap: break-word;
+  clear: both;
+}
+
+.bolha-enviada {
+  background: #DCF8C6;
+  float: right;
+}
+
+.bolha-recebida {
+  background: #fff;
+  float: left;
+}
+
+.bolha .remetente {
+  font-size: 12px;
+  font-weight: bold;
+  color: #D32F2F;
+  margin-bottom: 2px;
+}
+
+.bolha img {
+  max-width: 220px;
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.bolha .hora {
+  font-size: 11px;
+  color: #757575;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.chat-empty {
+  text-align: center;
+  color: #888;
+  margin-top: 24px;
+}
