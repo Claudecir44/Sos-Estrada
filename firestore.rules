@@ -41,9 +41,14 @@ service cloud.firestore {
     // criação só passa se o hash bater. Logo depois o app apaga o campo
     // (update abaixo), então a senha master não fica guardada.
     //
-    // Pra trocar a senha master: gerar o novo hash
-    //   node -e "console.log(require('crypto').createHash('sha256').update('NOVA_SENHA').digest('hex').toUpperCase())"
-    // e trocar o valor abaixo (e publicar as regras).
+    // O hash real NUNCA vai pro git (o repositório é público e dá pra
+    // descobrir uma senha curta a partir do hash). Aqui fica só o marcador
+    // __HASH_SENHA_MASTER__; pra publicar, trocar pelo hash numa cópia
+    // temporária, publicar e voltar o arquivo:
+    //   HASH=$(node -e "console.log(require('crypto').createHash('sha256').update('SENHA_MASTER').digest('hex').toUpperCase())")
+    //   sed -i "s|__HASH_SENHA_MASTER__|$HASH|" firestore.rules
+    //   npx --yes firebase-tools deploy --only firestore:rules --project sos-estrada-dc55d
+    //   git checkout -- firestore.rules
     match /admins/{adminId} {
       allow read: if ehDono(adminId) || ehAdmin();
       allow create: if ehDono(adminId)
