@@ -37,4 +37,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAssinaturaRepository(impl: AssinaturaRepository): IAssinaturaRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAdminRepository(impl: AdminRepository): IAdminRepository
 }
