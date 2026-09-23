@@ -1,6 +1,7 @@
 package com.cjstudio.sosestrada
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -45,7 +46,19 @@ class AdminRepository @Inject constructor(
         // O Firebase guarda o e-mail em minúsculas no token, e as regras
         // comparam o do cadastro com o do token.
         val email = admin.email.orEmpty().trim().lowercase()
-        val uid = authRepository.criarConta(email, senha).getOrThrow()
+        // E-mail que já tem conta (ex.: a mesma pessoa já é motorista ou
+        // prestador): em vez de dar "e-mail já existe", entra nessa conta
+        // com a senha digitada e só acrescenta o cadastro de admin.
+        var contaNova = true
+        val uid = try {
+            authRepository.criarConta(email, senha).getOrThrow()
+        } catch (e: FirebaseAuthUserCollisionException) {
+            contaNova = false
+            runCatching { auth.signInWithEmailAndPassword(email, senha).await() }.getOrElse {
+                throw IllegalStateException("Este e-mail já tem uma conta com outra senha. Use a senha dessa conta (ou \"Esqueci minha senha\" no login).")
+            }
+            auth.currentUser?.uid ?: throw IllegalStateException("Falha ao entrar na conta existente.")
+        }
         try {
             // As regras só aceitam criar admins/{uid} com a senha master certa
             // (comparam o hash dela) — errada, a gravação é negada.
@@ -60,8 +73,9 @@ class AdminRepository @Inject constructor(
             )
             documentoAdmin(uid).set(dados).await()
         } catch (e: Exception) {
-            // Sem o cadastro de admin a conta não serve pra nada: desfaz.
-            runCatching { authRepository.excluirConta() }
+            // Conta criada agora sem o cadastro de admin não serve pra nada:
+            // desfaz. Conta que já existia antes fica como estava.
+            if (contaNova) runCatching { authRepository.excluirConta() }
             authRepository.sair()
             val permissaoNegada = e is FirebaseFirestoreException &&
                 e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
@@ -69,7 +83,7 @@ class AdminRepository @Inject constructor(
         }
         // A senha master só serviu pra autorizar a criação — não fica guardada.
         runCatching { documentoAdmin(uid).update(CAMPO_AUTORIZACAO, FieldValue.delete()).await() }
-        authRepository.enviarVerificacaoEmail()
+        if (auth.currentUser?.isEmailVerified != true) authRepository.enviarVerificacaoEmail()
         authRepository.sair()
         Unit
     }
