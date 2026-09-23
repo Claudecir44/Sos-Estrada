@@ -5,6 +5,8 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     alias(libs.plugins.google.services)   // Usa o version catalog
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -87,6 +89,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.lifecycle.runtime.ktx)
+
+    // Injeção de dependência (mesmo padrão do Caronas/Match)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 
     // ✅ Google Play Services – Localização (FusedLocationProviderClient)
     implementation("com.google.android.gms:play-services-location:21.0.1")

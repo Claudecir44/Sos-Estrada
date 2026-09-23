@@ -65,8 +65,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             EnviadaViewHolder h = (EnviadaViewHolder) holder;
             bindTextoEImagem(h.tvTexto, h.ivImagem, texto, imagemUrl);
             h.tvHora.setText(hora);
-            h.tvLida.setText(m.isLida() ? "✓✓" : "✓");
-            h.tvLida.setTextColor(m.isLida() ? 0xFF4FC3F7 : 0xFF757575);
+            h.tvLida.setText(m.getLida() ? "✓✓" : "✓");
+            h.tvLida.setTextColor(m.getLida() ? 0xFF4FC3F7 : 0xFF757575);
         } else if (holder instanceof RecebidaViewHolder) {
             RecebidaViewHolder h = (RecebidaViewHolder) holder;
             bindTextoEImagem(h.tvTexto, h.ivImagem, texto, imagemUrl);
