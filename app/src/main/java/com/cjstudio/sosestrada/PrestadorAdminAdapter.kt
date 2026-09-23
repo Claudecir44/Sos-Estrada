@@ -25,18 +25,16 @@ class PrestadorAdminAdapter : RecyclerView.Adapter<PrestadorAdminAdapter.ViewHol
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val p = prestadores[position]
         with(holder.binding) {
-            tvNomePrestador.text = "Nome: ${p.nome}"
-            tvCnpjPrestador.text = "CNPJ: ${p.cnpj}"
-            tvTelefonePrestador.text = "Telefone: ${p.telefone}"
-            tvEmailPrestador.text = "E-mail: ${p.email}"
-            tvServicoPrestador.text = "Serviço: ${p.servico}"
-            tvEnderecoPrestador.text = "Endereço: ${p.enderecoCompleto}"
-            // Localização resumida: cidade - estado.
-            val cidadeEstado = listOfNotNull(p.cidade?.takeIf { it.isNotEmpty() }, p.estado?.takeIf { it.isNotEmpty() })
-                .joinToString(" - ")
-            tvLocalizacaoPrestador.text = "Localização: " + cidadeEstado.ifEmpty { "Não informada" }
-            tvPrecoPrestador.text = "Preço: ${p.preco}"
-            tvUidPrestador.text = "ID: ${p.uid}"
+            tvNomePrestador.text = p.nome ?: "Sem nome"
+            tvServicoPrestador.text = "🔧 ${p.servico?.takeIf { it.isNotBlank() } ?: "Serviço não informado"}"
+            tvTelefonePrestador.text = "📞 ${p.telefone ?: "Não informado"}"
+            tvEmailPrestador.text = "✉️ ${p.email.orEmpty()}"
+            tvEnderecoPrestador.text = "📍 ${p.enderecoCompleto}"
+            tvCnpjPrestador.text = listOfNotNull(
+                p.cnpj?.takeIf { it.isNotBlank() }?.let { "CNPJ $it" },
+                p.preco?.takeIf { it.isNotBlank() }?.let { "💲 $it" }
+            ).joinToString("  •  ").ifEmpty { "CNPJ não informado" }
+            tvUidPrestador.text = "ID ${p.uid.orEmpty()}"
             if (!p.logo.isNullOrEmpty()) {
                 Glide.with(root).load(p.logo).placeholder(R.drawable.ic_placeholder_logo).into(ivLogoPrestador)
             } else {

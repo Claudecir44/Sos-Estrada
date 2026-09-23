@@ -27,6 +27,7 @@ class AdminMensagensActivity : AppCompatActivity() {
         binding = ActivityAdminMensagensBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.btnVoltarAdminMensagens.setOnClickListener { finish() }
         binding.rvAdminMensagens.layoutManager = LinearLayoutManager(this)
         binding.rvAdminMensagens.adapter = adapter
 
@@ -35,6 +36,7 @@ class AdminMensagensActivity : AppCompatActivity() {
             adminRepository.listarSolicitacoes()
                 .onSuccess { lista ->
                     adapter.atualizarLista(lista)
+                    binding.tvSubtituloAdminMensagens.text = if (lista.size == 1) "1 conversa" else "${lista.size} conversas"
                     binding.tvEmptyAdminMensagens.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
                 }
                 .onFailure { e ->

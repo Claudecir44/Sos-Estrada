@@ -7,4 +7,22 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Painel administrativo -->
+    <color name="admin_vermelho">#D32F2F</color>
+    <color name="admin_vermelho_escuro">#8E1B1B</color>
+    <color name="admin_fundo">#F3F4F8</color>
+    <color name="admin_texto">#1F2937</color>
+    <color name="admin_texto_secundario">#6B7280</color>
+    <color name="admin_borda">#E5E7EB</color>
+    <color name="admin_chip">#F3F4F6</color>
+    <color name="admin_azul">#2563EB</color>
+    <color name="admin_azul_claro">#DBEAFE</color>
+    <color name="admin_laranja">#D97706</color>
+    <color name="admin_laranja_claro">#FEF3C7</color>
+    <color name="admin_roxo">#7C3AED</color>
+    <color name="admin_roxo_claro">#EDE9FE</color>
+    <color name="admin_verde">#15803D</color>
+    <color name="admin_verde_claro">#DCFCE7</color>
+    <color name="admin_vermelho_claro">#FEE2E2</color>
 </resources>

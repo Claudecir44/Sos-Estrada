@@ -13,6 +13,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cjstudio.sosestrada.databinding.ActivityAdminBinding
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -124,15 +126,20 @@ class AdminActivity : AppCompatActivity() {
     }
 
     private fun inicializarPainel() {
+        binding.tvSaudacaoAdmin.text = "Olá, ${adminRepository.emailLogado().orEmpty()}"
         binding.rvMotoristas.layoutManager = LinearLayoutManager(this)
         binding.rvPrestadores.layoutManager = LinearLayoutManager(this)
         binding.rvMotoristas.adapter = motoristaAdapter
         binding.rvPrestadores.adapter = prestadorAdapter
 
-        mostrarMensagemInicial()
-
-        binding.btnMotoristas.setOnClickListener { carregarMotoristas() }
-        binding.btnPrestadores.setOnClickListener { carregarPrestadores() }
+        binding.toggleListas.addOnButtonCheckedListener { _, id, marcado ->
+            if (marcado) mostrarLista(motoristas = id == R.id.btnMotoristas)
+        }
+        binding.cardTotalMotoristas.setOnClickListener { binding.toggleListas.check(R.id.btnMotoristas) }
+        binding.cardTotalPrestadores.setOnClickListener { binding.toggleListas.check(R.id.btnPrestadores) }
+        binding.cardTotalSolicitacoes.setOnClickListener {
+            startActivity(Intent(this, AdminSolicitacoesActivity::class.java))
+        }
         binding.btnVerSolicitacoes.setOnClickListener {
             startActivity(Intent(this, AdminSolicitacoesActivity::class.java))
         }
@@ -143,66 +150,67 @@ class AdminActivity : AppCompatActivity() {
             adminRepository.sair()
             finish()
         }
+
+        painelIniciado = true
+        carregarTudo()
     }
 
-    private fun mostrarMensagemInicial() {
-        binding.rvMotoristas.visibility = View.GONE
-        binding.rvPrestadores.visibility = View.GONE
-        binding.tvEmptyMotoristas.visibility = View.GONE
-        binding.tvEmptyPrestadores.visibility = View.GONE
-        binding.progressBar.visibility = View.GONE
-        binding.tvMensagemInicial.visibility = View.VISIBLE
-        destacarAba(motoristas = true)
+    // Volta das telas de solicitações/mensagens: atualiza os totais e as listas.
+    override fun onResume() {
+        super.onResume()
+        if (painelIniciado) carregarTudo()
     }
 
-    private fun destacarAba(motoristas: Boolean) {
-        val ativo = getColorStateList(android.R.color.holo_blue_light)
-        val inativo = getColorStateList(android.R.color.darker_gray)
-        binding.btnMotoristas.backgroundTintList = if (motoristas) ativo else inativo
-        binding.btnPrestadores.backgroundTintList = if (motoristas) inativo else ativo
-    }
-
-    private fun mostrarAba(motoristas: Boolean) {
-        binding.tvMensagemInicial.visibility = View.GONE
-        binding.rvMotoristas.visibility = if (motoristas) View.VISIBLE else View.GONE
-        binding.rvPrestadores.visibility = if (motoristas) View.GONE else View.VISIBLE
-        binding.tvEmptyMotoristas.visibility = View.GONE
-        binding.tvEmptyPrestadores.visibility = View.GONE
+    // Motoristas, prestadores e solicitações de uma vez (em paralelo) — os
+    // totais do resumo saem das próprias listas.
+    private fun carregarTudo() {
         binding.progressBar.visibility = View.VISIBLE
-        destacarAba(motoristas)
-    }
-
-    private fun carregarMotoristas() {
-        mostrarAba(motoristas = true)
         lifecycleScope.launch {
-            adminRepository.listarMotoristas()
-                .onSuccess { lista ->
-                    motoristaAdapter.atualizarLista(lista)
-                    binding.tvEmptyMotoristas.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
-                }
-                .onFailure { e ->
-                    Toast.makeText(this@AdminActivity, "Erro ao carregar motoristas: ${e.message}", Toast.LENGTH_LONG).show()
-                    binding.tvEmptyMotoristas.text = "Erro ao carregar motoristas.\n${e.message}"
-                    binding.tvEmptyMotoristas.visibility = View.VISIBLE
-                }
+            val (motoristas, prestadores, solicitacoes) = coroutineScope {
+                val m = async { adminRepository.listarMotoristas() }
+                val p = async { adminRepository.listarPrestadores() }
+                val s = async { adminRepository.listarSolicitacoes() }
+                Triple(m.await(), p.await(), s.await())
+            }
             binding.progressBar.visibility = View.GONE
+            binding.tvMensagemInicial.visibility = View.GONE
+
+            motoristas.onSuccess { motoristaAdapter.atualizarLista(it) }
+            prestadores.onSuccess { prestadorAdapter.atualizarLista(it) }
+            binding.tvTotalMotoristas.text = motoristas.getOrNull()?.size?.toString() ?: "—"
+            binding.tvTotalPrestadores.text = prestadores.getOrNull()?.size?.toString() ?: "—"
+            binding.tvTotalSolicitacoes.text = solicitacoes.getOrNull()?.size?.toString() ?: "—"
+
+            erroMotoristas = motoristas.exceptionOrNull()?.message
+            erroPrestadores = prestadores.exceptionOrNull()?.message
+            (erroMotoristas ?: erroPrestadores)?.let { avisar("Erro ao carregar cadastros: $it") }
+
+            mostrarLista(motoristas = binding.toggleListas.checkedButtonId != R.id.btnPrestadores)
         }
     }
 
-    private fun carregarPrestadores() {
-        mostrarAba(motoristas = false)
-        lifecycleScope.launch {
-            adminRepository.listarPrestadores()
-                .onSuccess { lista ->
-                    prestadorAdapter.atualizarLista(lista)
-                    binding.tvEmptyPrestadores.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
-                }
-                .onFailure { e ->
-                    Toast.makeText(this@AdminActivity, "Erro ao carregar prestadores: ${e.message}", Toast.LENGTH_LONG).show()
-                    binding.tvEmptyPrestadores.text = "Erro ao carregar prestadores.\n${e.message}"
-                    binding.tvEmptyPrestadores.visibility = View.VISIBLE
-                }
-            binding.progressBar.visibility = View.GONE
+    private var painelIniciado = false
+    private var erroMotoristas: String? = null
+    private var erroPrestadores: String? = null
+
+    private fun mostrarLista(motoristas: Boolean) {
+        if (binding.progressBar.visibility == View.VISIBLE) return
+        binding.rvMotoristas.visibility = if (motoristas) View.VISIBLE else View.GONE
+        binding.rvPrestadores.visibility = if (motoristas) View.GONE else View.VISIBLE
+
+        val (vazio, erro, total) = if (motoristas) {
+            Triple(binding.tvEmptyMotoristas, erroMotoristas, motoristaAdapter.itemCount)
+        } else {
+            Triple(binding.tvEmptyPrestadores, erroPrestadores, prestadorAdapter.itemCount)
+        }
+        binding.tvEmptyMotoristas.visibility = View.GONE
+        binding.tvEmptyPrestadores.visibility = View.GONE
+        if (erro != null) {
+            vazio.text = "Erro ao carregar.\n$erro"
+            vazio.visibility = View.VISIBLE
+        } else if (total == 0) {
+            vazio.text = if (motoristas) "Nenhum motorista cadastrado ainda." else "Nenhum prestador cadastrado ainda."
+            vazio.visibility = View.VISIBLE
         }
     }
 }

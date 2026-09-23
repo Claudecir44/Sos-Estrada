@@ -92,6 +92,8 @@ class AdminRepository @Inject constructor(
 
     override fun sair() = authRepository.sair()
 
+    override fun emailLogado(): String? = auth.currentUser?.email
+
     override suspend fun listarMotoristas(): Result<List<Motorista>> = runCatching {
         db.collection("motoristas").get().await().documents
             .mapNotNull { it.toObject(Motorista::class.java) }

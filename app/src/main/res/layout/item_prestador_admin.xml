@@ -1,48 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="4dp">
+    style="@style/AdminCard"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:padding="14dp">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivLogoPrestador"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@color/admin_chip"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_placeholder_logo"
+            app:shapeAppearanceOverlay="@style/AdminLogoCircular" />
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <ImageView
-                android:id="@+id/ivLogoPrestador"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:src="@drawable/ic_placeholder_logo"
-                android:scaleType="centerCrop"
-                android:layout_marginEnd="16dp"/>
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/tvNomePrestador"
-                style="@style/AdminItemText"
-                android:text="Nome: ..."
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                style="@style/AdminTitulo"
+                android:layout_width="match_parent"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Nome" />
+
+            <TextView
+                android:id="@+id/tvServicoPrestador"
+                style="@style/AdminChip"
+                android:layout_marginTop="6dp"
+                android:backgroundTint="@color/admin_laranja_claro"
+                android:textColor="@color/admin_laranja"
+                android:text="🔧 Serviço" />
+
+            <TextView
+                android:id="@+id/tvTelefonePrestador"
+                style="@style/AdminLinha"
+                android:layout_marginTop="8dp"
+                android:text="📞 Telefone" />
+
+            <TextView
+                android:id="@+id/tvEmailPrestador"
+                style="@style/AdminLinha"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="✉️ E-mail" />
+
+            <TextView
+                android:id="@+id/tvEnderecoPrestador"
+                style="@style/AdminLinha"
+                android:text="📍 Endereço" />
+
+            <TextView
+                android:id="@+id/tvCnpjPrestador"
+                style="@style/AdminLinha"
+                android:text="CNPJ • Preço" />
+
+            <TextView
+                android:id="@+id/tvUidPrestador"
+                style="@style/AdminLinha"
+                android:textSize="11sp"
+                android:textColor="#9CA3AF"
+                android:text="ID" />
         </LinearLayout>
-
-        <TextView android:id="@+id/tvCnpjPrestador" style="@style/AdminItemText" android:text="CNPJ: ..." />
-        <TextView android:id="@+id/tvTelefonePrestador" style="@style/AdminItemText" android:text="Telefone: ..." />
-        <TextView android:id="@+id/tvEmailPrestador" style="@style/AdminItemText" android:text="E-mail: ..." />
-        <TextView android:id="@+id/tvServicoPrestador" style="@style/AdminItemText" android:text="Serviço: ..." />
-        <TextView android:id="@+id/tvLocalizacaoPrestador" style="@style/AdminItemText" android:text="Localização: ..." />
-        <TextView android:id="@+id/tvEnderecoPrestador" style="@style/AdminItemText" android:text="Endereço: ..." />
-        <TextView android:id="@+id/tvPrecoPrestador" style="@style/AdminItemText" android:text="Preço: ..." />
-        <TextView android:id="@+id/tvUidPrestador" style="@style/AdminItemText" android:text="ID: ..." android:textSize="12sp" android:textColor="#888" />
-
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

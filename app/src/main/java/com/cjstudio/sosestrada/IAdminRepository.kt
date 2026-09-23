@@ -18,6 +18,8 @@ interface IAdminRepository {
 
     fun sair()
 
+    fun emailLogado(): String?
+
     suspend fun listarMotoristas(): Result<List<Motorista>>
 
     suspend fun listarPrestadores(): Result<List<Prestador>>

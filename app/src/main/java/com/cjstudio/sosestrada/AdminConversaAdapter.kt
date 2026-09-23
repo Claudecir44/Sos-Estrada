@@ -24,9 +24,9 @@ class AdminConversaAdapter : RecyclerView.Adapter<AdminConversaAdapter.ViewHolde
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val s = solicitacoes[position]
         with(holder.binding) {
-            tvConversaMotorista.text = "🚗 Motorista: ${s.motoristaNome}"
-            tvConversaPrestador.text = "🔧 Prestador: ${s.prestadorNome}"
-            tvConversaStatus.text = "Status: ${s.status}"
+            tvConversaMotorista.text = "🚗 ${s.motoristaNome ?: "Motorista"}"
+            tvConversaPrestador.text = "🔧 ${s.prestadorNome ?: "Prestador"}"
+            tvConversaStatus.mostrarStatus(s.status)
             tvConversaDataHora.text = dataHora(s.timestamp)
             root.setOnClickListener { abrirConversaComoAdmin(root.context, s) }
         }

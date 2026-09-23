@@ -24,13 +24,14 @@ class MotoristaAdminAdapter : RecyclerView.Adapter<MotoristaAdminAdapter.ViewHol
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val m = motoristas[position]
         with(holder.binding) {
-            tvNomeMotorista.text = "Nome: ${m.nome}"
-            tvTelefoneMotorista.text = "Telefone: ${m.telefone}"
-            tvEmailMotorista.text = "E-mail: ${m.email}"
-            tvVeiculoMotorista.text = "Veículo: ${m.veiculo}"
-            tvPlacaMotorista.text = "Placa: ${m.placa}"
-            tvCorMotorista.text = "Cor: ${m.cor}"
-            tvUidMotorista.text = "ID: ${m.uid}"
+            tvAvatarMotorista.text = iniciais(m.nome)
+            tvNomeMotorista.text = m.nome ?: "Sem nome"
+            tvEmailMotorista.text = m.email.orEmpty()
+            // "🚗 Onix • ABC1D23 • Prata" (só o que estiver preenchido).
+            tvVeiculoMotorista.text = "🚗 " + listOfNotNull(m.veiculo, m.placa, m.cor)
+                .filter { it.isNotBlank() }.joinToString(" • ").ifEmpty { "Veículo não informado" }
+            tvTelefoneMotorista.text = "📞 ${m.telefone ?: "Não informado"}"
+            tvUidMotorista.text = "ID ${m.uid.orEmpty()}"
         }
     }
 }

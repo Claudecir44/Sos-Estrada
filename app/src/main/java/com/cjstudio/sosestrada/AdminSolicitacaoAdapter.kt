@@ -24,23 +24,14 @@ class AdminSolicitacaoAdapter : RecyclerView.Adapter<AdminSolicitacaoAdapter.Vie
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val s = solicitacoes[position]
         with(holder.binding) {
-            tvMotoristaNomeAdmin.text = "Motorista: ${s.motoristaNome}"
-            tvMotoristaTelefoneAdmin.text = "📞 ${s.motoristaTelefone}"
-            tvMotoristaVeiculoAdmin.text = "🚗 ${s.motoristaVeiculo}"
-            tvMotoristaPlacaAdmin.text = "🔢 ${s.motoristaPlaca}"
-            tvMotoristaEnderecoAdmin.text = "📍 ${s.enderecoMotorista ?: "não informado"}"
-            tvPrestadorNomeAdmin.text = "Prestador: ${s.prestadorNome}"
-            tvStatusAdmin.text = "Status: ${s.status}"
-            tvStatusAdmin.setTextColor(
-                when (s.status) {
-                    ISolicitacaoRepository.PENDENTE -> 0xFFFF9800
-                    ISolicitacaoRepository.ACEITO -> 0xFF4CAF50
-                    ISolicitacaoRepository.RECUSADO -> 0xFFD32F2F
-                    ISolicitacaoRepository.CANCELADO -> 0xFF9E9E9E
-                    else -> 0xFF333333
-                }.toInt()
-            )
+            tvStatusAdmin.mostrarStatus(s.status)
             tvDataHoraAdmin.text = dataHora(s.timestamp)
+            tvMotoristaNomeAdmin.text = s.motoristaNome ?: "Motorista"
+            tvMotoristaVeiculoAdmin.text = listOfNotNull(s.motoristaVeiculo, s.motoristaPlaca)
+                .filter { it.isNotBlank() }.joinToString(" • ").ifEmpty { "Veículo não informado" }
+            tvMotoristaTelefoneAdmin.text = "📞 ${s.motoristaTelefone ?: "Não informado"}"
+            tvMotoristaEnderecoAdmin.text = "📍 ${s.enderecoMotorista ?: "Endereço não informado"}"
+            tvPrestadorNomeAdmin.text = s.prestadorNome ?: "Prestador"
             btnVerMensagensAdmin.setOnClickListener { abrirConversaComoAdmin(root.context, s) }
         }
     }

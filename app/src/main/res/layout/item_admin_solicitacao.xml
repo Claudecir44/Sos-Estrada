@@ -1,106 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="4dp">
+    style="@style/AdminCard"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="14dp">
 
-        <TextView
-            android:id="@+id/tvMotoristaNomeAdmin"
+        <!-- Status + data -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Motorista: ..."
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#333" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/tvMotoristaTelefoneAdmin"
+            <TextView
+                android:id="@+id/tvStatusAdmin"
+                style="@style/AdminChip"
+                android:text="Pendente" />
+
+            <TextView
+                android:id="@+id/tvDataHoraAdmin"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:text="data"
+                android:textColor="@color/admin_texto_secundario"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Motorista -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📞 ..."
-            android:textSize="14sp"
-            android:textColor="#555" />
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/tvMotoristaVeiculoAdmin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🚗 ..."
-            android:textSize="14sp"
-            android:textColor="#555" />
+            <TextView
+                style="@style/AdminAvatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:backgroundTint="@color/admin_azul_claro"
+                android:text="🚗"
+                android:textSize="18sp" />
 
-        <TextView
-            android:id="@+id/tvMotoristaPlacaAdmin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔢 ..."
-            android:textSize="14sp"
-            android:textColor="#555" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tvMotoristaEnderecoAdmin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📍 ..."
-            android:textSize="14sp"
-            android:textColor="#555"
-            android:layout_marginBottom="8dp" />
+                <TextView
+                    android:id="@+id/tvMotoristaNomeAdmin"
+                    style="@style/AdminTitulo"
+                    android:layout_width="match_parent"
+                    android:text="Motorista" />
+
+                <TextView
+                    android:id="@+id/tvMotoristaVeiculoAdmin"
+                    style="@style/AdminLinha"
+                    android:layout_marginTop="1dp"
+                    android:text="Veículo" />
+
+                <TextView
+                    android:id="@+id/tvMotoristaTelefoneAdmin"
+                    style="@style/AdminLinha"
+                    android:text="📞 Telefone" />
+
+                <TextView
+                    android:id="@+id/tvMotoristaEnderecoAdmin"
+                    style="@style/AdminLinha"
+                    android:text="📍 Endereço" />
+            </LinearLayout>
+        </LinearLayout>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#DDD"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="@color/admin_borda" />
 
-        <TextView
-            android:id="@+id/tvPrestadorNomeAdmin"
+        <!-- Prestador -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Prestador: ..."
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#333"
-            android:layout_marginBottom="4dp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/tvStatusAdmin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Status: ..."
-            android:textSize="14sp"
-            android:textColor="#555" />
+            <TextView
+                style="@style/AdminAvatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:backgroundTint="@color/admin_laranja_claro"
+                android:text="🔧"
+                android:textSize="18sp" />
 
-        <TextView
-            android:id="@+id/tvDataHoraAdmin"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Data/Hora: ..."
-            android:textSize="14sp"
-            android:textColor="#555" />
+            <TextView
+                android:id="@+id/tvPrestadorNomeAdmin"
+                style="@style/AdminTitulo"
+                android:layout_width="0dp"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:text="Prestador" />
+        </LinearLayout>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnVerMensagensAdmin"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:paddingHorizontal="16dp"
-            android:gravity="center"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="@color/admin_roxo_claro"
             android:text="💬 Ver mensagens"
-            android:backgroundTint="#9C27B0"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:layout_marginTop="8dp"
-            app:cornerRadius="8dp" />
-
+            android:textAllCaps="false"
+            android:textColor="@color/admin_roxo"
+            app:cornerRadius="12dp" />
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

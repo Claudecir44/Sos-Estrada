@@ -26,6 +26,7 @@ class AdminSolicitacoesActivity : AppCompatActivity() {
         binding = ActivityAdminSolicitacoesBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.btnVoltarAdminSolicitacoes.setOnClickListener { finish() }
         binding.rvAdminSolicitacoes.layoutManager = LinearLayoutManager(this)
         binding.rvAdminSolicitacoes.adapter = adapter
 
@@ -34,6 +35,7 @@ class AdminSolicitacoesActivity : AppCompatActivity() {
             adminRepository.listarSolicitacoes()
                 .onSuccess { lista ->
                     adapter.atualizarLista(lista)
+                    binding.tvSubtituloAdminSolicitacoes.text = if (lista.size == 1) "1 solicitação" else "${lista.size} solicitações"
                     binding.tvEmptyAdminSolicitacoes.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
                 }
                 .onFailure { e ->
