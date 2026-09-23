@@ -15,4 +15,8 @@ interface IPrestadorRepository {
     suspend fun enviarLogo(imagem: Uri): Result<String>
 
     suspend fun excluirMeuCadastro(): Result<Unit>
+
+    // Prestadores visíveis na busca do motorista (ativo == true: dentro do
+    // período grátis ou com assinatura em dia).
+    suspend fun listarAtivos(): Result<List<Prestador>>
 }

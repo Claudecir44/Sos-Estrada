@@ -21,4 +21,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindPrestadorRepository(impl: PrestadorRepository): IPrestadorRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSolicitacaoRepository(impl: SolicitacaoRepository): ISolicitacaoRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindChatRepository(impl: ChatRepository): IChatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLocalizacaoRepository(impl: LocalizacaoRepository): ILocalizacaoRepository
 }

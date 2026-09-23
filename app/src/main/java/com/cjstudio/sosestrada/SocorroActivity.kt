@@ -3,456 +3,238 @@ package com.cjstudio.sosestrada
 import android.Manifest
 import android.app.AlertDialog
 import android.content.pm.PackageManager
-import android.location.Geocoder
-import android.location.Location
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextUtils
-import android.text.TextWatcher
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.material.textfield.TextInputEditText
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.Dispatchers
+import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.CANCELADO
+import com.cjstudio.sosestrada.databinding.ActivitySocorroBinding
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
-import java.io.IOException
-import java.util.Date
-import java.util.Locale
+import javax.inject.Inject
 
-// Migrada de Java pra Kotlin (era o arquivo com mais retorno de Firebase
-// encadeado do app — 17 addOnSuccessListener/addOnFailureListener/
-// addOnCompleteListener aninhados). Corrotinas (lifecycleScope + .await())
-// no lugar dos callbacks: mesmo comportamento, código sequencial mais fácil
-// de acompanhar e sem esquecer caso de erro por engano.
-class SocorroActivity : AppCompatActivity(),
-    PrestadorAdapter.OnSolicitarServicoListener,
-    PrestadorAdapter.OnItemLongClickListener {
+// Busca de socorro do motorista: lista os prestadores ativos (com distância,
+// quando há GPS), pede o serviço, cancela e exclui solicitações.
+@AndroidEntryPoint
+class SocorroActivity : AppCompatActivity() {
 
-    private lateinit var recyclerView: RecyclerView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var tvEmpty: TextView
-    private lateinit var edtPesquisa: TextInputEditText
-    private lateinit var db: FirebaseFirestore
-    private lateinit var mAuth: FirebaseAuth
+    @Inject
+    lateinit var authRepository: IAuthRepository
+
+    @Inject
+    lateinit var prestadorRepository: IPrestadorRepository
+
+    @Inject
+    lateinit var solicitacaoRepository: ISolicitacaoRepository
+
+    @Inject
+    lateinit var localizacaoRepository: ILocalizacaoRepository
+
+    private lateinit var binding: ActivitySocorroBinding
     private lateinit var adapter: PrestadorAdapter
-    private val prestadorList = mutableListOf<Prestador>()
 
-    private var driverLat = 0.0
-    private var driverLng = 0.0
-    private var locationReady = false
+    private var latitude = 0.0
+    private var longitude = 0.0
+    private var temLocalizacao = false
+    private var primeiraCargaFeita = false
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_socorro)
-
-        db = FirebaseFirestore.getInstance()
-        mAuth = FirebaseAuth.getInstance()
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
-        recyclerView = findViewById(R.id.rvPrestadoresSocorro)
-        progressBar = findViewById(R.id.progressBarSocorro)
-        tvEmpty = findViewById(R.id.tvEmptySocorro)
-        edtPesquisa = findViewById(R.id.edtPesquisa)
-
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = PrestadorAdapter(prestadorList, this, this, this)
-        recyclerView.adapter = adapter
-
-        edtPesquisa.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                adapter.filter(s.toString())
-            }
-
-            override fun afterTextChanged(s: Editable?) {}
-        })
-
-        verificarPermissaoLocalizacao()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (locationReady) {
-            lifecycleScope.launch { carregarPrestadores() }
-        }
-    }
-
-    private fun verificarPermissaoLocalizacao() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST
-            )
+    private val permissaoLocalizacao = registerForActivityResult(ActivityResultContracts.RequestPermission()) { concedida ->
+        if (concedida) {
+            obterLocalizacaoECarregar()
         } else {
-            obterLocalizacaoAtual()
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == LOCATION_PERMISSION_REQUEST) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                obterLocalizacaoAtual()
-            } else {
-                Toast.makeText(this, "Permissão de localização negada. A distância não será calculada.", Toast.LENGTH_LONG).show()
-                lifecycleScope.launch { carregarPrestadores() }
-            }
-        }
-    }
-
-    private fun obterLocalizacaoAtual() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        lifecycleScope.launch {
-            try {
-                val location = fusedLocationClient.lastLocation.await()
-                if (location != null) {
-                    driverLat = location.latitude
-                    driverLng = location.longitude
-                    locationReady = true
-                    Log.d("Socorro", "Localização obtida: $driverLat, $driverLng")
-                } else {
-                    Toast.makeText(this@SocorroActivity, "Não foi possível obter a localização. Verifique o GPS.", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@SocorroActivity, "Erro ao obter localização: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(this, "Permissão de localização negada. A distância não será calculada.", Toast.LENGTH_LONG).show()
             carregarPrestadores()
         }
     }
 
-    private suspend fun carregarPrestadores() {
-        progressBar.visibility = View.VISIBLE
-        tvEmpty.visibility = View.GONE
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivitySocorroBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        try {
-            // "ativo" só existe em prestadores criados depois do módulo de
-            // assinatura (aoRegistrarPrestador, Cloud Function) — cadastros
-            // antigos só recebem esse campo através da migração
-            // (migrarAssinaturaPrestadores). Enquanto essa function não
-            // rodar em produção (bloqueada pelo plano Spark), esse filtro
-            // escondia todo mundo; rodar a migração é pré-requisito pra
-            // essa tela voltar a listar prestadores antigos.
-            val snapshot = db.collection("prestadores")
-                .whereEqualTo("ativo", true)
-                .get()
-                .await()
+        adapter = PrestadorAdapter(aoSolicitar = ::solicitarServico, aoSegurar = ::aoSegurarPrestador)
+        binding.rvPrestadoresSocorro.layoutManager = LinearLayoutManager(this)
+        binding.rvPrestadoresSocorro.adapter = adapter
+        binding.edtPesquisa.doOnTextChanged { texto, _, _, _ -> adapter.filtrar(texto?.toString().orEmpty()) }
 
-            val tempList = snapshot.documents.mapNotNull { it.toObject(Prestador::class.java) }
-
-            progressBar.visibility = View.GONE
-
-            if (tempList.isEmpty()) {
-                tvEmpty.visibility = View.VISIBLE
-                adapter.updateList(emptyList())
-                return
-            }
-
-            val listaFinal = if (locationReady) calcularDistancias(tempList) else tempList
-            carregarStatusSolicitacoes(listaFinal)
-        } catch (e: Exception) {
-            progressBar.visibility = View.GONE
-            Toast.makeText(this, "Erro ao carregar prestadores: ${e.message}", Toast.LENGTH_SHORT).show()
-            tvEmpty.visibility = View.VISIBLE
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            obterLocalizacaoECarregar()
+        } else {
+            permissaoLocalizacao.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
-    private suspend fun calcularDistancias(lista: List<Prestador>): List<Prestador> = withContext(Dispatchers.IO) {
-        @Suppress("DEPRECATION")
-        val geocoder = Geocoder(applicationContext, Locale.getDefault())
-        lista.map { p ->
-            try {
-                var endereco = p.enderecoCompleto
-                if (!endereco.isNullOrEmpty() && endereco != " " && endereco != "Endereço não informado"
-                    && driverLat != 0.0 && driverLng != 0.0
-                ) {
-                    if (!endereco.lowercase().contains("brasil")) {
-                        endereco += ", Brasil"
-                    }
-                    @Suppress("DEPRECATION")
-                    val addresses = geocoder.getFromLocationName(endereco, 1)
-                    if (!addresses.isNullOrEmpty()) {
-                        val address = addresses[0]
-                        val results = FloatArray(1)
-                        Location.distanceBetween(driverLat, driverLng, address.latitude, address.longitude, results)
-                        p.distancia = (results[0] / 1000).toDouble()
+    // Volta do chat: recarrega status e contadores de mensagens.
+    override fun onResume() {
+        super.onResume()
+        if (primeiraCargaFeita) carregarPrestadores()
+    }
+
+    private fun obterLocalizacaoECarregar() {
+        lifecycleScope.launch {
+            localizacaoRepository.ultimaLocalizacao()
+                .onSuccess { local ->
+                    if (local != null) {
+                        latitude = local.latitude
+                        longitude = local.longitude
+                        temLocalizacao = true
+                    } else {
+                        Toast.makeText(this@SocorroActivity, "Não foi possível obter a localização. Verifique o GPS.", Toast.LENGTH_SHORT).show()
                     }
                 }
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            p
+                .onFailure { e ->
+                    Toast.makeText(this@SocorroActivity, "Erro ao obter localização: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            carregarPrestadores()
         }
     }
 
-    private suspend fun carregarStatusSolicitacoes(tempList: List<Prestador>) {
-        val user = mAuth.currentUser
-        if (user == null) {
-            adapter.updateList(tempList)
-            return
+    private fun carregarPrestadores() {
+        primeiraCargaFeita = true
+        binding.progressBarSocorro.visibility = View.VISIBLE
+        binding.tvEmptySocorro.visibility = View.GONE
+
+        lifecycleScope.launch {
+            val prestadores = prestadorRepository.listarAtivos().getOrElse { e ->
+                binding.progressBarSocorro.visibility = View.GONE
+                binding.tvEmptySocorro.visibility = View.VISIBLE
+                Toast.makeText(this@SocorroActivity, "Erro ao carregar prestadores: ${e.message}", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            if (temLocalizacao) calcularDistancias(prestadores)
+
+            // Sem as solicitações, a lista aparece do mesmo jeito (só sem status).
+            val solicitacoes = solicitacaoRepository.minhasSolicitacoesPorPrestador().getOrDefault(emptyMap())
+            for (p in prestadores) {
+                val solicitacao = solicitacoes[p.uid]
+                p.statusSolicitacao = solicitacao?.status
+                p.solicitacaoId = solicitacao?.id
+                p.naoLidasMotorista = solicitacao?.naoLidasMotorista ?: 0
+            }
+
+            binding.progressBarSocorro.visibility = View.GONE
+            binding.tvEmptySocorro.visibility = if (prestadores.isEmpty()) View.VISIBLE else View.GONE
+            adapter.atualizarLista(prestadores)
         }
+    }
 
-        try {
-            val snapshot = db.collection("solicitacoes")
-                .whereEqualTo("motoristaUid", user.uid)
-                .get()
-                .await()
-
-            val statusMap = HashMap<String, String>()
-            val idMap = HashMap<String, String>()
-            val naoLidasMap = HashMap<String, Long>()
-            for (doc in snapshot.documents) {
-                val prestadorUid = doc.getString("prestadorUid")
-                val status = doc.getString("status")
-                if (prestadorUid != null && status != null) {
-                    statusMap[prestadorUid] = status
-                    idMap[prestadorUid] = doc.id
-                    naoLidasMap[prestadorUid] = doc.getLong("naoLidasMotorista") ?: 0L
+    // Geocodifica os endereços em paralelo (cada um é uma chamada de rede).
+    private suspend fun calcularDistancias(prestadores: List<Prestador>) = coroutineScope {
+        prestadores.map { p ->
+            async {
+                val endereco = p.enderecoCompleto
+                if (endereco != "Endereço não informado") {
+                    localizacaoRepository.distanciaKmAte(latitude, longitude, endereco)?.let { p.distancia = it }
                 }
             }
-            for (p in tempList) {
-                p.statusSolicitacao = statusMap[p.uid]
-                p.solicitacaoId = idMap[p.uid]
-                p.naoLidasMotorista = (naoLidasMap[p.uid] ?: 0L).toInt()
-            }
-            prestadorList.clear()
-            prestadorList.addAll(tempList)
-            adapter.updateList(prestadorList)
-        } catch (e: Exception) {
-            adapter.updateList(tempList)
-        }
+        }.awaitAll()
     }
 
-    // ---------- OnSolicitarServicoListener ----------
-    override fun onSolicitarServico(prestador: Prestador) {
-        val user = mAuth.currentUser
-        if (user == null) {
+    private fun solicitarServico(prestador: Prestador) {
+        val prestadorUid = prestador.uid ?: return
+        if (authRepository.uidLogado() == null) {
             Toast.makeText(this, "Faça login como motorista primeiro", Toast.LENGTH_SHORT).show()
             return
         }
-
         lifecycleScope.launch {
-            try {
-                val existentes = db.collection("solicitacoes")
-                    .whereEqualTo("motoristaUid", user.uid)
-                    .whereEqualTo("prestadorUid", prestador.uid)
-                    .whereIn("status", listOf("pendente", "aceito"))
-                    .get()
-                    .await()
-
-                if (!existentes.isEmpty) {
-                    Toast.makeText(this@SocorroActivity, "Você já possui uma solicitação pendente ou aceita para este prestador.", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-
-                val motoristaDoc = db.collection("motoristas").document(user.uid).get().await()
-                if (!motoristaDoc.exists()) {
-                    Toast.makeText(this@SocorroActivity, "Dados do motorista não encontrados.", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-
-                val solicitacao = hashMapOf<String, Any?>(
-                    "motoristaUid" to user.uid,
-                    "prestadorUid" to prestador.uid,
-                    "prestadorNome" to prestador.nome,
-                    "motoristaNome" to motoristaDoc.getString("nome"),
-                    "motoristaTelefone" to motoristaDoc.getString("telefone"),
-                    "motoristaVeiculo" to motoristaDoc.getString("veiculo"),
-                    "motoristaPlaca" to motoristaDoc.getString("placa"),
-                    "status" to "pendente",
-                    "timestamp" to Date(),
-                    "latitudeMotorista" to driverLat,
-                    "longitudeMotorista" to driverLng
-                )
-
-                val enderecoMotorista = obterEnderecoAtual(driverLat, driverLng)
-                if (enderecoMotorista != null) {
-                    solicitacao["enderecoMotorista"] = enderecoMotorista
-                }
-
-                db.collection("solicitacoes").add(solicitacao).await()
-                Toast.makeText(this@SocorroActivity, "✅ Solicitação enviada para ${prestador.nome}", Toast.LENGTH_LONG).show()
-                prestador.statusSolicitacao = "pendente"
-                adapter.notifyDataSetChanged()
-            } catch (e: Exception) {
+            val jaTem = solicitacaoRepository.temSolicitacaoAtivaCom(prestadorUid).getOrElse { e ->
                 Toast.makeText(this@SocorroActivity, "Erro ao enviar solicitação: ${e.message}", Toast.LENGTH_SHORT).show()
+                return@launch
             }
+            if (jaTem) {
+                Toast.makeText(this@SocorroActivity, "Você já possui uma solicitação pendente ou aceita para este prestador.", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val endereco = if (temLocalizacao) localizacaoRepository.enderecoDe(latitude, longitude) else null
+            solicitacaoRepository.solicitar(prestador, latitude, longitude, endereco)
+                .onSuccess {
+                    Toast.makeText(this@SocorroActivity, "✅ Solicitação enviada para ${prestador.nome}", Toast.LENGTH_LONG).show()
+                    carregarPrestadores()
+                }
+                .onFailure { e ->
+                    Toast.makeText(this@SocorroActivity, "Erro ao enviar solicitação: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
-    // ---------- OnItemLongClickListener ----------
-    override fun onItemLongClick(prestador: Prestador) {
-        if (prestador.statusSolicitacao == null) {
+    private fun aoSegurarPrestador(prestador: Prestador) {
+        val solicitacaoId = prestador.solicitacaoId
+        if (prestador.statusSolicitacao == null || solicitacaoId == null) {
             Toast.makeText(this, "Não há solicitação ativa para este prestador.", Toast.LENGTH_SHORT).show()
             return
         }
-
-        if (prestador.statusSolicitacao == "cancelado") {
+        if (prestador.statusSolicitacao == CANCELADO) {
             AlertDialog.Builder(this)
                 .setTitle("Excluir permanentemente")
                 .setMessage("Esta solicitação já foi cancelada. Deseja excluí-la permanentemente?")
-                .setPositiveButton("Sim") { _, _ -> excluirPermanentemente(prestador) }
+                .setPositiveButton("Sim") { _, _ -> excluir(solicitacaoId) }
                 .setNegativeButton("Não", null)
                 .show()
             return
         }
-
-        mostrarDialogoCancelamento(prestador)
+        confirmarCancelamento(solicitacaoId)
     }
 
-    private fun mostrarDialogoCancelamento(prestador: Prestador) {
-        val builder = AlertDialog.Builder(this)
+    private fun confirmarCancelamento(solicitacaoId: String) {
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_cancelar_solicitacao, null)
         val checkBox = view.findViewById<CheckBox>(R.id.checkBoxConfirmacaoCancelamento)
         val edtSenha = view.findViewById<EditText>(R.id.edtSenhaCancelamento)
-
-        builder.setView(view)
-        builder.setTitle("Cancelar solicitação")
-
-        builder.setPositiveButton("Cancelar solicitação") { _, _ ->
-            if (!checkBox.isChecked) {
-                Toast.makeText(this, "Marque a checkbox para confirmar.", Toast.LENGTH_SHORT).show()
-                return@setPositiveButton
+        AlertDialog.Builder(this)
+            .setTitle("Cancelar solicitação")
+            .setView(view)
+            .setPositiveButton("Cancelar solicitação") { _, _ ->
+                val senha = edtSenha.text.toString().trim()
+                when {
+                    !checkBox.isChecked -> Toast.makeText(this, "Marque a checkbox para confirmar.", Toast.LENGTH_SHORT).show()
+                    senha.isEmpty() -> Toast.makeText(this, "Digite sua senha.", Toast.LENGTH_SHORT).show()
+                    else -> cancelar(solicitacaoId, senha)
+                }
             }
-            val senha = edtSenha.text.toString().trim()
-            if (TextUtils.isEmpty(senha)) {
-                Toast.makeText(this, "Digite sua senha.", Toast.LENGTH_SHORT).show()
-                return@setPositiveButton
-            }
-            reautenticarECancelar(prestador, senha)
-        }
-
-        builder.setNegativeButton("Voltar", null)
-        builder.show()
+            .setNegativeButton("Voltar", null)
+            .show()
     }
 
-    private fun reautenticarECancelar(prestador: Prestador, senha: String) {
-        val user = mAuth.currentUser
-        if (user == null) {
-            Toast.makeText(this, "Usuário não logado", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val email = user.email
-        if (email == null) {
-            Toast.makeText(this, "E-mail não disponível", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+    // Cancela só a solicitação deste card (antes cancelava todas as
+    // solicitações já feitas com o prestador, inclusive as antigas).
+    private fun cancelar(solicitacaoId: String, senha: String) {
         lifecycleScope.launch {
-            try {
-                mAuth.signInWithEmailAndPassword(email, senha).await()
-                cancelarSolicitacao(prestador)
-            } catch (e: Exception) {
+            if (authRepository.reautenticar(senha).isFailure) {
                 Toast.makeText(this@SocorroActivity, "Senha incorreta. Tente novamente.", Toast.LENGTH_SHORT).show()
+                return@launch
             }
+            solicitacaoRepository.atualizarStatus(solicitacaoId, CANCELADO)
+                .onSuccess {
+                    Toast.makeText(this@SocorroActivity, "Solicitação cancelada com sucesso.", Toast.LENGTH_SHORT).show()
+                    carregarPrestadores()
+                }
+                .onFailure { e ->
+                    Toast.makeText(this@SocorroActivity, "Erro ao cancelar: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
-    private fun cancelarSolicitacao(prestador: Prestador) {
-        val user = mAuth.currentUser ?: return
-
+    private fun excluir(solicitacaoId: String) {
         lifecycleScope.launch {
-            try {
-                val snapshot = db.collection("solicitacoes")
-                    .whereEqualTo("motoristaUid", user.uid)
-                    .whereEqualTo("prestadorUid", prestador.uid)
-                    .get()
-                    .await()
-
-                if (snapshot.isEmpty) {
-                    Toast.makeText(this@SocorroActivity, "Nenhuma solicitação encontrada.", Toast.LENGTH_SHORT).show()
-                    return@launch
+            solicitacaoRepository.excluir(solicitacaoId)
+                .onSuccess {
+                    Toast.makeText(this@SocorroActivity, "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show()
+                    carregarPrestadores()
                 }
-
-                for (doc in snapshot.documents) {
-                    try {
-                        doc.reference.update("status", "cancelado").await()
-                        Toast.makeText(this@SocorroActivity, "Solicitação cancelada com sucesso.", Toast.LENGTH_SHORT).show()
-                        prestador.statusSolicitacao = "cancelado"
-                        adapter.notifyDataSetChanged()
-                    } catch (e: Exception) {
-                        Toast.makeText(this@SocorroActivity, "Erro ao cancelar: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
+                .onFailure { e ->
+                    Toast.makeText(this@SocorroActivity, "Erro ao excluir: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(this@SocorroActivity, "Erro ao cancelar: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
         }
     }
 
-    private fun excluirPermanentemente(prestador: Prestador) {
-        val user = mAuth.currentUser ?: return
-
-        lifecycleScope.launch {
-            try {
-                val snapshot = db.collection("solicitacoes")
-                    .whereEqualTo("motoristaUid", user.uid)
-                    .whereEqualTo("prestadorUid", prestador.uid)
-                    .get()
-                    .await()
-
-                if (snapshot.isEmpty) {
-                    Toast.makeText(this@SocorroActivity, "Nenhuma solicitação encontrada.", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-
-                for (doc in snapshot.documents) {
-                    try {
-                        doc.reference.delete().await()
-                        Toast.makeText(this@SocorroActivity, "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show()
-                        prestador.statusSolicitacao = null
-                        adapter.notifyDataSetChanged()
-                    } catch (e: Exception) {
-                        Toast.makeText(this@SocorroActivity, "Erro ao excluir: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@SocorroActivity, "Erro ao excluir: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun obterEnderecoAtual(lat: Double, lng: Double): String? {
-        @Suppress("DEPRECATION")
-        val geocoder = Geocoder(this, Locale.getDefault())
-        return try {
-            @Suppress("DEPRECATION")
-            val addresses = geocoder.getFromLocation(lat, lng, 1)
-            if (!addresses.isNullOrEmpty()) addresses[0].getAddressLine(0) else null
-        } catch (e: IOException) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    companion object {
-        private const val LOCATION_PERMISSION_REQUEST = 1001
-    }
 }

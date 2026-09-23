@@ -66,4 +66,13 @@ class PrestadorRepository @Inject constructor(
         meuDocumento().delete().await()
         Unit
     }
+
+    // "ativo" só existe em prestadores criados depois do módulo de assinatura
+    // (Cloud Function aoRegistrarPrestador) ou migrados por
+    // migrarAssinaturaPrestadores. Enquanto a migração não rodar em produção
+    // (exige o plano Blaze), cadastros antigos não aparecem aqui.
+    override suspend fun listarAtivos(): Result<List<Prestador>> = runCatching {
+        db.collection("prestadores").whereEqualTo("ativo", true).get().await()
+            .documents.mapNotNull { it.toObject(Prestador::class.java) }
+    }
 }

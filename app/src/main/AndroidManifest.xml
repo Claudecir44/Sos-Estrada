@@ -36,9 +36,6 @@
             android:name=".AtendimentoActivity"
             android:exported="false" />
         <activity
-            android:name=".SolicitacoesActivity"
-            android:exported="false" />
-        <activity
             android:name=".SocorroActivity"
             android:exported="false" />
         <activity
