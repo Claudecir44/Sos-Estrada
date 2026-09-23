@@ -9,7 +9,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.text.InputType
 import android.util.Patterns
+import android.view.View
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -68,10 +70,14 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         editando = intent.getBooleanExtra(EXTRA_EDITANDO, false)
         binding.btnCadastrar.text = if (editando) "ATUALIZAR CADASTRO" else "CADASTRAR"
         if (editando) {
-            // O e-mail é o login da conta — mudar só no cadastro deixaria os
-            // dois diferentes. A senha também não muda por aqui.
+            binding.tvTitulo.text = "Meu Perfil"
+            binding.btnCadastrar.text = "SALVAR ALTERAÇÕES"
+            // O e-mail é o login da conta: vem preenchido e travado.
             binding.edtEmail.isEnabled = false
-            binding.edtSenha.isEnabled = false
+            // Senha não muda aqui ("Esqueci minha senha" no login).
+            binding.tilSenha.visibility = View.GONE
+            binding.btnExcluir.visibility = View.VISIBLE
+            binding.btnExcluir.setOnClickListener { confirmarExclusao() }
             carregarCadastro()
         }
 
@@ -79,6 +85,9 @@ class CadastroPrestadorActivity : AppCompatActivity() {
     }
 
     private fun carregarCadastro() {
+        // O e-mail é o do login (travado): vem preenchido na hora, mesmo que o
+        // cadastro não tenha guardado o e-mail.
+        binding.edtEmail.setText(authRepository.emailLogado())
         lifecycleScope.launch {
             prestadorRepository.buscarMeuCadastro()
                 .onSuccess { prestador ->
@@ -86,7 +95,6 @@ class CadastroPrestadorActivity : AppCompatActivity() {
                     binding.edtNome.setText(prestador.nome)
                     binding.edtCnpj.setText(prestador.cnpj)
                     binding.edtTelefone.setText(prestador.telefone)
-                    binding.edtEmail.setText(prestador.email)
                     binding.edtServico.setText(prestador.servico)
                     binding.edtPreco.setText(prestador.preco)
                     binding.edtRua.setText(prestador.rua)
@@ -209,6 +217,52 @@ class CadastroPrestadorActivity : AppCompatActivity() {
                 finish()
             }
             .show()
+    }
+
+    // "Excluir meu cadastro" (só no Meu Perfil): senha confirmada -> apaga o
+    // cadastro no Firestore -> apaga a conta do Auth -> volta pro início.
+    private fun confirmarExclusao() {
+        val inputSenha = EditText(this).apply {
+            hint = "Digite sua senha atual"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Excluir cadastro")
+            .setMessage("Tem certeza que deseja excluir permanentemente seu cadastro e conta? Esta ação não pode ser desfeita.")
+            .setView(inputSenha)
+            .setPositiveButton("Excluir") { _, _ ->
+                val senha = inputSenha.text.toString().trim()
+                if (senha.isEmpty()) {
+                    Toast.makeText(this, "Digite sua senha", Toast.LENGTH_SHORT).show()
+                } else {
+                    excluirCadastro(senha)
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun excluirCadastro(senha: String) {
+        lifecycleScope.launch {
+            if (authRepository.reautenticar(senha).isFailure) {
+                Toast.makeText(this@CadastroPrestadorActivity, "Senha incorreta. Tente novamente.", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val dados = prestadorRepository.excluirMeuCadastro()
+            if (dados.isFailure) {
+                Toast.makeText(this@CadastroPrestadorActivity, "Erro ao excluir dados: ${dados.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            authRepository.excluirConta()
+                .onSuccess {
+                    Toast.makeText(this@CadastroPrestadorActivity, "Cadastro e conta excluídos com sucesso.", Toast.LENGTH_LONG).show()
+                    startActivity(Intent(this@CadastroPrestadorActivity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+                    finishAffinity()
+                }
+                .onFailure { e ->
+                    Toast.makeText(this@CadastroPrestadorActivity, "Erro ao excluir conta: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+        }
     }
 
     private fun EditText.textoLimpo() = text.toString().trim()

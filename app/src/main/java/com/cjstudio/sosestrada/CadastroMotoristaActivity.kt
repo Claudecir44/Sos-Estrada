@@ -63,6 +63,8 @@ class CadastroMotoristaActivity : AppCompatActivity() {
             binding.btnCadastrar.text = "SALVAR ALTERAÇÕES"
             // A senha não muda por aqui ("Esqueci minha senha" no login).
             binding.tilSenha.visibility = View.GONE
+            binding.btnExcluir.visibility = View.VISIBLE
+            binding.btnExcluir.setOnClickListener { confirmarExclusao() }
             carregarCadastro()
         } else {
             binding.btnCadastrar.text = "CADASTRAR"
@@ -220,6 +222,52 @@ class CadastroMotoristaActivity : AppCompatActivity() {
             .setCancelable(false)
             .setPositiveButton("OK") { _, _ -> finish() }
             .show()
+    }
+
+    // "Excluir meu cadastro" (só no Meu Perfil): senha confirmada -> apaga o
+    // cadastro no Firestore -> apaga a conta do Auth -> volta pro início.
+    private fun confirmarExclusao() {
+        val inputSenha = EditText(this).apply {
+            hint = "Digite sua senha atual"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Excluir cadastro")
+            .setMessage("Tem certeza que deseja excluir permanentemente seu cadastro e conta? Esta ação não pode ser desfeita.")
+            .setView(inputSenha)
+            .setPositiveButton("Excluir") { _, _ ->
+                val senha = inputSenha.text.toString().trim()
+                if (senha.isEmpty()) {
+                    Toast.makeText(this, "Digite sua senha", Toast.LENGTH_SHORT).show()
+                } else {
+                    excluirCadastro(senha)
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun excluirCadastro(senha: String) {
+        lifecycleScope.launch {
+            if (authRepository.reautenticar(senha).isFailure) {
+                Toast.makeText(this@CadastroMotoristaActivity, "Senha incorreta. Tente novamente.", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val dados = motoristaRepository.excluirMeuCadastro()
+            if (dados.isFailure) {
+                Toast.makeText(this@CadastroMotoristaActivity, "Erro ao excluir dados: ${dados.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            authRepository.excluirConta()
+                .onSuccess {
+                    Toast.makeText(this@CadastroMotoristaActivity, "Cadastro e conta excluídos com sucesso.", Toast.LENGTH_LONG).show()
+                    startActivity(Intent(this@CadastroMotoristaActivity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+                    finishAffinity()
+                }
+                .onFailure { e ->
+                    Toast.makeText(this@CadastroMotoristaActivity, "Erro ao excluir conta: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+        }
     }
 
     private fun EditText.textoLimpo() = text.toString().trim()
