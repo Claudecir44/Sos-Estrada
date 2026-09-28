@@ -3,6 +3,7 @@ package com.cjstudio.sosestrada
 import android.content.Context
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,6 +30,15 @@ class AuthRepository @Inject constructor(
             .getOrDefault(false)
     }
 
+    override suspend fun perfisDaConta(): Set<String> {
+        val uid = auth.currentUser?.uid ?: return emptySet()
+        suspend fun tem(colecao: String) = db.collection(colecao).document(uid).get().await().exists()
+        return buildSet {
+            if (tem("motoristas")) add(IChatRepository.MOTORISTA)
+            if (tem("prestadores")) add(IChatRepository.PRESTADOR)
+        }
+    }
+
     override suspend fun entrar(email: String, senha: String): Result<Unit> = runCatching {
         val usuario = auth.signInWithEmailAndPassword(email, senha).await().user
             ?: throw IllegalStateException("Falha ao entrar.")
@@ -46,7 +56,14 @@ class AuthRepository @Inject constructor(
 
     override suspend fun criarConta(email: String, senha: String): Result<String> = runCatching {
         SenhaUtil.validar(senha)?.let { throw IllegalArgumentException(it) }
-        val resultado = auth.createUserWithEmailAndPassword(email, senha).await()
+        val resultado = try {
+            auth.createUserWithEmailAndPassword(email, senha).await()
+        } catch (e: FirebaseAuthUserCollisionException) {
+            throw IllegalStateException(
+                "Este e-mail já está cadastrado no SOS Estrada. Cada e-mail vale para um perfil só " +
+                    "(motorista ou prestador): entre pela opção certa ou use outro e-mail."
+            )
+        }
         resultado.user?.uid ?: throw IllegalStateException("Conta criada sem usuário.")
     }
 

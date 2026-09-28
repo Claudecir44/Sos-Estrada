@@ -61,6 +61,20 @@ class LoginMotoristaActivity : AppCompatActivity() {
                         mostrarMensagem(MENSAGEM_BLOQUEADO, erro = true)
                         return@launch
                     }
+                    // Um e-mail = um perfil: conta de prestador não entra aqui.
+                    val perfis = runCatching { authRepository.perfisDaConta() }.getOrNull()
+                    if (perfis == null || IChatRepository.MOTORISTA !in perfis) {
+                        authRepository.sair()
+                        binding.btnEntrar.isEnabled = true
+                        val aviso = when {
+                            perfis == null -> "❌ Não foi possível conferir seu cadastro. Verifique a internet e tente de novo."
+                            IChatRepository.PRESTADOR in perfis ->
+                                "🚫 Este e-mail está cadastrado como prestador. Volte e entre pela opção \"Sou Prestador\"."
+                            else -> "❌ Nenhum cadastro de motorista encontrado para este e-mail."
+                        }
+                        mostrarMensagem(aviso, erro = true)
+                        return@launch
+                    }
                     Toast.makeText(this@LoginMotoristaActivity, "✅ Login realizado!", Toast.LENGTH_SHORT).show()
                     startActivity(Intent(this@LoginMotoristaActivity, MotoristaDashboardActivity::class.java))
                     finish()

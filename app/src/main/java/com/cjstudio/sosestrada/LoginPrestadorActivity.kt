@@ -60,6 +60,20 @@ class LoginPrestadorActivity : AppCompatActivity() {
                         mostrarMensagem(MENSAGEM_BLOQUEADO, erro = true)
                         return@launch
                     }
+                    // Um e-mail = um perfil: conta de motorista não entra aqui.
+                    val perfis = runCatching { authRepository.perfisDaConta() }.getOrNull()
+                    if (perfis == null || IChatRepository.PRESTADOR !in perfis) {
+                        authRepository.sair()
+                        binding.btnEntrar.isEnabled = true
+                        val aviso = when {
+                            perfis == null -> "❌ Não foi possível conferir seu cadastro. Verifique a internet e tente de novo."
+                            IChatRepository.MOTORISTA in perfis ->
+                                "🚫 Este e-mail está cadastrado como motorista. Volte e entre pela opção \"Sou Motorista\"."
+                            else -> "❌ Nenhum cadastro de prestador encontrado para este e-mail."
+                        }
+                        mostrarMensagem(aviso, erro = true)
+                        return@launch
+                    }
                     Toast.makeText(this@LoginPrestadorActivity, "✅ Login realizado!", Toast.LENGTH_SHORT).show()
                     binding.edtEmailLogin.setText("")
                     binding.edtSenhaLogin.setText("")

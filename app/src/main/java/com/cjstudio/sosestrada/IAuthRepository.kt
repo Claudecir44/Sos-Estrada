@@ -39,6 +39,11 @@ interface IAuthRepository {
 
     fun sair()
 
+    // Perfis com cadastro na conta logada (IChatRepository.MOTORISTA /
+    // PRESTADOR). Cada e-mail é de um perfil só: o login de motorista
+    // recusa conta de prestador e vice-versa.
+    suspend fun perfisDaConta(): Set<String>
+
     // Conta bloqueada pelo admin (bloqueados/{uid}) — vale mesmo depois de o
     // admin excluir o cadastro, pra pessoa não se recadastrar.
     suspend fun contaBloqueada(): Boolean

@@ -157,7 +157,9 @@ service cloud.firestore {
       allow read: if ehDono(uid) || podeAdmin('motoristas');
       // Dono: cria e edita o próprio perfil, mas nunca mexe em "bloqueado"
       // e, bloqueado, não edita mais nada. Admin: só com a senha master.
-      allow create: if ehDono(uid) && !('bloqueado' in request.resource.data) && !estaBloqueado(uid);
+      // Um e-mail = um perfil: conta que já é prestador não vira motorista.
+      allow create: if ehDono(uid) && !('bloqueado' in request.resource.data) && !estaBloqueado(uid)
+        && !exists(/databases/$(database)/documents/prestadores/$(uid));
       allow update: if acaoAdminAutorizada('motoristas', uid)
         || (ehDono(uid)
             && resource.data.get('bloqueado', false) != true
@@ -179,8 +181,10 @@ service cloud.firestore {
 
       // Cadastro e edição do próprio perfil (CadastroPrestadorActivity,
       // PrestadorDashboardActivity).
+      // Um e-mail = um perfil: conta que já é motorista não vira prestador.
       allow create: if ehDono(uid) && !request.resource.data.keys().hasAny(camposDoServidorPrestador())
-        && !estaBloqueado(uid);
+        && !estaBloqueado(uid)
+        && !exists(/databases/$(database)/documents/motoristas/$(uid));
       // Admin só com a senha master (editar/bloquear no painel). Dono
       // bloqueado não edita mais nada.
       allow update: if acaoAdminAutorizada('prestadores', uid)
