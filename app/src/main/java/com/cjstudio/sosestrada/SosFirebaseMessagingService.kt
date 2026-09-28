@@ -39,6 +39,11 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(message)
         val dados = message.data
         val corpo = dados["corpo"] ?: return
+        // Só mostra o aviso da conta logada neste celular agora. Se o aparelho
+        // ainda estiver registrado pra outra conta (quem trocou de conta sem
+        // sair), o aviso dela não aparece aqui — nem o da própria ação.
+        val destinatario = dados["destinatarioUid"]
+        if (destinatario != null && destinatario != authRepository.uidLogado()) return
         // "motorista" ou "prestador": qual lado recebe, pra abrir a tela certa.
         val paraPrestador = dados["destino"] == IChatRepository.PRESTADOR
 

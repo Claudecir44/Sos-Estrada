@@ -448,23 +448,39 @@ function primeiroNome(nome, padrao) {
   return (nome || "").trim().split(/\s+/)[0] || padrao;
 }
 
-async function enviarPush(uid, tipo, destino, corpo, id) {
+async function tokenDe(uid) {
+  if (!uid) return null;
+  const snap = await getFirestore().collection("fcmTokens").doc(uid).get();
+  return snap.exists ? snap.get("token") : null;
+}
+
+// remetenteUid: quem causou o aviso. Se o celular registrado pra quem
+// recebe for o MESMO de quem enviou (as duas contas usadas no mesmo
+// aparelho), não manda — senão a pessoa recebia o aviso da própria ação
+// no próprio celular. Vale pra todos os tipos de push.
+async function enviarPush(uid, remetenteUid, tipo, destino, corpo, id) {
   if (!uid) return;
-  const db = getFirestore();
-  const snap = await db.collection("fcmTokens").doc(uid).get();
-  const token = snap.exists ? snap.get("token") : null;
-  if (!token) return;
+  const [token, tokenRemetente] = await Promise.all([tokenDe(uid), tokenDe(remetenteUid)]);
+  if (!token) {
+    logger.info(`push ${tipo}: ${uid} sem celular registrado.`);
+    return;
+  }
+  if (token === tokenRemetente) {
+    logger.info(`push ${tipo}: não enviado — ${uid} e o remetente ${remetenteUid} estão no mesmo celular.`);
+    return;
+  }
   try {
     await getMessaging().send({
       token,
-      data: { tipo, destino, corpo, id },
+      data: { tipo, destino, corpo, id, destinatarioUid: uid },
       android: { priority: "high" },
     });
+    logger.info(`push ${tipo}: enviado para ${uid}.`);
   } catch (erro) {
     logger.warn(`Erro ao enviar push (${tipo}) para ${uid}:`, erro.message);
     // App desinstalado ou dados limpos: token morto, não tenta mais.
     if (erro.code === "messaging/registration-token-not-registered") {
-      await db.collection("fcmTokens").doc(uid).delete();
+      await getFirestore().collection("fcmTokens").doc(uid).delete();
     }
   }
 }
@@ -503,7 +519,7 @@ exports.notificarNovaSolicitacao = onDocumentCreated(
       const s = event.data?.data();
       if (!s) return;
       const nome = primeiroNome(s.motoristaNome, "Um motorista");
-      await enviarPush(s.prestadorUid, "novaSolicitacao", "prestador",
+      await enviarPush(s.prestadorUid, s.motoristaUid, "novaSolicitacao", "prestador",
           `${nome} precisa de socorro. Toque para ver a solicitação.`, event.params.id);
     },
 );
@@ -521,7 +537,7 @@ exports.notificarRespostaPrestador = onDocumentUpdated(
       const corpo = depois.status === "aceito" ?
         `${nome} aceitou sua solicitação e está a caminho.` :
         `${nome} recusou sua solicitação. Procure outro prestador.`;
-      await enviarPush(depois.motoristaUid, "respostaPrestador", "motorista", corpo, event.params.id);
+      await enviarPush(depois.motoristaUid, depois.prestadorUid, "respostaPrestador", "motorista", corpo, event.params.id);
     },
 );
 
@@ -539,7 +555,7 @@ exports.notificarMensagemSos = onDocumentCreated(
       const doMotorista = m.remetenteTipo === "motorista";
       const destinatario = doMotorista ? s.prestadorUid : s.motoristaUid;
       const remetente = doMotorista ? primeiroNome(s.motoristaNome, "O motorista") : (s.prestadorNome || "O prestador");
-      await enviarPush(destinatario, "mensagemSos", doMotorista ? "prestador" : "motorista",
+      await enviarPush(destinatario, m.remetenteUid, "mensagemSos", doMotorista ? "prestador" : "motorista",
           `Nova mensagem de ${remetente}.`, event.params.solicitacaoId);
     },
 );
@@ -556,7 +572,7 @@ exports.notificarLocalizacaoMotorista = onDocumentUpdated(
       const emAntes = antes.localizacaoCompartilhadaEm ? antes.localizacaoCompartilhadaEm.toMillis() : 0;
       if (depois.localizacaoCompartilhadaEm.toMillis() === emAntes) return;
       const nome = primeiroNome(depois.motoristaNome, "O motorista");
-      await enviarPush(depois.prestadorUid, "localizacaoMotorista", "prestador",
+      await enviarPush(depois.prestadorUid, depois.motoristaUid, "localizacaoMotorista", "prestador",
           `${nome} enviou a localização atual. Toque para ver no mapa.`, event.params.id);
     },
 );
