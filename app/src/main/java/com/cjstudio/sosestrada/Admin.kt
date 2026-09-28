@@ -33,6 +33,7 @@ data class Admin(
         const val PERM_SOLICITACOES = "solicitacoes"
         const val PERM_MENSAGENS = "mensagens"
         const val PERM_ACOES = "acoes"
+        const val PERM_FINANCEIRO = "financeiro"
 
         // Ordem e textos das caixinhas no cadastro do colaborador (e no painel web).
         val PERMISSOES = listOf(
@@ -40,6 +41,7 @@ data class Admin(
             PERM_PRESTADORES to "Ver prestadores",
             PERM_SOLICITACOES to "Ver solicitações",
             PERM_MENSAGENS to "Ver mensagens (conversas)",
+            PERM_FINANCEIRO to "Ver financeiro (pagamentos e relatórios)",
             PERM_ACOES to "Editar, bloquear e excluir cadastros (pede a senha master)"
         )
     }

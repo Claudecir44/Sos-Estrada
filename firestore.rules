@@ -37,7 +37,7 @@ service cloud.firestore {
     // CadastroAdminActivity marcando "Colaborador"): só vê/faz o que o admin
     // master marcou em "permissoes" na hora do cadastro. Admin sem role é
     // administrador completo. Seções: motoristas, prestadores, solicitacoes,
-    // mensagens, acoes (editar/bloquear/excluir cadastros).
+    // mensagens, financeiro, acoes (editar/bloquear/excluir cadastros).
     function perfilAdmin() {
       return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
     }
@@ -323,7 +323,8 @@ service cloud.firestore {
     // próprio histórico; pagamentosProcessados nunca é lido pelo cliente
     // (é só controle interno do webhook).
     match /pagamentos/{id} {
-      allow read: if ehAdmin()
+      // Financeiro do app admin e do painel web (colaborador: permissão "financeiro").
+      allow read: if podeAdmin('financeiro')
         || (estaLogado() && resource.data.prestadorId == request.auth.uid);
       allow write: if false;
     }

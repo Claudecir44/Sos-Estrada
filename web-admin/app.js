@@ -56,7 +56,7 @@ function pode(secao) {
   return !!(adminAtual.permissoes && adminAtual.permissoes[secao]);
 }
 // Aba "mensagens" lista as conversas a partir das solicitações.
-const PERMISSAO_DA_ABA = { motoristas: "motoristas", prestadores: "prestadores", solicitacoes: "solicitacoes", mensagens: "mensagens" };
+const PERMISSAO_DA_ABA = { motoristas: "motoristas", prestadores: "prestadores", solicitacoes: "solicitacoes", mensagens: "mensagens", financeiro: "financeiro" };
 
 async function dadosAdmin(user) {
   if (!user || user.isAnonymous || !user.emailVerified) return null;
@@ -103,7 +103,7 @@ function mostrarAba(nome) {
   document.querySelectorAll(".aba-botao").forEach((b) => b.classList.toggle("ativa", b.dataset.aba === nome));
   document.querySelectorAll(".aba-conteudo").forEach((c) => c.classList.remove("ativa"));
   document.getElementById("aba" + nome.charAt(0).toUpperCase() + nome.slice(1)).classList.add("ativa");
-  ({ motoristas: carregarMotoristas, prestadores: carregarPrestadores, solicitacoes: carregarSolicitacoes, mensagens: carregarConversas })[nome]();
+  ({ motoristas: carregarMotoristas, prestadores: carregarPrestadores, solicitacoes: carregarSolicitacoes, mensagens: carregarConversas, financeiro: carregarFinanceiro })[nome]();
 }
 
 document.querySelectorAll(".aba-botao").forEach((b) => b.addEventListener("click", () => mostrarAba(b.dataset.aba)));
@@ -412,6 +412,162 @@ function abrirChat(solicitacaoId, titulo) {
     });
     mensagensEl.scrollTop = mensagensEl.scrollHeight;
   });
+}
+
+// ---------- Financeiro (mesmo do painel do Caronas) ----------
+// Assinaturas dos prestadores (coleção pagamentos, gravada pelo webhook do
+// Mercado Pago — paymentWebhookPrestador). Datas em milissegundos.
+
+let pagamentosCache = [];
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+function formatarReal(v) {
+  return "R$ " + (v || 0).toFixed(2).replace(".", ",");
+}
+
+function formatarData(ms) {
+  return ms ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(ms)) : "-";
+}
+
+document.getElementById("selectPeriodoFinanceiro").addEventListener("change", () => {
+  const personalizado = document.getElementById("selectPeriodoFinanceiro").value === "personalizado";
+  document.getElementById("datasPersonalizadasFinanceiro").style.display = personalizado ? "inline-flex" : "none";
+});
+document.getElementById("btnFiltrarFinanceiro").addEventListener("click", aplicarFiltroFinanceiro);
+document.getElementById("btnRelatorioFinanceiro").addEventListener("click", abrirModalRelatorio);
+document.getElementById("btnCancelarRelatorio").addEventListener("click", () => {
+  document.getElementById("modalRelatorio").style.display = "none";
+});
+document.getElementById("btnGerarRelatorio").addEventListener("click", () => {
+  document.getElementById("modalRelatorio").style.display = "none";
+  gerarRelatorioMensal(
+    parseInt(document.getElementById("mesRelatorio").value, 10),
+    parseInt(document.getElementById("anoRelatorio").value, 10)
+  );
+});
+
+async function carregarFinanceiro() {
+  const corpo = document.getElementById("corpoFinanceiro");
+  const vazio = document.getElementById("vazioFinanceiro");
+  corpo.innerHTML = '<tr><td colspan="6" class="carregando">Carregando…</td></tr>';
+  vazio.style.display = "none";
+  try {
+    const snap = await getDocs(collection(db, "pagamentos"));
+    pagamentosCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    aplicarFiltroFinanceiro();
+  } catch (e) {
+    corpo.innerHTML = "";
+    vazio.textContent = "Erro ao carregar o financeiro: " + e.message;
+    vazio.style.display = "block";
+  }
+}
+
+function aplicarFiltroFinanceiro() {
+  const periodo = document.getElementById("selectPeriodoFinanceiro").value;
+  const agora = Date.now();
+  let inicio = 0;
+  let fim = Infinity;
+  if (periodo === "personalizado") {
+    const de = document.getElementById("dataInicialFinanceiro").value;
+    const ate = document.getElementById("dataFinalFinanceiro").value;
+    if (!de || !ate) {
+      alert("Preencha as duas datas.");
+      return;
+    }
+    inicio = new Date(de + "T00:00:00").getTime();
+    fim = new Date(ate + "T23:59:59").getTime();
+    if (inicio > fim) {
+      alert("A data inicial é depois da final.");
+      return;
+    }
+  } else {
+    const dias = { diario: 1, semanal: 7, mensal: 30, trimestral: 90, semestral: 180, anual: 365 }[periodo];
+    if (dias) inicio = agora - dias * 24 * 60 * 60 * 1000;
+  }
+
+  const filtrados = pagamentosCache
+    .filter((p) => p.dataCompra && p.dataCompra >= inicio && p.dataCompra <= fim)
+    .sort((a, b) => b.dataCompra - a.dataCompra);
+
+  document.getElementById("statTotalPagamentos").textContent = String(filtrados.length);
+  document.getElementById("statPrestadoresPagantes").textContent = String(new Set(filtrados.map((p) => p.prestadorId).filter(Boolean)).size);
+  document.getElementById("statTotalArrecadado").textContent = formatarReal(filtrados.reduce((t, p) => t + (p.valor || 0), 0));
+
+  const corpo = document.getElementById("corpoFinanceiro");
+  const vazio = document.getElementById("vazioFinanceiro");
+  vazio.textContent = "Nenhum pagamento encontrado nesse período.";
+  vazio.style.display = filtrados.length ? "none" : "block";
+  corpo.innerHTML = filtrados.map((p) => {
+    const ativo = p.expiraEm && p.expiraEm > agora;
+    return `<tr>
+      <td><b>${escapeHtml(p.prestadorNome || "Prestador")}</b></td>
+      <td>${escapeHtml(p.prestadorEmail || "-")}</td>
+      <td>${formatarReal(p.valor)}</td>
+      <td>${formatarData(p.dataCompra)}</td>
+      <td>${formatarData(p.expiraEm)}</td>
+      <td><span class="badge ${ativo ? "ativo" : "recusado"}">${ativo ? "Ativo" : "Expirado"}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+function abrirModalRelatorio() {
+  const hoje = new Date();
+  document.getElementById("mesRelatorio").innerHTML = MESES
+    .map((m, i) => `<option value="${i}" ${i === hoje.getMonth() ? "selected" : ""}>${m}</option>`).join("");
+  document.getElementById("anoRelatorio").innerHTML = Array.from({ length: 6 }, (_, i) => hoje.getFullYear() - i)
+    .map((a) => `<option value="${a}">${a}</option>`).join("");
+  document.getElementById("modalRelatorio").style.display = "flex";
+}
+
+// Relatório mensal: página imprimível numa aba nova ("Salvar como PDF" na
+// impressão do navegador) — mesmo recurso do painel do Caronas.
+function gerarRelatorioMensal(mes, ano) {
+  const inicio = new Date(ano, mes, 1).getTime();
+  const fim = new Date(ano, mes + 1, 1).getTime();
+  const linhas = pagamentosCache
+    .filter((p) => p.dataCompra && p.dataCompra >= inicio && p.dataCompra < fim && (p.valor || 0) > 0)
+    .sort((a, b) => a.dataCompra - b.dataCompra);
+  if (linhas.length === 0) {
+    alert(`Nenhum pagamento em ${MESES[mes]}/${ano}.`);
+    return;
+  }
+  const porValor = {};
+  linhas.forEach((l) => { porValor[l.valor] = (porValor[l.valor] || 0) + 1; });
+  const total = linhas.reduce((t, l) => t + l.valor, 0);
+  const periodo = `${MESES[mes]}/${ano}`;
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>Relatório Financeiro — ${periodo}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 30px; color: #222; }
+      h1 { color: #B71C1C; font-size: 20px; }
+      h2 { color: #B71C1C; font-size: 14px; margin-top: 24px; border-bottom: 2px solid #B71C1C; padding-bottom: 4px; }
+      p.sub { color: #666; font-size: 12px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
+      th { color: #666; font-size: 10px; text-transform: uppercase; }
+      .total { text-align: right; font-weight: 700; color: #B71C1C; font-size: 14px; margin-top: 10px; }
+    </style></head><body>
+    <h1>Relatório Financeiro — Assinaturas de Prestadores</h1>
+    <p class="sub">SOS Estrada · Período: ${periodo}</p>
+    <h2>Pagamentos do período</h2>
+    <table><thead><tr><th>Prestador</th><th>E-mail</th><th>Valor</th><th>Data</th><th>Vale até</th></tr></thead><tbody>
+    ${linhas.map((l) => `<tr><td>${escapeHtml(l.prestadorNome || "Prestador")}</td><td>${escapeHtml(l.prestadorEmail || "-")}</td><td>${formatarReal(l.valor)}</td><td>${formatarData(l.dataCompra)}</td><td>${formatarData(l.expiraEm)}</td></tr>`).join("")}
+    </tbody></table>
+    <h2>Resumo por valor</h2>
+    <table><thead><tr><th>Valor</th><th>Qtd</th><th>Total</th></tr></thead><tbody>
+    ${Object.entries(porValor).map(([v, q]) => `<tr><td>${formatarReal(parseFloat(v))}</td><td>${q}</td><td>${formatarReal(parseFloat(v) * q)}</td></tr>`).join("")}
+    </tbody></table>
+    <p class="total">Total geral: ${formatarReal(total)}</p>
+    <p class="sub" style="margin-top:30px;">Gerado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}</p>
+    </body></html>`;
+  const aba = window.open("", "_blank");
+  if (!aba) {
+    alert("O navegador bloqueou a nova aba do relatório. Permita pop-ups para este site e tente de novo.");
+    return;
+  }
+  aba.document.write(html);
+  aba.document.close();
+  setTimeout(() => aba.print(), 300);
 }
 
 // ---------- Util ----------

@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -129,6 +130,19 @@ class AdminActivity : AppCompatActivity() {
             adminRepository.sair()
             recreate()
         }
+        // ⚙️ Configurações > Financeiro: abre na mesma tela, no lugar das listas.
+        binding.btnConfiguracoesAdmin.setOnClickListener { mostrarConfiguracoes() }
+        binding.secaoConfiguracoes.btnVoltarConfiguracoes.setOnClickListener { voltarDasConfiguracoes() }
+        binding.secaoConfiguracoes.cardFinanceiro.setOnClickListener { mostrarFinanceiro() }
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.secaoConfiguracoes.root.visibility == View.VISIBLE) voltarDasConfiguracoes()
+                else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
         binding.btnMeuPerfil.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
         binding.ivFotoAdminCabecalho.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
         // Primeiro quem está logado (admin ou colaborador e o que ele pode
@@ -182,6 +196,48 @@ class AdminActivity : AppCompatActivity() {
         // Seleção atual escondida: passa pra primeira seção liberada.
         val atual = secoes.firstOrNull { it.first.id == binding.grupoListas.checkedChipId }
         if (atual == null || !pode(atual.second)) secoes.firstOrNull { pode(it.second) }?.first?.isChecked = true
+    }
+
+    private val financeiro by lazy { FinanceiroAdmin(this, binding.secaoConfiguracoes, adminRepository, lifecycleScope) }
+
+    // Configurações ocupam o lugar das listas (seletor + lista somem).
+    private fun mostrarConfiguracoes() {
+        binding.rolagemSeletor.visibility = View.GONE
+        binding.rvLista.visibility = View.GONE
+        binding.tvListaVazia.visibility = View.GONE
+        binding.progressBar.visibility = View.GONE
+        with(binding.secaoConfiguracoes) {
+            root.visibility = View.VISIBLE
+            tvTituloConfiguracoes.text = "⚙️ Configurações"
+            btnVoltarConfiguracoes.text = "‹ Voltar às listas"
+            menuConfiguracoes.visibility = View.VISIBLE
+            layoutFinanceiro.visibility = View.GONE
+            // Colaborador sem a permissão "financeiro" não vê o cartão.
+            cardFinanceiro.visibility = if (pode(Admin.PERM_FINANCEIRO)) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun mostrarFinanceiro() {
+        if (!pode(Admin.PERM_FINANCEIRO)) return avisar("🔒 Seu acesso de colaborador não inclui o financeiro.")
+        with(binding.secaoConfiguracoes) {
+            tvTituloConfiguracoes.text = "💰 Financeiro"
+            btnVoltarConfiguracoes.text = "‹ Configurações"
+            menuConfiguracoes.visibility = View.GONE
+            layoutFinanceiro.visibility = View.VISIBLE
+        }
+        financeiro.abrir()
+    }
+
+    // Do Financeiro volta pro menu das Configurações; do menu, pras listas.
+    private fun voltarDasConfiguracoes() {
+        if (binding.secaoConfiguracoes.layoutFinanceiro.visibility == View.VISIBLE) {
+            mostrarConfiguracoes()
+            return
+        }
+        binding.secaoConfiguracoes.root.visibility = View.GONE
+        binding.rolagemSeletor.visibility = View.VISIBLE
+        binding.rvLista.visibility = View.VISIBLE
+        mostrarListaEscolhida()
     }
 
     // Segurar um cartão: editar/bloquear/excluir só com a permissão "acoes".

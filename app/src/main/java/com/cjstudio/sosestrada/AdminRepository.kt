@@ -155,6 +155,12 @@ class AdminRepository @Inject constructor(
             .sortedByDescending { it.timestamp?.time ?: 0L }
     }
 
+    override suspend fun listarPagamentos(): Result<List<PagamentoPrestador>> = runCatching {
+        db.collection("pagamentos").get().await().documents
+            .mapNotNull { doc -> doc.toObject(PagamentoPrestador::class.java)?.also { it.id = doc.id } }
+            .sortedByDescending { it.dataCompra ?: 0L }
+    }
+
     override suspend fun editarMotorista(uid: String, dados: Map<String, Any?>, senhaMaster: String): Result<Unit> =
         executarAcao(COLECAO_MOTORISTAS, uid, "editar", senhaMaster) { lote, alvo -> lote.update(alvo, dados) }
 

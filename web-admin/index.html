@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Painel Web SOS Estrada</title>
 <!-- ?v= força o navegador a buscar a versão nova (sem ele, usava o estilo antigo em cache) -->
-<link rel="stylesheet" href="style.css?v=4" />
+<link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
 
@@ -43,6 +43,7 @@
     <button class="aba-botao" data-aba="prestadores">🔧 Prestadores<span id="contPrestadores" class="badge-tab"></span></button>
     <button class="aba-botao" data-aba="solicitacoes">📋 Solicitações<span id="contSolicitacoes" class="badge-tab"></span></button>
     <button class="aba-botao" data-aba="mensagens">💬 Mensagens</button>
+    <button class="aba-botao" data-aba="financeiro">💰 Financeiro</button>
   </div>
 
   <div class="aba-conteudo ativa" id="abaMotoristas">
@@ -83,9 +84,60 @@
     </div>
   </div>
 
+  <!-- Financeiro: mesmas opções do painel do Caronas (período, totais,
+       tabela e relatório mensal imprimível), com as assinaturas dos
+       prestadores (coleção pagamentos). -->
+  <div class="aba-conteudo" id="abaFinanceiro">
+    <h3 class="titulo-aba">💰 Financeiro — Assinaturas dos Prestadores</h3>
+    <div class="filtro-financeiro">
+      <label>Período:</label>
+      <select id="selectPeriodoFinanceiro">
+        <option value="todos">Todos</option>
+        <option value="diario">Diário (hoje)</option>
+        <option value="semanal">Semanal (7 dias)</option>
+        <option value="mensal">Mensal (30 dias)</option>
+        <option value="trimestral">Trimestral (3 meses)</option>
+        <option value="semestral">Semestral (6 meses)</option>
+        <option value="anual">Anual (12 meses)</option>
+        <option value="personalizado">Personalizado</option>
+      </select>
+      <span id="datasPersonalizadasFinanceiro" style="display:none; gap:10px; align-items:center;">
+        <label>De:</label> <input type="date" id="dataInicialFinanceiro" />
+        <label>Até:</label> <input type="date" id="dataFinalFinanceiro" />
+      </span>
+      <button id="btnFiltrarFinanceiro">Filtrar</button>
+      <button id="btnRelatorioFinanceiro" class="btn-relatorio">📄 Gerar Relatório</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Pagamentos no período</div><div class="stat-valor" id="statTotalPagamentos">0</div></div>
+      <div class="stat-card"><div class="stat-label">Prestadores pagantes</div><div class="stat-valor" id="statPrestadoresPagantes">0</div></div>
+      <div class="stat-card"><div class="stat-label">Total arrecadado</div><div class="stat-valor verde" id="statTotalArrecadado">R$ 0,00</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Prestador</th><th>E-mail</th><th>Valor</th><th>Data</th><th>Vale até</th><th>Status</th></tr></thead>
+      <tbody id="corpoFinanceiro"></tbody>
+    </table>
+    <div class="vazio" id="vazioFinanceiro" style="display:none;">Nenhum pagamento encontrado nesse período.</div>
+
+    <!-- Escolha do mês do relatório -->
+    <div class="modal-overlay" id="modalRelatorio" style="display:none;">
+      <div class="modal-caixa">
+        <h3>📄 Relatório mensal</h3>
+        <label>Mês</label>
+        <select id="mesRelatorio"></select>
+        <label>Ano</label>
+        <select id="anoRelatorio"></select>
+        <div class="modal-botoes">
+          <button id="btnCancelarRelatorio" class="btn-secundario">Cancelar</button>
+          <button id="btnGerarRelatorio" class="btn-relatorio">Gerar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="carregando" id="carregando" style="display:none;">Carregando…</div>
 </div>
 
-<script type="module" src="app.js?v=4"></script>
+<script type="module" src="app.js?v=5"></script>
 </body>
 </html>

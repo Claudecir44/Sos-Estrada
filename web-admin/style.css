@@ -133,3 +133,35 @@ td img.foto-linha { width: 34px; height: 34px; border-radius: 50%; object-fit: c
 .bolha-motorista .remetente { color: #0D47A1; }
 .bolha-prestador { align-self: flex-end; background: #E8F5E9; }
 .bolha-prestador .remetente { color: #2E7D32; }
+
+/* ---------- Financeiro (mesmo formato do Caronas) ---------- */
+.titulo-aba { color: #B71C1C; margin-bottom: 12px; }
+.filtro-financeiro {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #FAFAFA; border-radius: 8px; padding: 14px; margin-bottom: 16px;
+}
+.filtro-financeiro label { font-size: 13px; color: #455A64; font-weight: 600; }
+.filtro-financeiro select, .filtro-financeiro input[type=date] {
+  padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px;
+}
+.filtro-financeiro button, .modal-botoes button {
+  background: #D32F2F; color: #fff; border: none; border-radius: 6px;
+  padding: 8px 16px; font-weight: 600; font-size: 13px; cursor: pointer;
+}
+button.btn-relatorio { background: #00897B; }
+button.btn-secundario { background: #ECEFF1; color: #455A64; }
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+@media (max-width: 640px) { .stat-grid { grid-template-columns: 1fr; } }
+.stat-card { background: #FAFAFA; border: 1px solid #E0E0E0; border-radius: 8px; padding: 14px; }
+.stat-card .stat-label { font-size: 12px; color: #555; }
+.stat-card .stat-valor { font-size: 22px; font-weight: 700; color: #B71C1C; margin-top: 2px; }
+.stat-card .stat-valor.verde { color: #2E7D32; }
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-caixa { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 360px; }
+.modal-caixa h3 { color: #B71C1C; margin-bottom: 8px; }
+.modal-caixa label { display: block; font-size: 12px; color: #777; font-weight: 700; margin-top: 12px; margin-bottom: 4px; }
+.modal-caixa select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+.modal-botoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }

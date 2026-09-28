@@ -38,6 +38,10 @@ interface IAdminRepository {
     // Todas as solicitações, mais recentes primeiro.
     suspend fun listarSolicitacoes(): Result<List<Solicitacao>>
 
+    // Financeiro: todos os pagamentos de assinatura dos prestadores, mais
+    // recentes primeiro (o filtro de período é feito na tela).
+    suspend fun listarPagamentos(): Result<List<PagamentoPrestador>>
+
     // Ações do admin sobre o cadastro de outra pessoa (segurar o cartão nas
     // listas). Todas exigem a senha do administrador master — conferida
     // pelas regras do Firestore; errada, falham com SenhaMasterIncorretaException.
