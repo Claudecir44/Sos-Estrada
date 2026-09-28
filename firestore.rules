@@ -206,11 +206,11 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'naoLidasMotorista', 'naoLidasPrestador']);
 
-      // "Enviar Minha Localização" (SocorroActivity): só o motorista, só com
-      // a solicitação em andamento, só as coordenadas + horário do servidor.
-      // O prestador vê isso como o botão "Localização do Motorista".
+      // "Enviar Minha Localização" (SocorroActivity): só o motorista, só
+      // depois que o prestador aceitou, só as coordenadas + horário do
+      // servidor. O prestador vê isso como o botão "Localização do Motorista".
       allow update: if souMotorista()
-        && resource.data.status in ['pendente', 'aceito']
+        && resource.data.status == 'aceito'
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['latitudeCompartilhada', 'longitudeCompartilhada', 'localizacaoCompartilhadaEm'])
         && request.resource.data.latitudeCompartilhada is number

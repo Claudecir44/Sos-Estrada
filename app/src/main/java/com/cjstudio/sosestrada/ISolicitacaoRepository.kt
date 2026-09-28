@@ -23,7 +23,7 @@ interface ISolicitacaoRepository {
     suspend fun aceitar(solicitacaoId: String): Result<Unit>
 
     // Motorista envia a localização atual pro prestador (só com a
-    // solicitação pendente ou aceita — reforçado nas regras).
+    // solicitação aceita — reforçado nas regras).
     suspend fun enviarMinhaLocalizacao(solicitacaoId: String, latitude: Double, longitude: Double): Result<Unit>
 
     // Exclusão permanente (as regras só permitem com status "cancelado").

@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.CANCELADO
 import com.cjstudio.sosestrada.databinding.ActivitySocorroBinding
+import com.google.firebase.firestore.FirebaseFirestoreException
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -189,7 +190,13 @@ class SocorroActivity : AppCompatActivity() {
                     Toast.makeText(this@SocorroActivity, "Localização enviada para ${prestador.nome ?: "o prestador"}.", Toast.LENGTH_SHORT).show()
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@SocorroActivity, "Erro ao enviar localização: ${e.message}", Toast.LENGTH_SHORT).show()
+                    // As regras recusam se a solicitação deixou de estar aceita
+                    // (ex.: cancelada em outro aparelho) — explica em vez do código técnico.
+                    val negado = (e as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+                    val texto = if (negado) "Só é possível enviar sua localização com a solicitação aceita pelo prestador."
+                    else "Erro ao enviar localização: ${e.message}"
+                    Toast.makeText(this@SocorroActivity, texto, Toast.LENGTH_LONG).show()
+                    if (negado) carregarPrestadores()
                 }
         }
     }

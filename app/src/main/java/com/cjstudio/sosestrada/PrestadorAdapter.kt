@@ -85,8 +85,9 @@ class PrestadorAdapter(
     }
 
     // Mensagem e Enviar Minha Localização só aparecem quando já existe uma
-    // solicitação com este prestador; enviar a localização, só enquanto ela
-    // está pendente ou aceita (as regras também só permitem nesses status).
+    // solicitação com este prestador. Enviar a localização só depois que o
+    // prestador aceitou (as regras também só permitem com status "aceito");
+    // enquanto está pendente o botão fica cinza e explica o porquê.
     private fun mostrarBotoesSolicitacao(b: ItemPrestadorSocorroBinding, p: Prestador) {
         val solicitacaoId = p.solicitacaoId
         if (solicitacaoId.isNullOrEmpty()) {
@@ -94,9 +95,21 @@ class PrestadorAdapter(
             return
         }
         b.layoutBotoesSolicitacao.visibility = View.VISIBLE
-        val emAndamento = p.statusSolicitacao == PENDENTE || p.statusSolicitacao == ACEITO
-        b.btnEnviarLocalizacao.visibility = if (emAndamento) View.VISIBLE else View.GONE
-        b.btnEnviarLocalizacao.setOnClickListener { aoEnviarLocalizacao(p) }
+        when (p.statusSolicitacao) {
+            ACEITO -> {
+                b.btnEnviarLocalizacao.visibility = View.VISIBLE
+                b.btnEnviarLocalizacao.backgroundTintList = ColorStateList.valueOf(0xFF00897B.toInt())
+                b.btnEnviarLocalizacao.setOnClickListener { aoEnviarLocalizacao(p) }
+            }
+            PENDENTE -> {
+                b.btnEnviarLocalizacao.visibility = View.VISIBLE
+                b.btnEnviarLocalizacao.backgroundTintList = ColorStateList.valueOf(0xFF9E9E9E.toInt())
+                b.btnEnviarLocalizacao.setOnClickListener {
+                    Toast.makeText(b.root.context, "Você poderá enviar sua localização depois que o prestador aceitar a solicitação.", Toast.LENGTH_LONG).show()
+                }
+            }
+            else -> b.btnEnviarLocalizacao.visibility = View.GONE
+        }
         if (p.naoLidasMotorista > 0) {
             val plural = if (p.naoLidasMotorista > 1) "s" else ""
             b.btnMensagem.text = "💬 Mensagem (${p.naoLidasMotorista} nova$plural)"
