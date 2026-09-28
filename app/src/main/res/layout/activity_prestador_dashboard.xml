@@ -59,8 +59,8 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_prestador_header"
             android:orientation="vertical"
-            android:paddingStart="12dp"
-            android:paddingTop="10dp"
+            android:paddingStart="8dp"
+            android:paddingTop="6dp"
             android:paddingEnd="12dp"
             android:paddingBottom="56dp">
 
@@ -68,7 +68,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="2dp"
                 android:maxLines="1"
                 android:text="Painel do Prestador"
                 android:textColor="@android:color/white"
@@ -84,10 +84,18 @@
                 <!-- Foto no canto, com a situação do cadastro e os dias do
                      plano embaixo (StatusAssinatura.resumo). -->
                 <LinearLayout
-                    android:layout_width="88dp"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:gravity="center_horizontal"
+                    android:layout_weight="1"
+                    android:gravity="start"
                     android:orientation="vertical">
+
+                    <!-- Foto no canto e o primeiro nome colado nela, na altura do meio -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                     <com.google.android.material.imageview.ShapeableImageView
                         android:id="@+id/ivFotoPrestadorPainel"
@@ -100,6 +108,20 @@
                         app:shapeAppearanceOverlay="@style/AdminLogoCircular"
                         app:strokeColor="#CCFFFFFF"
                         app:strokeWidth="2dp" />
+
+                    <TextView
+                        android:id="@+id/tvNomePrestadorPainel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Prestador"
+                        android:textColor="@android:color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/tvCadastroStatus"
@@ -131,21 +153,6 @@
                         android:textSize="8sp"
                         tools:text="Plano free 45/60 dias" />
                 </LinearLayout>
-
-                <!-- Primeiro nome ao lado da foto, na altura do meio dela -->
-                <TextView
-                    android:id="@+id/tvNomePrestadorPainel"
-                    android:layout_width="0dp"
-                    android:layout_height="56dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:gravity="center_vertical"
-                    android:maxLines="1"
-                    android:text="Prestador"
-                    android:textColor="@android:color/white"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
