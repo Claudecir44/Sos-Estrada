@@ -19,9 +19,10 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-// Tela de assinatura do prestador: 180 dias grátis a partir do cadastro
-// (aoRegistrarPrestador, Cloud Function), depois um plano anual de
-// R$49,90/365 dias pra manter o cadastro visível na busca do motorista
+// Tela de assinatura do prestador: 60 dias grátis a partir do cadastro
+// (aoRegistrarPrestador, Cloud Function), depois o plano Trimestral
+// (R$59,90/90 dias) ou Semestral (R$129,90/180 dias) pra manter o cadastro
+// visível na busca do motorista
 // (a busca só lista prestadores com ativo==true). A confirmação de
 // pagamento NUNCA vem desta tela sozinha — vem do webhook
 // (paymentWebhookPrestador) escrevendo no Firestore; por isso a tela
@@ -57,7 +58,8 @@ class AssinaturaActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.btnVoltarAssinatura.setOnClickListener { finish() }
-        binding.btnAssinar.setOnClickListener { iniciarPagamento() }
+        binding.btnAssinarTrimestral.setOnClickListener { iniciarPagamento(IAssinaturaRepository.PLANO_TRIMESTRAL) }
+        binding.btnAssinarSemestral.setOnClickListener { iniciarPagamento(IAssinaturaRepository.PLANO_SEMESTRAL) }
 
         carregarStatus()
     }
@@ -82,13 +84,13 @@ class AssinaturaActivity : AppCompatActivity() {
             "ativa" -> {
                 binding.tvStatusAssinatura.text = "✅ Assinatura ativa"
                 binding.tvDetalheAssinatura.text = if (expiraEm != null) "Válida até ${formatoData.format(Date(expiraEm))}" else ""
-                binding.btnAssinar.text = "Renovar plano anual (R$ 49,90)"
+                textoBotoes("Renovar")
             }
             "expirada" -> {
                 binding.tvStatusAssinatura.text = "⛔ Cadastro inativo"
                 binding.tvDetalheAssinatura.text =
                     "Seu período grátis ou sua assinatura venceu. Seu cadastro não aparece mais para motoristas até renovar."
-                binding.btnAssinar.text = "Assinar plano anual (R$ 49,90)"
+                textoBotoes("Assinar")
             }
             else -> { // trial
                 val diasRestantes = assinatura.dataCadastro?.let {
@@ -101,16 +103,28 @@ class AssinaturaActivity : AppCompatActivity() {
                 } else {
                     "Aproveitando o período de testes"
                 }
-                binding.btnAssinar.text = "Assinar plano anual (R$ 49,90)"
+                textoBotoes("Assinar")
             }
         }
     }
 
-    private fun iniciarPagamento() {
+    // Com assinatura ativa, os botões viram "Renovar" (os dias que faltam
+    // são somados ao novo prazo — ver paymentWebhookPrestador).
+    private fun textoBotoes(acao: String) {
+        binding.btnAssinarTrimestral.text = acao
+        binding.btnAssinarSemestral.text = acao
+    }
+
+    private fun habilitarBotoes(sim: Boolean) {
+        binding.btnAssinarTrimestral.isEnabled = sim
+        binding.btnAssinarSemestral.isEnabled = sim
+    }
+
+    private fun iniciarPagamento(plano: String) {
         binding.progressBarAssinatura.visibility = View.VISIBLE
-        binding.btnAssinar.isEnabled = false
+        habilitarBotoes(false)
         lifecycleScope.launch {
-            assinaturaRepository.criarCheckout()
+            assinaturaRepository.criarCheckout(plano)
                 .onSuccess { initPoint ->
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(initPoint)))
                     esperarConfirmacao()
@@ -120,7 +134,7 @@ class AssinaturaActivity : AppCompatActivity() {
                     Toast.makeText(this@AssinaturaActivity, "Erro ao iniciar pagamento: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             binding.progressBarAssinatura.visibility = View.GONE
-            binding.btnAssinar.isEnabled = true
+            habilitarBotoes(true)
         }
     }
 
@@ -151,6 +165,7 @@ class AssinaturaActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "AssinaturaActivity"
-        private const val TRIAL_DIAS = 180
+        // Mesmo prazo de TRIAL_DIAS em functions/index.js.
+        private const val TRIAL_DIAS = 60
     }
 }

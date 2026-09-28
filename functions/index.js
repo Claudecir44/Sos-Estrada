@@ -138,17 +138,25 @@ exports.provisionarAdminInicial = onCall(async (request) => {
 });
 
 // ============================================================
-// Assinatura de prestadores (Mercado Pago) — 180 dias grátis a partir do
-// cadastro, depois um único plano anual (R$49,90 / 365 dias) pra manter o
+// Assinatura de prestadores (Mercado Pago) — 60 dias grátis a partir do
+// cadastro, depois um dos planos (Trimestral R$59,90 / 90 dias ou Semestral
+// R$129,90 / 180 dias — ver PLANOS) pra manter o
 // cadastro visível na busca do motorista (SocorroFragment filtra por
 // "ativo"==true). Espelha o desenho do Match (createPaymentPreference/
 // paymentWebhook/checkPaymentStatus), simplificado: aqui é só um plano, e
 // vencer sem pagar apenas desativa a listagem — nunca apaga a conta.
 // ============================================================
 
-const TRIAL_DIAS = 180;
+const TRIAL_DIAS = 60;
 const DIA_MS = 1000 * 60 * 60 * 24;
-const PLANO_ANUAL = { valor: 49.90, diasValidade: 365 };
+// Mesmos valores/prazos mostrados no app (AssinaturaActivity). O app manda
+// só a chave do plano; valor e prazo sempre saem daqui (o cliente não
+// escolhe preço).
+const PLANOS = {
+  trimestral: { nome: "Trimestral", valor: 59.90, diasValidade: 90 },
+  semestral: { nome: "Semestral", valor: 129.90, diasValidade: 180 },
+};
+const PLANO_PADRAO = "trimestral";
 
 // Campos que só esta Cloud Function (Admin SDK, ignora firestore.rules)
 // pode escrever — o cliente nunca grava "ativo" nem os campos de
@@ -232,16 +240,21 @@ exports.criarPreferenciaPagamentoPrestador = onCall(async (request) => {
     throw new HttpsError("not-found", "Cadastro de prestador não encontrado.");
   }
   const prestador = prestadorDoc.data();
+  const chavePlano = (request.data && request.data.plano) || PLANO_PADRAO;
+  const plano = PLANOS[chavePlano];
+  if (!plano) {
+    throw new HttpsError("invalid-argument", "Plano inválido.");
+  }
 
   try {
     const preference = {
       items: [{
-        id: "plano_anual_prestador",
-        title: "Plano Anual - SOS Estrada Prestador",
-        description: "Assinatura anual para manter o cadastro ativo no SOS Estrada",
+        id: `plano_${chavePlano}_prestador`,
+        title: `Plano ${plano.nome} - SOS Estrada Prestador`,
+        description: `Assinatura ${plano.nome.toLowerCase()} (${plano.diasValidade} dias) para manter o cadastro ativo no SOS Estrada`,
         quantity: 1,
         currency_id: "BRL",
-        unit_price: PLANO_ANUAL.valor,
+        unit_price: plano.valor,
       }],
       payer: {
         email: prestador.email || `${prestadorId}@sosestrada.app`,
@@ -257,7 +270,8 @@ exports.criarPreferenciaPagamentoPrestador = onCall(async (request) => {
       notification_url: `https://us-central1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/paymentWebhookPrestador`,
       metadata: {
         prestadorId,
-        diasValidade: PLANO_ANUAL.diasValidade,
+        plano: chavePlano,
+        diasValidade: plano.diasValidade,
       },
       statement_descriptor: "SOS ESTRADA",
     };
@@ -327,9 +341,16 @@ exports.paymentWebhookPrestador = onRequest(async (req, res) => {
         throw idempotenciaError;
       }
 
-      const diasValidade = (payment.metadata && payment.metadata.diasValidade) || PLANO_ANUAL.diasValidade;
+      const chavePlano = (payment.metadata && payment.metadata.plano) || PLANO_PADRAO;
+      const diasValidade = (payment.metadata && payment.metadata.dias_validade) ||
+        (payment.metadata && payment.metadata.diasValidade) ||
+        (PLANOS[chavePlano] || PLANOS[PLANO_PADRAO]).diasValidade;
       const agora = Date.now();
-      const expiraEm = agora + diasValidade * DIA_MS;
+      // Renovação antes de vencer: soma ao prazo que ainda restava (não perde dias).
+      const atual = await db.collection("prestadores").doc(prestadorId).get();
+      const expiraAtual = atual.exists && atual.get("assinaturaStatus") === "ativa" && atual.get("assinaturaExpiraEm") ?
+        atual.get("assinaturaExpiraEm").toMillis() : 0;
+      const expiraEm = Math.max(agora, expiraAtual) + diasValidade * DIA_MS;
 
       await db.collection("prestadores").doc(prestadorId).update({
         ativo: true,
@@ -348,6 +369,7 @@ exports.paymentWebhookPrestador = onRequest(async (req, res) => {
           prestadorNome: prestadorData.nome || "",
           prestadorEmail: prestadorData.email || "",
           valor: payment.transaction_amount || 0,
+          plano: chavePlano,
           diasValidade,
           dataCompra: agora,
           expiraEm,
@@ -403,8 +425,8 @@ exports.checkPaymentStatus = onCall(async (request) => {
   }
 });
 
-// Roda todo dia: desativa (não apaga) prestadores cujo trial de 180 dias
-// venceu sem assinatura, ou cuja assinatura anual venceu sem renovação.
+// Roda todo dia: desativa (não apaga) prestadores cujo período grátis de
+// 60 dias venceu sem assinatura, ou cuja assinatura venceu sem renovação.
 // Assinatura ATIVA e ainda dentro da validade nunca é tocada aqui.
 exports.expirarAssinaturasPrestadores = onSchedule("every day 04:00", async () => {
   const db = getFirestore();

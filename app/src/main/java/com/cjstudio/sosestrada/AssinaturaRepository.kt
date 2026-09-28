@@ -39,8 +39,8 @@ class AssinaturaRepository @Inject constructor(
         awaitClose { registro.remove() }
     }
 
-    override suspend fun criarCheckout(): Result<String> = runCatching {
-        val resultado = functions.getHttpsCallable("criarPreferenciaPagamentoPrestador").call().await()
+    override suspend fun criarCheckout(plano: String): Result<String> = runCatching {
+        val resultado = functions.getHttpsCallable("criarPreferenciaPagamentoPrestador").call(mapOf("plano" to plano)).await()
         val initPoint = (resultado.data as? Map<*, *>)?.get("initPoint") as? String
         if (initPoint.isNullOrEmpty()) throw IllegalStateException("Não foi possível iniciar o pagamento.")
         initPoint

@@ -11,9 +11,15 @@ interface IAssinaturaRepository {
     // webhook do Mercado Pago confirmou o pagamento.
     fun escutarMinhaAssinatura(): Flow<StatusAssinatura>
 
-    // Cria a preferência de pagamento no servidor (preço e duração decididos
-    // lá) e devolve o link do checkout.
-    suspend fun criarCheckout(): Result<String>
+    // Cria a preferência de pagamento no servidor pro plano escolhido
+    // (PLANO_TRIMESTRAL ou PLANO_SEMESTRAL — preço e duração são decididos
+    // lá, em PLANOS de functions/index.js) e devolve o link do checkout.
+    suspend fun criarCheckout(plano: String): Result<String>
+
+    companion object {
+        const val PLANO_TRIMESTRAL = "trimestral"
+        const val PLANO_SEMESTRAL = "semestral"
+    }
 }
 
 data class StatusAssinatura(
