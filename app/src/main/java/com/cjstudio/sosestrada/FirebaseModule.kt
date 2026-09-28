@@ -16,7 +16,10 @@ object FirebaseModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance().apply {
+        // E-mails de verificação e de redefinição de senha no idioma do aparelho (pt-BR)
+        useAppLanguage()
+    }
 
     @Provides
     @Singleton

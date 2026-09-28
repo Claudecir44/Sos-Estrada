@@ -40,6 +40,8 @@ async function ehAdmin(user) {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+// E-mails de verificação e de redefinição de senha em português
+auth.languageCode = "pt-BR";
 const db = getFirestore(app);
 const storage = getStorage(app);
 
