@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.util.Patterns
 import android.view.View
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
@@ -15,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.cjstudio.sosestrada.databinding.ActivityCadastroAdminBinding
+import com.google.android.material.checkbox.MaterialCheckBox
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -69,7 +71,27 @@ class CadastroAdminActivity : AppCompatActivity() {
             binding.btnCadastrar.setOnClickListener { salvarPerfil() }
             carregarPerfil()
         } else {
+            montarPermissoes()
             binding.btnCadastrar.setOnClickListener { cadastrar() }
+        }
+    }
+
+    // Uma caixinha por seção (Admin.PERMISSOES), só visíveis com
+    // "Colaborador" marcado.
+    private val caixasPermissao = mutableMapOf<String, CheckBox>()
+
+    private fun montarPermissoes() {
+        Admin.PERMISSOES.forEach { (chave, texto) ->
+            val caixa = MaterialCheckBox(this).apply {
+                this.text = texto
+                textSize = 14f
+            }
+            caixasPermissao[chave] = caixa
+            binding.layoutPermissoes.addView(caixa)
+        }
+        binding.cbColaborador.setOnCheckedChangeListener { _, marcado ->
+            binding.layoutPermissoes.visibility = if (marcado) View.VISIBLE else View.GONE
+            binding.btnCadastrar.text = if (marcado) "CADASTRAR COLABORADOR" else "CADASTRAR"
         }
     }
 
@@ -137,6 +159,15 @@ class CadastroAdminActivity : AppCompatActivity() {
             binding.edtSenhaMaster.erro("Informe a senha do administrador master")
             return
         }
+        if (binding.cbColaborador.isChecked) {
+            val permissoes = caixasPermissao.mapValues { it.value.isChecked }
+            if (permissoes.values.none { it }) {
+                Toast.makeText(this, "Marque ao menos uma permissão para o colaborador.", Toast.LENGTH_SHORT).show()
+                return
+            }
+            admin.role = Admin.ROLE_COLABORADOR
+            admin.permissoes = permissoes
+        }
 
         ocupado(true)
         lifecycleScope.launch {
@@ -146,7 +177,7 @@ class CadastroAdminActivity : AppCompatActivity() {
                     ocupado(false)
                     val email = admin.email.orEmpty()
                     AlertDialog.Builder(this@CadastroAdminActivity)
-                        .setTitle("✅ Admin cadastrado!")
+                        .setTitle(if (admin.ehColaborador) "✅ Colaborador cadastrado!" else "✅ Admin cadastrado!")
                         .setMessage("Enviamos um e-mail de verificação para $email.\n\nAbra o link do e-mail (confira também o spam) e depois entre com seu e-mail e senha.")
                         .setCancelable(false)
                         .setPositiveButton("OK") { _, _ ->

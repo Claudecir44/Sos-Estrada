@@ -47,6 +47,17 @@ const FOTO_PADRAO = "data:image/svg+xml;utf8," + encodeURIComponent(
 
 let chatUnsubscribe = null;
 
+// Colaborador (admins/{uid}.role == "colaborador") só vê as abas liberadas
+// pelo admin master no cadastro (permissoes). As regras do Firestore
+// (podeAdmin) aplicam o mesmo — aqui é só pra esconder o que não pode.
+let adminAtual = null;
+function pode(secao) {
+  if (!adminAtual || adminAtual.role !== "colaborador") return true;
+  return !!(adminAtual.permissoes && adminAtual.permissoes[secao]);
+}
+// Aba "mensagens" lista as conversas a partir das solicitações.
+const PERMISSAO_DA_ABA = { motoristas: "motoristas", prestadores: "prestadores", solicitacoes: "solicitacoes", mensagens: "mensagens" };
+
 async function dadosAdmin(user) {
   if (!user || user.isAnonymous || !user.emailVerified) return null;
   try {
@@ -61,6 +72,7 @@ async function dadosAdmin(user) {
 
 function mostrarLogin() {
   pararChat();
+  adminAtual = null;
   document.getElementById("painel").style.display = "none";
   document.getElementById("login").style.display = "flex";
 }
@@ -77,7 +89,12 @@ function mostrarPainel(admin) {
   const colaborador = admin.role === "colaborador";
   papel.textContent = colaborador ? "Colaborador" : "Administrador";
   papel.classList.toggle("colaborador", colaborador);
-  mostrarAba("motoristas");
+  adminAtual = admin;
+  document.querySelectorAll(".aba-botao").forEach((b) => {
+    b.style.display = pode(PERMISSAO_DA_ABA[b.dataset.aba]) ? "" : "none";
+  });
+  const primeira = Object.keys(PERMISSAO_DA_ABA).find((aba) => pode(PERMISSAO_DA_ABA[aba]));
+  if (primeira) mostrarAba(primeira);
   atualizarContadores();
 }
 
@@ -186,9 +203,9 @@ async function atualizarContadores() {
       document.getElementById(id).textContent = snap.size || "";
     } catch (_) { /* sem permissão ou offline: fica sem número */ }
   };
-  contar("motoristas", "contMotoristas");
-  contar("prestadores", "contPrestadores");
-  contar("solicitacoes", "contSolicitacoes");
+  if (pode("motoristas")) contar("motoristas", "contMotoristas");
+  if (pode("prestadores")) contar("prestadores", "contPrestadores");
+  if (pode("solicitacoes")) contar("solicitacoes", "contSolicitacoes");
 }
 
 // ---------- Motoristas ----------
@@ -256,7 +273,7 @@ async function carregarSolicitacoes() {
     <td>${escapeHtml(s.prestadorNome)}</td>
     <td>${escapeHtml(s.enderecoMotorista || "—")}</td>
     <td><span class="badge ${escapeHtml(s.status)}">${escapeHtml(NOME_STATUS[s.status] || s.status)}</span></td>
-    <td><button class="btn-acao" data-chat="${escapeHtml(id)}">💬 Mensagens</button></td>
+    <td>${pode("mensagens") ? `<button class="btn-acao" data-chat="${escapeHtml(id)}">💬 Mensagens</button>` : ""}</td>
   `, (a, b) => tempo(b.timestamp) - tempo(a.timestamp));
 
   corpo.querySelectorAll("[data-chat]").forEach((botao) => botao.addEventListener("click", () => {

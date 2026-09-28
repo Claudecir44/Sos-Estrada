@@ -33,6 +33,23 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Colaborador = admin com role "colaborador" (cadastrado com
+    // CadastroAdminActivity marcando "Colaborador"): só vê/faz o que o admin
+    // master marcou em "permissoes" na hora do cadastro. Admin sem role é
+    // administrador completo. Seções: motoristas, prestadores, solicitacoes,
+    // mensagens, acoes (editar/bloquear/excluir cadastros).
+    function perfilAdmin() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+    }
+    function ehAdminCompleto() {
+      return ehAdmin() && perfilAdmin().get('role', 'admin') != 'colaborador';
+    }
+    function podeAdmin(secao) {
+      return ehAdmin()
+        && (perfilAdmin().get('role', 'admin') != 'colaborador'
+            || perfilAdmin().get('permissoes', {}).get(secao, false) == true);
+    }
+
     // Hash SHA-256 (hex maiúsculo) da senha do administrador master — ver
     // o bloco de admins abaixo pra como publicar sem pôr o hash no git.
     function senhaMasterConfere(senha) {
@@ -47,7 +64,7 @@ service cloud.firestore {
     // registro antigo que tenha sobrado não autoriza nada.
     function acaoAdminRegistrada(uid) {
       let acao = getAfter(/databases/$(database)/documents/acoesAdmin/$(uid)).data;
-      return ehAdmin()
+      return podeAdmin('acoes')
         && acao.adminUid == request.auth.uid
         && acao.em == request.time
         && senhaMasterConfere(acao.autorizacao);
@@ -81,13 +98,13 @@ service cloud.firestore {
     // Guarda a senha master digitada só até o fim do lote — o app apaga o
     // registro logo depois. Ninguém lê.
     match /acoesAdmin/{uid} {
-      allow create, update: if ehAdmin()
+      allow create, update: if podeAdmin('acoes')
         && request.resource.data.keys().hasOnly(['adminUid', 'acao', 'colecao', 'autorizacao', 'em'])
         && request.resource.data.adminUid == request.auth.uid
         && request.resource.data.colecao in ['motoristas', 'prestadores']
         && request.resource.data.em == request.time
         && senhaMasterConfere(request.resource.data.autorizacao);
-      allow delete: if ehAdmin();
+      allow delete: if podeAdmin('acoes');
       allow read: if false;
     }
 
@@ -110,7 +127,10 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow read: if ehDono(adminId) || ehAdmin();
       allow create: if ehDono(adminId)
-        && request.resource.data.keys().hasOnly(['nome', 'sobrenome', 'email', 'telefone', 'cpf', 'foto', 'criadoEm', 'autorizacao'])
+        && request.resource.data.keys().hasOnly(['nome', 'sobrenome', 'email', 'telefone', 'cpf', 'foto', 'criadoEm', 'autorizacao', 'role', 'permissoes'])
+        // Colaborador: role fixo "colaborador" + mapa com as permissões marcadas.
+        && (!('role' in request.resource.data) || request.resource.data.role == 'colaborador')
+        && (!('permissoes' in request.resource.data) || request.resource.data.permissoes is map)
         // Foto obrigatória no cadastro (JPEG pequeno em base64, ver FotoUtil).
         && request.resource.data.foto is string && request.resource.data.foto.size() > 0
         && request.resource.data.email == request.auth.token.email
@@ -123,7 +143,7 @@ service cloud.firestore {
              .hasOnly(['autorizacao', 'nome', 'sobrenome', 'telefone', 'cpf', 'foto'])
         && !('autorizacao' in request.resource.data);
       // "Meu Perfil" > Excluir (o próprio acesso) ou outro admin.
-      allow delete: if ehDono(adminId) || ehAdmin();
+      allow delete: if ehDono(adminId) || ehAdminCompleto();
     }
 
     // ---------------- motoristas ----------------
@@ -134,7 +154,7 @@ service cloud.firestore {
       // lido por outro usuário — os dados relevantes (nome, telefone,
       // veículo, placa) são copiados pra dentro de "solicitacoes" na hora
       // da solicitação (SocorroFragment.onSolicitarServico).
-      allow read: if ehDono(uid) || ehAdmin();
+      allow read: if ehDono(uid) || podeAdmin('motoristas');
       // Dono: cria e edita o próprio perfil, mas nunca mexe em "bloqueado"
       // e, bloqueado, não edita mais nada. Admin: só com a senha master.
       allow create: if ehDono(uid) && !('bloqueado' in request.resource.data) && !estaBloqueado(uid);
@@ -199,12 +219,14 @@ service cloud.firestore {
         return estaLogado() && resource.data.prestadorUid == request.auth.uid;
       }
 
-      allow read: if ehAdmin() || souMotorista() || souPrestador();
+      // As conversas do painel também listam as solicitações (seção mensagens).
+      allow read: if podeAdmin('solicitacoes') || podeAdmin('mensagens') || souMotorista() || souPrestador();
 
       // Só o motorista cria (SocorroFragment.onSolicitarServico), sempre
       // com o próprio uid — e nunca pra si mesmo (quem também é prestador
       // com a mesma conta não pede socorro ao próprio cadastro).
       allow create: if estaLogado() && request.resource.data.motoristaUid == request.auth.uid
+        && request.resource.data.prestadorUid is string
         && request.resource.data.prestadorUid != request.auth.uid
         && !estaBloqueado(request.auth.uid);
 
@@ -255,7 +277,7 @@ service cloud.firestore {
           return estaLogado() && (request.auth.uid == s.motoristaUid || request.auth.uid == s.prestadorUid);
         }
 
-        allow read: if ehAdmin() || souParticipante();
+        allow read: if podeAdmin('mensagens') || souParticipante();
 
         // remetenteTipo precisa bater com qual dos dois lados o uid
         // realmente é na solicitação (não um valor livre) — ver

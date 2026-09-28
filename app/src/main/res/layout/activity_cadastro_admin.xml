@@ -206,6 +206,39 @@
                     android:inputType="textPassword"
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Colaborador: acesso só ao que for marcado abaixo (mesmo
+                 modelo do Match e do Caronas). Desmarcado = admin completo. -->
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cbColaborador"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Colaborador"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#333333" />
+
+            <LinearLayout
+                android:id="@+id/layoutPermissoes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/bg_admin_chip"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="O colaborador terá acesso somente a:"
+                    android:textColor="#555555"
+                    android:textSize="13sp" />
+                <!-- As caixinhas de cada permissão entram aqui pelo código
+                     (Admin.PERMISSOES). -->
+            </LinearLayout>
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton

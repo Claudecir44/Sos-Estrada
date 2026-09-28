@@ -122,7 +122,6 @@ class AdminActivity : AppCompatActivity() {
     }
 
     private fun inicializarPainel() {
-        carregarSaudacao()
         binding.rvLista.layoutManager = LinearLayoutManager(this)
         binding.grupoListas.setOnCheckedStateChangeListener { _, _ -> mostrarListaEscolhida() }
         // Sair só encerra a sessão e volta pro login (antes fechava o app).
@@ -132,27 +131,63 @@ class AdminActivity : AppCompatActivity() {
         }
         binding.btnMeuPerfil.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
         binding.ivFotoAdminCabecalho.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
-        painelIniciado = true
-        carregarTudo()
+        // Primeiro quem está logado (admin ou colaborador e o que ele pode
+        // ver), depois as listas permitidas.
+        lifecycleScope.launch {
+            carregarSaudacao()
+            painelIniciado = true
+            carregarTudo()
+        }
     }
 
     // Volta do Meu Perfil: perfil excluído -> sem acesso, volta pro login;
     // salvo -> atualiza foto e nome do cabeçalho.
     private val meuPerfil = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { resultado ->
-        if (resultado.resultCode == CadastroAdminActivity.RESULTADO_EXCLUIDO) recreate() else carregarSaudacao()
+        if (resultado.resultCode == CadastroAdminActivity.RESULTADO_EXCLUIDO) recreate()
+        else lifecycleScope.launch { carregarSaudacao() }
     }
 
+    // Cadastro de quem está logado: admin completo ou colaborador (com as
+    // seções que o admin master liberou). null = ainda não carregou.
+    private var perfil: Admin? = null
+
+    private fun pode(secao: String) = perfil?.pode(secao) ?: true
+
     // Foto + só o primeiro nome do cadastro de admin (embaixo da foto);
-    // sem cadastro, cai no começo do e-mail.
-    private fun carregarSaudacao() {
-        lifecycleScope.launch {
-            val cadastro = adminRepository.buscarMeuCadastro().getOrNull()
-            FotoUtil.mostrar(binding.ivFotoAdminCabecalho, cadastro?.foto)
-            val nome = cadastro?.nome
-            val primeiroNome = nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
-                ?: adminRepository.emailLogado()?.substringBefore("@")
-            binding.tvSaudacaoAdmin.text = primeiroNome ?: "Admin"
-        }
+    // sem cadastro, cai no começo do e-mail. Colaborador: título próprio e
+    // só as seções permitidas.
+    private suspend fun carregarSaudacao() {
+        val cadastro = adminRepository.buscarMeuCadastro().getOrNull()
+        perfil = cadastro
+        FotoUtil.mostrar(binding.ivFotoAdminCabecalho, cadastro?.foto)
+        val nome = cadastro?.nome
+        val primeiroNome = nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }
+            ?: adminRepository.emailLogado()?.substringBefore("@")
+        binding.tvSaudacaoAdmin.text = primeiroNome ?: "Admin"
+        binding.tvTituloPainelAdmin.text = if (cadastro?.ehColaborador == true) "Painel do Colaborador" else "Painel Administrativo"
+        aplicarPermissoes()
+    }
+
+    private fun aplicarPermissoes() {
+        val secoes = listOf(
+            binding.chipMotoristas to Admin.PERM_MOTORISTAS,
+            binding.chipPrestadores to Admin.PERM_PRESTADORES,
+            binding.chipSolicitacoes to Admin.PERM_SOLICITACOES,
+            binding.chipMensagens to Admin.PERM_MENSAGENS
+        )
+        secoes.forEach { (chip, secao) -> chip.visibility = if (pode(secao)) View.VISIBLE else View.GONE }
+        binding.quadroMotoristas.alpha = if (pode(Admin.PERM_MOTORISTAS)) 1f else 0.4f
+        binding.quadroPrestadores.alpha = if (pode(Admin.PERM_PRESTADORES)) 1f else 0.4f
+        binding.quadroPedidos.alpha = if (pode(Admin.PERM_SOLICITACOES)) 1f else 0.4f
+        // Seleção atual escondida: passa pra primeira seção liberada.
+        val atual = secoes.firstOrNull { it.first.id == binding.grupoListas.checkedChipId }
+        if (atual == null || !pode(atual.second)) secoes.firstOrNull { pode(it.second) }?.first?.isChecked = true
+    }
+
+    // Segurar um cartão: editar/bloquear/excluir só com a permissão "acoes".
+    private fun abrirAcoes(abrir: () -> Unit) {
+        if (pode(Admin.PERM_ACOES)) abrir()
+        else avisar("🔒 Seu acesso de colaborador não permite editar, bloquear ou excluir cadastros.")
     }
 
     // Volta do chat: atualiza os totais e as listas.
@@ -167,10 +202,14 @@ class AdminActivity : AppCompatActivity() {
     private fun carregarTudo() {
         binding.progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
+            // Colaborador: só carrega o que pode ver (as regras negariam o resto).
+            val semAcesso = Result.failure<Nothing>(IllegalStateException("🔒 Sem permissão"))
             val (motoristas, prestadores, solicitacoes) = coroutineScope {
-                val m = async { adminRepository.listarMotoristas() }
-                val p = async { adminRepository.listarPrestadores() }
-                val s = async { adminRepository.listarSolicitacoes() }
+                val m = async { if (pode(Admin.PERM_MOTORISTAS)) adminRepository.listarMotoristas() else semAcesso }
+                val p = async { if (pode(Admin.PERM_PRESTADORES)) adminRepository.listarPrestadores() else semAcesso }
+                val s = async {
+                    if (pode(Admin.PERM_SOLICITACOES) || pode(Admin.PERM_MENSAGENS)) adminRepository.listarSolicitacoes() else semAcesso
+                }
                 Triple(m.await(), p.await(), s.await())
             }
             binding.progressBar.visibility = View.GONE
@@ -183,7 +222,7 @@ class AdminActivity : AppCompatActivity() {
             }
             binding.tvTotalMotoristas.text = motoristas.getOrNull()?.size?.toString() ?: "—"
             binding.tvTotalPrestadores.text = prestadores.getOrNull()?.size?.toString() ?: "—"
-            binding.tvTotalSolicitacoes.text = solicitacoes.getOrNull()?.size?.toString() ?: "—"
+            binding.tvTotalSolicitacoes.text = if (pode(Admin.PERM_SOLICITACOES)) solicitacoes.getOrNull()?.size?.toString() ?: "—" else "—"
 
             erros = mapOf(
                 R.id.chipMotoristas to motoristas.exceptionOrNull()?.message,
@@ -191,7 +230,11 @@ class AdminActivity : AppCompatActivity() {
                 R.id.chipSolicitacoes to solicitacoes.exceptionOrNull()?.message,
                 R.id.chipMensagens to solicitacoes.exceptionOrNull()?.message
             )
-            erros.values.firstOrNull { it != null }?.let { avisar("Erro ao carregar: $it") }
+            // Seção bloqueada pro colaborador não é erro: não avisa.
+            val erroSecaoPermitida = listOf(
+                Admin.PERM_MOTORISTAS to motoristas, Admin.PERM_PRESTADORES to prestadores, Admin.PERM_SOLICITACOES to solicitacoes
+            ).firstOrNull { (secao, r) -> pode(secao) && r.isFailure }?.second?.exceptionOrNull()?.message
+            erroSecaoPermitida?.let { avisar("Erro ao carregar: $it") }
             mostrarListaEscolhida()
         }
     }
@@ -200,8 +243,8 @@ class AdminActivity : AppCompatActivity() {
     private var erros: Map<Int, String?> = emptyMap()
     // Segurar o cartão: editar, bloquear ou excluir (com a senha master).
     private val acoes by lazy { AcoesCadastroAdmin(this, adminRepository) { carregarTudo() } }
-    private val motoristaAdapter = MotoristaAdminAdapter { acoes.abrir(it) }
-    private val prestadorAdapter = PrestadorAdminAdapter { acoes.abrir(it) }
+    private val motoristaAdapter = MotoristaAdminAdapter { m -> abrirAcoes { acoes.abrir(m) } }
+    private val prestadorAdapter = PrestadorAdminAdapter { p -> abrirAcoes { acoes.abrir(p) } }
     private val solicitacaoAdapter = AdminSolicitacaoAdapter()
     private val conversaAdapter = AdminConversaAdapter()
 

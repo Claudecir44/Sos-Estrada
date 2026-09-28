@@ -64,7 +64,7 @@ class AdminRepository @Inject constructor(
         try {
             // As regras só aceitam criar admins/{uid} com a senha master certa
             // (comparam o hash dela) — errada, a gravação é negada.
-            val dados = mapOf(
+            val dados = mutableMapOf<String, Any?>(
                 "nome" to admin.nome,
                 "sobrenome" to admin.sobrenome,
                 "email" to email,
@@ -74,6 +74,11 @@ class AdminRepository @Inject constructor(
                 "criadoEm" to FieldValue.serverTimestamp(),
                 CAMPO_AUTORIZACAO to senhaMaster
             )
+            // Colaborador: só as seções marcadas pelo admin master.
+            if (admin.ehColaborador) {
+                dados["role"] = Admin.ROLE_COLABORADOR
+                dados["permissoes"] = admin.permissoes.orEmpty()
+            }
             documentoAdmin(uid).set(dados).await()
         } catch (e: Exception) {
             // Conta criada agora sem o cadastro de admin não serve pra nada:

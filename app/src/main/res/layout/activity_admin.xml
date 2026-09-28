@@ -79,6 +79,7 @@
 
                 <!-- Sempre numa linha: diminui a fonte em tela estreita -->
                 <TextView
+                    android:id="@+id/tvTituloPainelAdmin"
                     android:layout_width="match_parent"
                     android:layout_height="28dp"
                     android:layout_marginTop="2dp"
