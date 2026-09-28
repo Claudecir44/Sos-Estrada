@@ -27,24 +27,6 @@
             android:gravity="top"
             android:orientation="horizontal">
 
-            <!-- Configurações (Financeiro) no canto superior esquerdo, ao lado
-                 da foto — mesmo botão grafite dos painéis de motorista/prestador. -->
-            <ImageView
-                android:id="@+id/btnConfiguracoesAdmin"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_gravity="top"
-                android:layout_marginEnd="4dp"
-                android:background="@drawable/bg_admin_avatar"
-                android:backgroundTint="@color/grafite"
-                android:clickable="true"
-                android:contentDescription="Configurações"
-                android:elevation="3dp"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
-                android:padding="7dp"
-                android:src="@drawable/ic_configuracoes" />
-
             <!-- Foto do admin no canto, com o primeiro nome embaixo -->
             <LinearLayout
                 android:layout_width="72dp"
@@ -272,6 +254,11 @@
                 android:id="@+id/chipMensagens"
                 style="@style/AdminChipSeletor"
                 android:text="💬 Mensagens" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFinanceiro"
+                style="@style/AdminChipSeletor"
+                android:text="💰 Financeiro" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
@@ -311,11 +298,11 @@
             android:paddingEnd="12dp"
             android:paddingBottom="16dp" />
 
-        <!-- ⚙️ Configurações e Financeiro, na mesma tela (no lugar das
-             listas) — AdminActivity.mostrarConfiguracoes/mostrarFinanceiro. -->
+        <!-- 💰 Financeiro, no lugar da lista quando o chip está marcado
+             (AdminActivity.mostrarListaEscolhida). -->
         <include
-            android:id="@+id/secaoConfiguracoes"
-            layout="@layout/secao_configuracoes_admin"
+            android:id="@+id/secaoFinanceiro"
+            layout="@layout/secao_financeiro_admin"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone" />

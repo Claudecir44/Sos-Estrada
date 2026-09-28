@@ -15,7 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.cjstudio.sosestrada.databinding.ItemPagamentoAdminBinding
-import com.cjstudio.sosestrada.databinding.SecaoConfiguracoesAdminBinding
+import com.cjstudio.sosestrada.databinding.SecaoFinanceiroAdminBinding
 import kotlinx.coroutines.launch
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -32,7 +32,7 @@ import java.util.Locale
 // prestadores (coleção pagamentos — ver PagamentoPrestador).
 class FinanceiroAdmin(
     private val activity: Activity,
-    private val tela: SecaoConfiguracoesAdminBinding,
+    private val tela: SecaoFinanceiroAdminBinding,
     private val adminRepository: IAdminRepository,
     private val escopo: LifecycleCoroutineScope
 ) {

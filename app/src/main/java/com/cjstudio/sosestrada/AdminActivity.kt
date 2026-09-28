@@ -6,7 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -130,19 +129,6 @@ class AdminActivity : AppCompatActivity() {
             adminRepository.sair()
             recreate()
         }
-        // ⚙️ Configurações > Financeiro: abre na mesma tela, no lugar das listas.
-        binding.btnConfiguracoesAdmin.setOnClickListener { mostrarConfiguracoes() }
-        binding.secaoConfiguracoes.btnVoltarConfiguracoes.setOnClickListener { voltarDasConfiguracoes() }
-        binding.secaoConfiguracoes.cardFinanceiro.setOnClickListener { mostrarFinanceiro() }
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (binding.secaoConfiguracoes.root.visibility == View.VISIBLE) voltarDasConfiguracoes()
-                else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
-            }
-        })
         binding.btnMeuPerfil.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
         binding.ivFotoAdminCabecalho.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
         // Primeiro quem está logado (admin ou colaborador e o que ele pode
@@ -187,7 +173,8 @@ class AdminActivity : AppCompatActivity() {
             binding.chipMotoristas to Admin.PERM_MOTORISTAS,
             binding.chipPrestadores to Admin.PERM_PRESTADORES,
             binding.chipSolicitacoes to Admin.PERM_SOLICITACOES,
-            binding.chipMensagens to Admin.PERM_MENSAGENS
+            binding.chipMensagens to Admin.PERM_MENSAGENS,
+            binding.chipFinanceiro to Admin.PERM_FINANCEIRO
         )
         secoes.forEach { (chip, secao) -> chip.visibility = if (pode(secao)) View.VISIBLE else View.GONE }
         binding.quadroMotoristas.alpha = if (pode(Admin.PERM_MOTORISTAS)) 1f else 0.4f
@@ -198,47 +185,7 @@ class AdminActivity : AppCompatActivity() {
         if (atual == null || !pode(atual.second)) secoes.firstOrNull { pode(it.second) }?.first?.isChecked = true
     }
 
-    private val financeiro by lazy { FinanceiroAdmin(this, binding.secaoConfiguracoes, adminRepository, lifecycleScope) }
-
-    // Configurações ocupam o lugar das listas (seletor + lista somem).
-    private fun mostrarConfiguracoes() {
-        binding.rolagemSeletor.visibility = View.GONE
-        binding.rvLista.visibility = View.GONE
-        binding.tvListaVazia.visibility = View.GONE
-        binding.progressBar.visibility = View.GONE
-        with(binding.secaoConfiguracoes) {
-            root.visibility = View.VISIBLE
-            tvTituloConfiguracoes.text = "⚙️ Configurações"
-            btnVoltarConfiguracoes.text = "‹ Voltar às listas"
-            menuConfiguracoes.visibility = View.VISIBLE
-            layoutFinanceiro.visibility = View.GONE
-            // Colaborador sem a permissão "financeiro" não vê o cartão.
-            cardFinanceiro.visibility = if (pode(Admin.PERM_FINANCEIRO)) View.VISIBLE else View.GONE
-        }
-    }
-
-    private fun mostrarFinanceiro() {
-        if (!pode(Admin.PERM_FINANCEIRO)) return avisar("🔒 Seu acesso de colaborador não inclui o financeiro.")
-        with(binding.secaoConfiguracoes) {
-            tvTituloConfiguracoes.text = "💰 Financeiro"
-            btnVoltarConfiguracoes.text = "‹ Configurações"
-            menuConfiguracoes.visibility = View.GONE
-            layoutFinanceiro.visibility = View.VISIBLE
-        }
-        financeiro.abrir()
-    }
-
-    // Do Financeiro volta pro menu das Configurações; do menu, pras listas.
-    private fun voltarDasConfiguracoes() {
-        if (binding.secaoConfiguracoes.layoutFinanceiro.visibility == View.VISIBLE) {
-            mostrarConfiguracoes()
-            return
-        }
-        binding.secaoConfiguracoes.root.visibility = View.GONE
-        binding.rolagemSeletor.visibility = View.VISIBLE
-        binding.rvLista.visibility = View.VISIBLE
-        mostrarListaEscolhida()
-    }
+    private val financeiro by lazy { FinanceiroAdmin(this, binding.secaoFinanceiro, adminRepository, lifecycleScope) }
 
     // Segurar um cartão: editar/bloquear/excluir só com a permissão "acoes".
     private fun abrirAcoes(abrir: () -> Unit) {
@@ -296,6 +243,7 @@ class AdminActivity : AppCompatActivity() {
     }
 
     private var painelIniciado = false
+    private var financeiroAberto = false
     private var erros: Map<Int, String?> = emptyMap()
     // Segurar o cartão: editar, bloquear ou excluir (com a senha master).
     private val acoes by lazy { AcoesCadastroAdmin(this, adminRepository) { carregarTudo() } }
@@ -304,9 +252,23 @@ class AdminActivity : AppCompatActivity() {
     private val solicitacaoAdapter = AdminSolicitacaoAdapter()
     private val conversaAdapter = AdminConversaAdapter()
 
-    // Troca a lista abaixo do seletor (sem abrir outra tela).
+    // Troca a lista abaixo do seletor (sem abrir outra tela). O Financeiro
+    // ocupa o lugar da lista, na mesma tela.
     private fun mostrarListaEscolhida() {
         val escolhido = binding.grupoListas.checkedChipId
+        val noFinanceiro = escolhido == R.id.chipFinanceiro
+        binding.secaoFinanceiro.root.visibility = if (noFinanceiro) View.VISIBLE else View.GONE
+        binding.rvLista.visibility = if (noFinanceiro) View.GONE else View.VISIBLE
+        // Recarrega os pagamentos cada vez que o chip é escolhido.
+        if (!noFinanceiro) financeiroAberto = false
+        if (noFinanceiro) {
+            binding.tvListaVazia.visibility = View.GONE
+            if (!financeiroAberto) {
+                financeiroAberto = true
+                financeiro.abrir()
+            }
+            return
+        }
         val (adapter, vazio) = when (escolhido) {
             R.id.chipPrestadores -> prestadorAdapter to "Nenhum prestador cadastrado ainda."
             R.id.chipSolicitacoes -> solicitacaoAdapter to "Nenhuma solicitação encontrada."
