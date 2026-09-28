@@ -202,8 +202,10 @@ service cloud.firestore {
       allow read: if ehAdmin() || souMotorista() || souPrestador();
 
       // Só o motorista cria (SocorroFragment.onSolicitarServico), sempre
-      // com o próprio uid.
+      // com o próprio uid — e nunca pra si mesmo (quem também é prestador
+      // com a mesma conta não pede socorro ao próprio cadastro).
       allow create: if estaLogado() && request.resource.data.motoristaUid == request.auth.uid
+        && request.resource.data.prestadorUid != request.auth.uid
         && !estaBloqueado(request.auth.uid);
 
       // Update é sempre parcial e feito por quem participa da solicitação:

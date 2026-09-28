@@ -134,12 +134,15 @@ class SocorroFragment : Fragment() {
         binding.tvEmptySocorro.visibility = View.GONE
 
         viewLifecycleOwner.lifecycleScope.launch {
+            val meuUid = authRepository.uidLogado()
             val prestadores = prestadorRepository.listarAtivos().getOrElse { e ->
                 binding.progressBarSocorro.visibility = View.GONE
                 binding.tvEmptySocorro.visibility = View.VISIBLE
                 Toast.makeText(requireContext(), "Erro ao carregar prestadores: ${e.message}", Toast.LENGTH_SHORT).show()
                 return@launch
             }
+                // Quem também é prestador (mesma conta) não pede socorro a si mesmo.
+                .filter { it.uid != meuUid }
             if (temLocalizacao) calcularDistancias(prestadores)
 
             // Sem as solicitações, a lista aparece do mesmo jeito (só sem status).
