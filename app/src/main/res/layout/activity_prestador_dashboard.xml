@@ -82,21 +82,12 @@
                 android:gravity="top"
                 android:orientation="horizontal">
 
-                <!-- Foto no canto, com a situação do cadastro e os dias do
-                     plano embaixo (StatusAssinatura.resumo). -->
+                <!-- Foto no canto com o primeiro nome embaixo -->
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="start"
+                    android:gravity="center_horizontal"
                     android:orientation="vertical">
-
-                    <!-- Foto no canto e o primeiro nome colado nela, na altura do meio -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
 
                     <com.google.android.material.imageview.ShapeableImageView
                         android:id="@+id/ivFotoPrestadorPainel"
@@ -112,48 +103,22 @@
 
                     <TextView
                         android:id="@+id/tvNomePrestadorPainel"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:text="Prestador"
-                        android:textColor="@android:color/white"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tvCadastroStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:background="@drawable/bg_status_cadastro"
-                        android:gravity="center"
-                        android:maxLines="1"
-                        android:paddingStart="5dp"
-                        android:paddingTop="1dp"
-                        android:paddingEnd="5dp"
-                        android:paddingBottom="1dp"
-                        android:textSize="8sp"
-                        android:textStyle="bold"
-                        android:visibility="invisible"
-                        tools:text="Cadastro ativo"
-                        tools:textColor="@color/verde_neon"
-                        tools:visibility="visible" />
-
-                    <TextView
-                        android:id="@+id/tvPlanoStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:gravity="center"
-                        android:maxLines="2"
-                        android:textColor="@android:color/black"
-                        android:textSize="8sp"
-                        tools:text="Plano free 45/60 dias" />
+                        android:ellipsize="end"
+                        android:maxWidth="90dp"
+                        android:maxLines="1"
+                        android:text="Prestador"
+                        android:textColor="@android:color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -201,23 +166,65 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Serviço oferecido -->
-            <TextView
-                android:id="@+id/tvServicoPainel"
-                android:layout_width="wrap_content"
+            <!-- Situação do cadastro e dias do plano (StatusAssinatura.resumo)
+                 à esquerda, serviço oferecido no centro, na mesma linha. -->
+            <FrameLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_admin_chip"
-                android:backgroundTint="#26FFFFFF"
-                android:paddingStart="12dp"
-                android:paddingTop="6dp"
-                android:paddingEnd="12dp"
-                android:paddingBottom="6dp"
-                android:text="🔧 Carregando serviço…"
-                android:textColor="@android:color/white"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:layout_marginTop="10dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvCadastroStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_status_cadastro"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:paddingStart="5dp"
+                        android:paddingTop="1dp"
+                        android:paddingEnd="5dp"
+                        android:paddingBottom="1dp"
+                        android:textSize="8sp"
+                        android:textStyle="bold"
+                        android:visibility="invisible"
+                        tools:text="Cadastro ativo"
+                        tools:textColor="@color/verde_neon"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:id="@+id/tvPlanoStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:maxLines="1"
+                        android:textColor="@android:color/black"
+                        android:textSize="8sp"
+                        tools:text="Plano free 45/60 dias" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvServicoPainel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_admin_chip"
+                    android:backgroundTint="#26FFFFFF"
+                    android:paddingStart="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="6dp"
+                    android:text="🔧 Carregando serviço…"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
         </LinearLayout>
 
         <!-- Atender: a ação principal, sobre a base do cabeçalho -->
