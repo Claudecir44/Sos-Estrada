@@ -119,7 +119,7 @@
             app:cornerRadius="8dp" />
 
         <!-- Localização atual enviada pelo motorista ("Enviar Minha
-             Localização"); só aparece depois que ele enviar. -->
+             Localização"); cinza até ele enviar (SolicitacaoAdapter). -->
         <Button
             android:id="@+id/btnLocalizacaoMotorista"
             android:layout_width="match_parent"

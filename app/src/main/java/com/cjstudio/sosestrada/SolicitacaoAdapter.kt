@@ -96,16 +96,28 @@ class SolicitacaoAdapter(
         }
     }
 
-    // Botão com o link do mapa da localização que o motorista enviou; mostra
-    // o horário do envio pra o prestador saber se é recente.
+    // Sempre abaixo de Mensagem (menos em solicitação cancelada). Cinza até o
+    // motorista usar o "Enviar Minha Localização" (só depois do aceite);
+    // depois abre o mapa e mostra o horário do envio, pra saber se é recente.
     private fun mostrarLocalizacaoMotorista(b: ItemSolicitacaoBinding, s: Solicitacao, cancelada: Boolean) {
-        val lat = s.latitudeCompartilhada
-        val lng = s.longitudeCompartilhada
-        if (cancelada || lat == null || lng == null) {
+        if (cancelada) {
             b.btnLocalizacaoMotorista.visibility = View.GONE
             return
         }
         b.btnLocalizacaoMotorista.visibility = View.VISIBLE
+        val lat = s.latitudeCompartilhada
+        val lng = s.longitudeCompartilhada
+        if (lat == null || lng == null) {
+            b.btnLocalizacaoMotorista.text = "📍 Localização do Motorista"
+            b.btnLocalizacaoMotorista.backgroundTintList = ColorStateList.valueOf(0xFF9E9E9E.toInt())
+            b.btnLocalizacaoMotorista.setOnClickListener {
+                val aviso = if (s.status == ACEITO) "O motorista ainda não enviou a localização. Peça pelo chat."
+                else "O motorista poderá enviar a localização depois que você aceitar a solicitação."
+                Toast.makeText(b.root.context, aviso, Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        b.btnLocalizacaoMotorista.backgroundTintList = ColorStateList.valueOf(0xFF00897B.toInt())
         b.btnLocalizacaoMotorista.text = s.localizacaoCompartilhadaEm
             ?.let { "📍 Localização do Motorista (${SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(it)})" }
             ?: "📍 Localização do Motorista"
