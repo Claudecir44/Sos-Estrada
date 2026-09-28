@@ -26,17 +26,11 @@ import {
   deleteObject,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
+// Painel Web SOS Estrada — mesmo formato do painel do Caronas: topo com
+// foto/nome/papel de quem está logado, abas com contador e tabelas.
 // Admin = e-mail validado + cadastro em admins/{uid}, feito pelo app admin
 // ("Criar conta", autorizado pela senha do administrador master). Quem
 // garante o acesso de verdade são as regras do Firestore (ehAdmin()).
-async function ehAdmin(user) {
-  if (!user || user.isAnonymous || !user.emailVerified) return false;
-  try {
-    return (await getDoc(doc(db, "admins", user.uid))).exists();
-  } catch (_) {
-    return false;
-  }
-}
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -45,39 +39,79 @@ auth.languageCode = "pt-BR";
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+// Silhueta cinza pra quem ainda não tem foto.
+const FOTO_PADRAO = "data:image/svg+xml;utf8," + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#E0E0E0"/>' +
+  '<circle cx="24" cy="19" r="9" fill="#BDBDBD"/><path d="M8 44c2-10 9-14 16-14s14 4 16 14z" fill="#BDBDBD"/></svg>'
+);
+
 let chatUnsubscribe = null;
 
-function mostrarView(id) {
-  document.querySelectorAll(".view").forEach((v) => v.classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
-  if (id !== "view-chat" && chatUnsubscribe) {
-    chatUnsubscribe();
-    chatUnsubscribe = null;
+async function dadosAdmin(user) {
+  if (!user || user.isAnonymous || !user.emailVerified) return null;
+  try {
+    const snap = await getDoc(doc(db, "admins", user.uid));
+    return snap.exists() ? snap.data() : null;
+  } catch (_) {
+    return null;
   }
 }
 
-document.querySelectorAll("[data-voltar]").forEach((el) => {
-  el.addEventListener("click", () => mostrarView(el.dataset.voltar));
-});
+// ---------- Telas ----------
+
+function mostrarLogin() {
+  pararChat();
+  document.getElementById("painel").style.display = "none";
+  document.getElementById("login").style.display = "flex";
+}
+
+function mostrarPainel(admin) {
+  document.getElementById("login").style.display = "none";
+  document.getElementById("painel").style.display = "block";
+  // Quem está logado: foto, nome e papel (colaborador ainda não existe no
+  // SOS Estrada — quando existir, virá em admins/{uid}.role).
+  document.getElementById("adminFoto").src = admin.foto ? srcFoto(admin.foto) : FOTO_PADRAO;
+  document.getElementById("adminNome").textContent =
+    [admin.nome, admin.sobrenome].filter(Boolean).join(" ") || admin.email || "";
+  const papel = document.getElementById("adminPapel");
+  const colaborador = admin.role === "colaborador";
+  papel.textContent = colaborador ? "Colaborador" : "Administrador";
+  papel.classList.toggle("colaborador", colaborador);
+  mostrarAba("motoristas");
+  atualizarContadores();
+}
+
+function mostrarAba(nome) {
+  if (nome !== "mensagens") pararChat();
+  document.querySelectorAll(".aba-botao").forEach((b) => b.classList.toggle("ativa", b.dataset.aba === nome));
+  document.querySelectorAll(".aba-conteudo").forEach((c) => c.classList.remove("ativa"));
+  document.getElementById("aba" + nome.charAt(0).toUpperCase() + nome.slice(1)).classList.add("ativa");
+  ({ motoristas: carregarMotoristas, prestadores: carregarPrestadores, solicitacoes: carregarSolicitacoes, mensagens: carregarConversas })[nome]();
+}
+
+document.querySelectorAll(".aba-botao").forEach((b) => b.addEventListener("click", () => mostrarAba(b.dataset.aba)));
 
 // ---------- Login ----------
 
-// Só abre o painel pra admin com e-mail validado (sessões anônimas das
-// versões antigas caem no login).
 // Durante o clique em "Entrar" quem decide é o próprio login (que ainda
 // precisa da sessão aberta pra reenviar a verificação).
 let entrando = false;
 
 onAuthStateChanged(auth, async (user) => {
   if (entrando) return;
-  if (user && !(await ehAdmin(user))) {
-    signOut(auth);
+  if (!user) return mostrarLogin();
+  const admin = await dadosAdmin(user);
+  if (!admin) {
+    await signOut(auth);
     return;
   }
-  mostrarView(user ? "view-panel" : "view-login");
+  mostrarPainel(admin);
 });
 
-document.getElementById("btnEntrar").addEventListener("click", async () => {
+document.getElementById("btnEntrar").addEventListener("click", entrar);
+document.getElementById("loginSenha").addEventListener("keydown", (e) => { if (e.key === "Enter") entrar(); });
+
+async function entrar() {
   const email = document.getElementById("loginEmail").value.trim();
   const senha = document.getElementById("loginSenha").value;
   const erroEl = document.getElementById("loginErro");
@@ -107,18 +141,19 @@ document.getElementById("btnEntrar").addEventListener("click", async () => {
       await signOut(auth);
       return;
     }
-    if (!(await ehAdmin(user))) {
+    const admin = await dadosAdmin(user);
+    if (!admin) {
       erroEl.textContent = "❌ Esta conta não tem acesso ao painel administrativo.";
       await signOut(auth);
       return;
     }
-    mostrarView("view-panel");
+    mostrarPainel(admin);
   } catch (e) {
     erroEl.textContent = "❌ E-mail ou senha incorretos.";
   } finally {
     entrando = false;
   }
-});
+}
 
 document.getElementById("btnEsqueciSenha").addEventListener("click", async (evento) => {
   evento.preventDefault();
@@ -138,306 +173,193 @@ document.getElementById("btnEsqueciSenha").addEventListener("click", async (even
 
 document.getElementById("btnSair").addEventListener("click", async () => {
   await signOut(auth);
+  document.getElementById("loginEmail").value = "";
+  document.getElementById("loginSenha").value = "";
 });
 
-// ---------- Navegação do painel ----------
+// ---------- Contadores das abas ----------
 
-document.getElementById("btnMotoristas").addEventListener("click", () => {
-  mostrarView("view-motoristas");
-  carregarMotoristas();
-});
-
-document.getElementById("btnPrestadores").addEventListener("click", () => {
-  mostrarView("view-prestadores");
-  carregarPrestadores();
-});
-
-document.getElementById("btnVerSolicitacoes").addEventListener("click", () => {
-  mostrarView("view-solicitacoes");
-  carregarSolicitacoes();
-});
-
-document.getElementById("btnVerMensagens").addEventListener("click", () => {
-  mostrarView("view-mensagens");
-  carregarConversas();
-});
-
-document.getElementById("btnVoltarChat").addEventListener("click", () => {
-  mostrarView("view-mensagens");
-});
+async function atualizarContadores() {
+  const contar = async (colecao, id) => {
+    try {
+      const snap = await getDocs(collection(db, colecao));
+      document.getElementById(id).textContent = snap.size || "";
+    } catch (_) { /* sem permissão ou offline: fica sem número */ }
+  };
+  contar("motoristas", "contMotoristas");
+  contar("prestadores", "contPrestadores");
+  contar("solicitacoes", "contSolicitacoes");
+}
 
 // ---------- Motoristas ----------
 
 async function carregarMotoristas() {
-  const loading = document.getElementById("motoristasLoading");
-  const empty = document.getElementById("motoristasEmpty");
-  const lista = document.getElementById("motoristasLista");
-  loading.classList.remove("hidden");
-  empty.classList.add("hidden");
-  lista.innerHTML = "";
-
-  try {
-    const snap = await getDocs(collection(db, "motoristas"));
-    loading.classList.add("hidden");
-    if (snap.empty) {
-      empty.classList.remove("hidden");
-      return;
-    }
-    snap.forEach((docSnap) => {
-      const m = docSnap.data();
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <p class="nome">${escapeHtml(m.nome)}</p>
-        <p>Telefone: ${escapeHtml(m.telefone)}</p>
-        <p>E-mail: ${escapeHtml(m.email)}</p>
-        <p>Veículo: ${escapeHtml(m.veiculo)}</p>
-        <p>Placa: ${escapeHtml(m.placa)}</p>
-        <p>Cor: ${escapeHtml(m.cor)}</p>
-        <p>ID: ${escapeHtml(m.uid)}</p>
-      `;
-      lista.appendChild(card);
-    });
-  } catch (e) {
-    loading.classList.add("hidden");
-    empty.textContent = "Erro ao carregar motoristas: " + e.message;
-    empty.classList.remove("hidden");
-  }
+  const corpo = document.getElementById("corpoMotoristas");
+  const vazio = document.getElementById("vazioMotoristas");
+  await carregarTabela(corpo, vazio, "motoristas", (m) => `
+    <td><img class="foto-linha" src="${escapeHtml(m.foto ? srcFoto(m.foto) : FOTO_PADRAO)}" alt=""></td>
+    <td><b>${escapeHtml(m.nome)}</b></td>
+    <td>${escapeHtml(m.email)}</td>
+    <td>${escapeHtml(m.telefone)}</td>
+    <td>${escapeHtml([m.veiculo, m.cor].filter(Boolean).join(" • "))}</td>
+    <td>${escapeHtml(m.placa)}</td>
+    <td>${m.bloqueado ? '<span class="badge bloqueado">Bloqueado</span>' : '<span class="badge ativo">Ativo</span>'}</td>
+  `, (a, b) => (a.nome || "").localeCompare(b.nome || ""));
 }
 
 // ---------- Prestadores ----------
 
-// Logo nova vem como JPEG em base64 (o projeto não tem Storage); a antiga, como link.
+// Foto nova vem como JPEG em base64 (o projeto não tem Storage); a antiga, como link.
 function srcFoto(foto) {
-  return foto.startsWith("http") ? foto : "data:image/jpeg;base64," + foto;
-}
-
-function enderecoCompletoPrestador(p) {
-  let sb = "";
-  if (p.rua) sb += p.rua;
-  if (p.numero) sb += ", " + p.numero;
-  if (p.bairro) sb += " - " + p.bairro;
-  if (p.cidade) sb += ", " + p.cidade;
-  if (p.estado) sb += " - " + p.estado;
-  if (p.pais) sb += ", " + p.pais;
-  if (p.complemento) sb += " (" + p.complemento + ")";
-
-  if (sb.length === 0) {
-    if (p.endereco) return p.endereco;
-    if (p.localizacao) return p.localizacao;
-    return "Endereço não informado";
-  }
-  return sb;
+  return String(foto).startsWith("http") ? foto : "data:image/jpeg;base64," + foto;
 }
 
 async function carregarPrestadores() {
-  const loading = document.getElementById("prestadoresLoading");
-  const empty = document.getElementById("prestadoresEmpty");
-  const lista = document.getElementById("prestadoresLista");
-  loading.classList.remove("hidden");
-  empty.classList.add("hidden");
-  lista.innerHTML = "";
-
-  try {
-    const snap = await getDocs(collection(db, "prestadores"));
-    loading.classList.add("hidden");
-    if (snap.empty) {
-      empty.classList.remove("hidden");
-      return;
-    }
-    snap.forEach((docSnap) => {
-      const p = docSnap.data();
-      const localizacao =
-        p.cidade || p.estado
-          ? `${p.cidade || ""}${p.estado ? " - " + p.estado : ""}`
-          : "Não informada";
-
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        ${p.logo ? `<img class="logo" src="${escapeHtml(srcFoto(p.logo))}" />` : ""}
-        <p class="nome">${escapeHtml(p.nome)}</p>
-        <p>CNPJ: ${escapeHtml(p.cnpj)}</p>
-        <p>Telefone: ${escapeHtml(p.telefone)}</p>
-        <p>E-mail: ${escapeHtml(p.email)}</p>
-        <p>Serviço: ${escapeHtml(p.servico)}</p>
-        <p>Endereço: ${escapeHtml(enderecoCompletoPrestador(p))}</p>
-        <p>Localização: ${escapeHtml(localizacao)}</p>
-        <p>Preço: ${escapeHtml(p.preco)}</p>
-        <p>ID: ${escapeHtml(p.uid)}</p>
-      `;
-      lista.appendChild(card);
-    });
-  } catch (e) {
-    loading.classList.add("hidden");
-    empty.textContent = "Erro ao carregar prestadores: " + e.message;
-    empty.classList.remove("hidden");
-  }
+  const corpo = document.getElementById("corpoPrestadores");
+  const vazio = document.getElementById("vazioPrestadores");
+  await carregarTabela(corpo, vazio, "prestadores", (p) => {
+    const cidade = [p.cidade, p.estado].filter(Boolean).join(" - ") || p.endereco || p.localizacao || "—";
+    const situacao = p.bloqueado ? '<span class="badge bloqueado">Bloqueado</span>'
+      : p.ativo === false ? '<span class="badge cancelado">Fora da busca</span>'
+      : '<span class="badge ativo">Ativo</span>';
+    return `
+      <td><img class="foto-linha" src="${escapeHtml(p.logo ? srcFoto(p.logo) : FOTO_PADRAO)}" alt=""></td>
+      <td><b>${escapeHtml(p.nome)}</b><br><span style="color:#888">${escapeHtml(p.email)}</span></td>
+      <td>${escapeHtml(p.servico)}</td>
+      <td>${escapeHtml(p.telefone)}</td>
+      <td>${escapeHtml(cidade)}</td>
+      <td>${escapeHtml(p.cnpj)}</td>
+      <td>${escapeHtml(p.preco)}</td>
+      <td>${situacao}</td>
+    `;
+  }, (a, b) => (a.nome || "").localeCompare(b.nome || ""));
 }
 
 // ---------- Solicitações ----------
 
-function statusClasse(status) {
-  switch (status) {
-    case "pendente": return "status-pendente";
-    case "aceito": return "status-aceito";
-    case "recusado": return "status-recusado";
-    case "cancelado": return "status-cancelado";
-    default: return "";
-  }
-}
+const NOME_STATUS = { pendente: "Pendente", aceito: "Aceita", recusado: "Recusada", cancelado: "Cancelada" };
 
 function formatarDataHora(timestamp) {
-  if (!timestamp || !timestamp.toDate) return "não informada";
+  if (!timestamp || !timestamp.toDate) return "—";
   const d = timestamp.toDate();
   const pad = (n) => String(n).padStart(2, "0");
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 async function carregarSolicitacoes() {
-  const loading = document.getElementById("solicitacoesLoading");
-  const empty = document.getElementById("solicitacoesEmpty");
-  const lista = document.getElementById("solicitacoesLista");
-  loading.classList.remove("hidden");
-  empty.classList.add("hidden");
-  lista.innerHTML = "";
+  const corpo = document.getElementById("corpoSolicitacoes");
+  const vazio = document.getElementById("vazioSolicitacoes");
+  await carregarTabela(corpo, vazio, "solicitacoes", (s, id) => `
+    <td>${formatarDataHora(s.timestamp)}</td>
+    <td><b>${escapeHtml(s.motoristaNome)}</b><br><span style="color:#888">${escapeHtml(s.motoristaTelefone)}</span></td>
+    <td>${escapeHtml([s.motoristaVeiculo, s.motoristaPlaca].filter(Boolean).join(" • "))}</td>
+    <td>${escapeHtml(s.prestadorNome)}</td>
+    <td>${escapeHtml(s.enderecoMotorista || "—")}</td>
+    <td><span class="badge ${escapeHtml(s.status)}">${escapeHtml(NOME_STATUS[s.status] || s.status)}</span></td>
+    <td><button class="btn-acao" data-chat="${escapeHtml(id)}">💬 Mensagens</button></td>
+  `, (a, b) => tempo(b.timestamp) - tempo(a.timestamp));
 
-  try {
-    const snap = await getDocs(collection(db, "solicitacoes"));
-    loading.classList.add("hidden");
-    if (snap.empty) {
-      empty.classList.remove("hidden");
-      return;
-    }
-    snap.forEach((docSnap) => {
-      const s = docSnap.data();
-      const id = docSnap.id;
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <p class="nome">Motorista: ${escapeHtml(s.motoristaNome)}</p>
-        <p>📞 ${escapeHtml(s.motoristaTelefone)}</p>
-        <p>🚗 ${escapeHtml(s.motoristaVeiculo)}</p>
-        <p>🔢 ${escapeHtml(s.motoristaPlaca)}</p>
-        <p>📍 ${escapeHtml(s.enderecoMotorista)}</p>
-        <p class="nome">Prestador: ${escapeHtml(s.prestadorNome)}</p>
-        <p class="${statusClasse(s.status)}">Status: ${escapeHtml(s.status)}</p>
-        <p>Data/Hora: ${formatarDataHora(s.timestamp)}</p>
-        <button class="btn btn-purple btn-ver-mensagens">💬 Ver mensagens</button>
-      `;
-      card.querySelector(".btn-ver-mensagens").addEventListener("click", () => {
-        abrirChat(id, `${s.motoristaNome} ↔ ${s.prestadorNome}`);
-      });
-      lista.appendChild(card);
-    });
-  } catch (e) {
-    loading.classList.add("hidden");
-    empty.textContent = "Erro ao carregar solicitações: " + e.message;
-    empty.classList.remove("hidden");
-  }
+  corpo.querySelectorAll("[data-chat]").forEach((botao) => botao.addEventListener("click", () => {
+    const id = botao.dataset.chat;
+    mostrarAba("mensagens");
+    // Espera a lista de conversas montar pra marcar a certa.
+    setTimeout(() => document.querySelector(`.conversa[data-id="${CSS.escape(id)}"]`)?.click(), 400);
+  }));
 }
 
-// ---------- Conversas (Ver Mensagens) ----------
+function tempo(timestamp) {
+  return timestamp && timestamp.toMillis ? timestamp.toMillis() : 0;
+}
+
+// ---------- Mensagens: lista de conversas + chat na mesma aba ----------
 
 async function carregarConversas() {
-  const loading = document.getElementById("mensagensLoading");
-  const empty = document.getElementById("mensagensEmpty");
-  const lista = document.getElementById("mensagensLista");
-  loading.classList.remove("hidden");
-  empty.classList.add("hidden");
-  lista.innerHTML = "";
-
+  const lista = document.getElementById("listaConversas");
+  const vazio = document.getElementById("vazioConversas");
+  lista.innerHTML = '<div class="carregando">Carregando…</div>';
+  vazio.style.display = "none";
   try {
     const snap = await getDocs(collection(db, "solicitacoes"));
-    loading.classList.add("hidden");
-    if (snap.empty) {
-      empty.classList.remove("hidden");
+    const docs = snap.docs.sort((a, b) => tempo(b.data().timestamp) - tempo(a.data().timestamp));
+    lista.innerHTML = "";
+    if (docs.length === 0) {
+      vazio.style.display = "block";
       return;
     }
-    snap.forEach((docSnap) => {
+    docs.forEach((docSnap) => {
       const s = docSnap.data();
-      const id = docSnap.id;
-      const card = document.createElement("div");
-      card.className = "card card-clickable";
-      card.innerHTML = `
-        <p class="nome">🚗 Motorista: ${escapeHtml(s.motoristaNome)}</p>
-        <p class="nome">🔧 Prestador: ${escapeHtml(s.prestadorNome)}</p>
-        <p class="${statusClasse(s.status)}">Status: ${escapeHtml(s.status)}</p>
-        <p>Data/Hora: ${formatarDataHora(s.timestamp)}</p>
+      const item = document.createElement("div");
+      item.className = "conversa";
+      item.dataset.id = docSnap.id;
+      item.innerHTML = `
+        <div class="partes">🚗 ${escapeHtml(s.motoristaNome)} ↔ 🔧 ${escapeHtml(s.prestadorNome)}</div>
+        <div class="detalhe">${formatarDataHora(s.timestamp)} · <span class="badge ${escapeHtml(s.status)}">${escapeHtml(NOME_STATUS[s.status] || s.status)}</span></div>
       `;
-      card.addEventListener("click", () => {
-        abrirChat(id, `${s.motoristaNome} ↔ ${s.prestadorNome}`);
+      item.addEventListener("click", () => {
+        lista.querySelectorAll(".conversa").forEach((c) => c.classList.remove("ativa"));
+        item.classList.add("ativa");
+        abrirChat(docSnap.id, `${s.motoristaNome} ↔ ${s.prestadorNome}`);
       });
-      lista.appendChild(card);
+      lista.appendChild(item);
     });
   } catch (e) {
-    loading.classList.add("hidden");
-    empty.textContent = "Erro ao carregar conversas: " + e.message;
-    empty.classList.remove("hidden");
+    lista.innerHTML = "";
+    vazio.textContent = "Erro ao carregar conversas: " + e.message;
+    vazio.style.display = "block";
   }
 }
-
-// ---------- Chat (somente leitura) ----------
 
 const SEIS_MESES_EM_MS = 1000 * 60 * 60 * 24 * 30 * 6;
 
 async function limparMensagensAntigas(solicitacaoId) {
   const limite = new Date(Date.now() - SEIS_MESES_EM_MS);
   const mensagensRef = collection(db, "solicitacoes", solicitacaoId, "mensagens");
-  const q = query(mensagensRef, where("timestamp", "<", limite));
-  const snap = await getDocs(q);
+  const snap = await getDocs(query(mensagensRef, where("timestamp", "<", limite)));
   for (const docSnap of snap.docs) {
     const data = docSnap.data();
     if (data.imagemUrl) {
-      try {
-        await deleteObject(ref(storage, data.imagemUrl));
-      } catch (e) {
-        // imagem já pode ter sido removida
-      }
+      try { await deleteObject(ref(storage, data.imagemUrl)); } catch (_) { /* já removida */ }
     }
     await deleteDoc(docSnap.ref);
   }
 }
 
+function pararChat() {
+  if (chatUnsubscribe) {
+    chatUnsubscribe();
+    chatUnsubscribe = null;
+  }
+}
+
 function abrirChat(solicitacaoId, titulo) {
-  mostrarView("view-chat");
-  document.getElementById("chatTitulo").textContent = titulo;
+  pararChat();
+  document.getElementById("chatTitulo").textContent = "💬 " + titulo;
   const mensagensEl = document.getElementById("chatMensagens");
-  mensagensEl.innerHTML = "";
+  mensagensEl.innerHTML = '<div class="carregando">Carregando…</div>';
 
-  limparMensagensAntigas(solicitacaoId);
+  limparMensagensAntigas(solicitacaoId).catch(() => {});
 
-  const mensagensRef = collection(db, "solicitacoes", solicitacaoId, "mensagens");
-  const q = query(mensagensRef, orderBy("timestamp", "asc"));
-
+  const q = query(collection(db, "solicitacoes", solicitacaoId, "mensagens"), orderBy("timestamp", "asc"));
   chatUnsubscribe = onSnapshot(q, (snap) => {
     mensagensEl.innerHTML = "";
     if (snap.empty) {
-      mensagensEl.innerHTML = '<div class="chat-empty">Nenhuma mensagem ainda.</div>';
+      mensagensEl.innerHTML = '<div class="vazio">Nenhuma mensagem nesta conversa.</div>';
       return;
     }
     snap.forEach((docSnap) => {
       const m = docSnap.data();
+      const doPrestador = m.remetenteTipo === "prestador";
       const bolha = document.createElement("div");
-      const tipo = m.remetenteTipo === "prestador" ? "bolha-enviada" : "bolha-recebida";
-      bolha.className = "bolha " + tipo;
-
-      let html = "";
-      if (tipo === "bolha-recebida") {
-        html += `<div class="remetente">${m.remetenteTipo === "motorista" ? "Motorista" : "Prestador"}</div>`;
-      }
-      if (m.imagemUrl) {
-        html += `<img src="${escapeHtml(m.imagemUrl)}" />`;
-      }
-      if (m.texto) {
-        html += `<div>${escapeHtml(m.texto)}</div>`;
-      }
+      bolha.className = "bolha " + (doPrestador ? "bolha-prestador" : "bolha-motorista");
       const hora = m.timestamp && m.timestamp.toDate
-        ? m.timestamp.toDate().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+        ? m.timestamp.toDate().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
         : "";
-      html += `<div class="hora">${hora}</div>`;
-
-      bolha.innerHTML = html;
+      bolha.innerHTML = `
+        <div class="remetente">${doPrestador ? "Prestador" : "Motorista"}</div>
+        ${m.imagemUrl ? `<img src="${escapeHtml(m.imagemUrl)}" alt="">` : ""}
+        ${m.texto ? `<div>${escapeHtml(m.texto)}</div>` : ""}
+        <div class="hora">${hora}${m.lida ? " ✓✓" : " ✓"}</div>
+      `;
       mensagensEl.appendChild(bolha);
     });
     mensagensEl.scrollTop = mensagensEl.scrollHeight;
@@ -445,6 +367,31 @@ function abrirChat(solicitacaoId, titulo) {
 }
 
 // ---------- Util ----------
+
+// Carrega uma coleção inteira numa tabela: linha(dados, id) devolve os <td>.
+async function carregarTabela(corpo, vazio, colecao, linha, ordenar) {
+  corpo.innerHTML = '<tr><td colspan="9" class="carregando">Carregando…</td></tr>';
+  vazio.style.display = "none";
+  try {
+    const snap = await getDocs(collection(db, colecao));
+    const itens = snap.docs.map((d) => ({ id: d.id, dados: d.data() }));
+    if (ordenar) itens.sort((a, b) => ordenar(a.dados, b.dados));
+    corpo.innerHTML = "";
+    if (itens.length === 0) {
+      vazio.style.display = "block";
+      return;
+    }
+    itens.forEach(({ id, dados }) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = linha(dados, id);
+      corpo.appendChild(tr);
+    });
+  } catch (e) {
+    corpo.innerHTML = "";
+    vazio.textContent = "Erro ao carregar: " + e.message;
+    vazio.style.display = "block";
+  }
+}
 
 function escapeHtml(valor) {
   if (valor === undefined || valor === null) return "";

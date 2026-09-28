@@ -1,247 +1,126 @@
-* {
-  box-sizing: border-box;
-}
-
+/* Painel Web SOS Estrada — mesmo formato do painel do Caronas
+   (cartão central, topo com o admin logado, abas com contador, tabelas),
+   nas cores do SOS Estrada. */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body {
-  margin: 0;
-  font-family: Roboto, Arial, sans-serif;
-  background: #F5F5F5;
-  color: #333;
-}
-
-.hidden {
-  display: none !important;
-}
-
-.view {
+  background: #F2F2F7;
+  padding: 20px;
   min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
+.container {
+  max-width: 1100px;
+  width: 100%;
+  background: #ffffff;
+  padding: 25px 30px;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.10);
+  margin-top: 20px;
+}
+h1 { color: #B71C1C; font-weight: 700; font-size: 26px; text-align: center; }
 
 /* ---------- Login ---------- */
-
-#view-login {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: #F5F5F5;
-}
-
+#login { display: flex; justify-content: center; margin: 60px auto; width: 100%; }
 .login-box {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  padding: 32px;
-  width: 90%;
-  max-width: 360px;
-  text-align: center;
+  display: flex; flex-direction: column; gap: 14px;
+  width: 100%; max-width: 360px;
+  background: #ffffff; padding: 30px 25px; border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
 }
-
-.login-box h2 {
-  margin-top: 0;
+.login-logo { font-size: 40px; text-align: center; }
+.login-box h2 { text-align: center; color: #B71C1C; margin-bottom: 6px; }
+.login-box input { padding: 12px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
+.login-box input:focus { border-color: #D32F2F; outline: none; }
+.login-box button {
+  padding: 12px; background: #D32F2F; color: #fff; border: none; border-radius: 8px;
+  font-weight: 700; font-size: 16px; cursor: pointer;
 }
+.login-box button:hover { background: #B71C1C; }
+.login-erro { color: #d32f2f; font-size: 13px; text-align: center; min-height: 16px; }
+.link-suave { text-align: center; font-size: 13px; color: #607D8B; }
 
-.login-box input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 15px;
+/* ---------- Topo ---------- */
+.top-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
 }
-
-#loginErro {
-  color: #D32F2F;
-  font-size: 14px;
-  min-height: 20px;
-  margin-bottom: 8px;
+.admin-info { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 90px; }
+.admin-info img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: #E8E8E8; border: 2px solid #FFCDD2; }
+.admin-info span { font-weight: 600; color: #333; font-size: 13px; }
+.badge-papel {
+  font-size: 10px !important; font-weight: 700 !important; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 6px; background: #FFEBEE; color: #B71C1C !important;
 }
-
-/* ---------- Botões estilo Android ---------- */
-
-.btn {
-  display: block;
-  width: 100%;
-  padding: 14px;
-  margin-bottom: 8px;
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
+.badge-papel.colaborador { background: #E3F2FD; color: #0D47A1 !important; }
+#btnSair {
+  background: #455A64; color: #fff; border: none; padding: 8px 20px; border-radius: 8px;
+  cursor: pointer; font-weight: 600; font-size: 14px;
 }
+#btnSair:hover { background: #37474F; }
 
-.btn:active {
-  opacity: 0.85;
+/* ---------- Abas ---------- */
+.abas { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.aba-botao {
+  padding: 10px 20px; border: none; border-radius: 8px; background: #F2F2F7;
+  color: #455A64; font-weight: 600; cursor: pointer; font-size: 14px;
 }
-
-.btn-blue { background: #4FC3F7; }
-.btn-gray { background: #9E9E9E; }
-.btn-orange { background: #FF9800; }
-.btn-purple { background: #9C27B0; }
-.btn-red { background: #D32F2F; }
-.btn-green { background: #4CAF50; }
-
-/* ---------- Painel principal ---------- */
-
-#view-panel {
-  padding: 16px;
-  max-width: 480px;
-  margin: 0 auto;
+.aba-botao.ativa { background: #D32F2F; color: #fff; }
+.badge-tab {
+  display: inline-block; min-width: 16px; height: 16px; line-height: 16px; border-radius: 8px;
+  background: #0D47A1; color: #fff; font-size: 10px; font-weight: 700; text-align: center;
+  padding: 0 4px; margin-left: 6px; vertical-align: middle;
 }
+.badge-tab:empty { display: none; }
+.aba-conteudo { display: none; overflow-x: auto; }
+.aba-conteudo.ativa { display: block; }
 
-#view-panel h1 {
-  text-align: center;
-  color: #333;
-  font-size: 24px;
-  margin: 32px 0 24px;
+/* ---------- Tabelas ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+th { color: #455A64; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+tr:hover { background: #FAFBFC; }
+td img.foto-linha { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #E8E8E8; }
+.vazio { color: #8899AA; text-align: center; padding: 24px; font-size: 13px; }
+.carregando { color: #8899AA; text-align: center; padding: 16px; font-size: 13px; }
+.badge {
+  display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 6px; background: rgba(69, 90, 100, 0.08); color: #455A64;
 }
-
-/* ---------- Cabeçalho de subtelas ---------- */
-
-.subview-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #D32F2F;
-  color: #fff;
-  padding: 14px 12px;
+.badge.pendente { background: #FFF3E0; color: #E65100; }
+.badge.aceito { background: #E8F5E9; color: #2E7D32; }
+.badge.recusado { background: #FFEBEE; color: #C62828; }
+.badge.cancelado { background: #ECEFF1; color: #546E7A; }
+.badge.bloqueado { background: #FFEBEE; color: #C62828; }
+.badge.ativo { background: #E8F5E9; color: #2E7D32; }
+.btn-acao {
+  border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 600;
+  cursor: pointer; background: #7B1FA2; color: #fff; white-space: nowrap;
 }
+.btn-acao:hover { background: #6A1B9A; }
 
-.subview-header .voltar {
-  cursor: pointer;
-  font-size: 22px;
-  padding: 4px 8px;
+/* ---------- Mensagens: lista à esquerda, chat à direita ---------- */
+.mensagens-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; min-height: 420px; }
+@media (max-width: 760px) { .mensagens-layout { grid-template-columns: 1fr; } }
+.subtitulo { font-size: 12px; font-weight: 700; color: #455A64; text-transform: uppercase; margin-bottom: 8px; }
+.lista-conversas { max-height: 70vh; overflow-y: auto; }
+.conversa {
+  padding: 10px 12px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 8px;
+  cursor: pointer; font-size: 13px; background: #fff;
 }
-
-.subview-header .titulo {
-  font-size: 18px;
-  font-weight: bold;
-  flex: 1;
-}
-
-.subview-body {
-  padding: 12px;
-  max-width: 640px;
-  margin: 0 auto;
-}
-
-.empty-msg {
-  text-align: center;
-  color: #666;
-  margin-top: 32px;
-  font-size: 15px;
-}
-
-.loading {
-  text-align: center;
-  margin-top: 24px;
-  color: #999;
-}
-
-/* ---------- Cards ---------- */
-
-.card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.card p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #555;
-}
-
-.card .nome {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.card img.logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  object-fit: cover;
-  float: right;
-}
-
-.card-clickable {
-  cursor: pointer;
-}
-
-.card-clickable:hover {
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-.status-pendente { color: #FF9800; font-weight: bold; }
-.status-aceito { color: #4CAF50; font-weight: bold; }
-.status-recusado { color: #D32F2F; font-weight: bold; }
-.status-cancelado { color: #9E9E9E; font-weight: bold; }
-
-/* ---------- Chat ---------- */
-
-#view-chat {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-#chatMensagens {
-  flex: 1;
-  overflow-y: auto;
-  background: #ECE5DD;
-  padding: 12px;
-}
-
-.bolha {
-  max-width: 70%;
-  padding: 8px 12px;
-  border-radius: 14px;
-  margin-bottom: 8px;
-  font-size: 14px;
-  word-wrap: break-word;
-  clear: both;
-}
-
-.bolha-enviada {
-  background: #DCF8C6;
-  float: right;
-}
-
-.bolha-recebida {
-  background: #fff;
-  float: left;
-}
-
-.bolha .remetente {
-  font-size: 12px;
-  font-weight: bold;
-  color: #D32F2F;
-  margin-bottom: 2px;
-}
-
-.bolha img {
-  max-width: 220px;
-  border-radius: 8px;
-  display: block;
-  margin-bottom: 4px;
-}
-
-.bolha .hora {
-  font-size: 11px;
-  color: #757575;
-  text-align: right;
-  margin-top: 2px;
-}
-
-.chat-empty {
-  text-align: center;
-  color: #888;
-  margin-top: 24px;
-}
+.conversa:hover { background: #FFF8F8; }
+.conversa.ativa { border-color: #D32F2F; background: #FFF5F5; }
+.conversa .partes { font-weight: 600; color: #333; }
+.conversa .detalhe { color: #777; font-size: 12px; margin-top: 3px; }
+.chat-caixa { display: flex; flex-direction: column; background: #F7F7FA; border-radius: 12px; overflow: hidden; }
+.chat-titulo { padding: 12px 16px; font-weight: 700; color: #fff; background: #D32F2F; }
+#chatMensagens { flex: 1; padding: 14px; overflow-y: auto; max-height: 64vh; display: flex; flex-direction: column; gap: 8px; }
+.bolha { max-width: 75%; padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
+.bolha img { max-width: 220px; border-radius: 8px; display: block; margin-bottom: 4px; }
+.bolha .remetente { font-size: 11px; font-weight: 700; margin-bottom: 2px; }
+.bolha .hora { font-size: 10px; color: #888; text-align: right; margin-top: 3px; }
+.bolha-motorista { align-self: flex-start; background: #E3F2FD; }
+.bolha-motorista .remetente { color: #0D47A1; }
+.bolha-prestador { align-self: flex-end; background: #E8F5E9; }
+.bolha-prestador .remetente { color: #2E7D32; }

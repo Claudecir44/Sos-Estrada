@@ -125,9 +125,10 @@ class AdminActivity : AppCompatActivity() {
         carregarSaudacao()
         binding.rvLista.layoutManager = LinearLayoutManager(this)
         binding.grupoListas.setOnCheckedStateChangeListener { _, _ -> mostrarListaEscolhida() }
+        // Sair só encerra a sessão e volta pro login (antes fechava o app).
         binding.btnSairAdmin.setOnClickListener {
             adminRepository.sair()
-            finish()
+            recreate()
         }
         binding.btnMeuPerfil.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }
         binding.ivFotoAdminCabecalho.setOnClickListener { meuPerfil.launch(CadastroAdminActivity.intentPerfil(this)) }

@@ -153,7 +153,7 @@ class SolicitacaoRepository @Inject constructor(
         chatRepository.enviarMensagem(
             solicitacaoId,
             IChatRepository.PRESTADOR,
-            texto = "✅ Aceitei sua solicitação e estou a caminho para o socorro.",
+            texto = "✅ Aceitei sua solicitação e estou a caminho para o socorro.\n📍 Envie sua localização para um atendimento melhor!",
             imagemUrl = null,
             automatica = true
         )
