@@ -34,21 +34,21 @@
                 android:orientation="horizontal">
 
                 <!-- Configurações no canto superior esquerdo, ao lado da foto (termos, regras) -->
-                <TextView
+                <ImageView
                     android:id="@+id/btnConfiguracoesMotorista"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:layout_gravity="top"
                     android:layout_marginEnd="4dp"
                     android:background="@drawable/bg_admin_avatar"
-                    android:backgroundTint="#33FFFFFF"
+                    android:backgroundTint="@color/grafite"
+                    android:elevation="3dp"
                     android:clickable="true"
                     android:contentDescription="Configurações"
                     android:focusable="true"
                     android:foreground="?attr/selectableItemBackgroundBorderless"
-                    android:gravity="center"
-                    android:text="⚙️"
-                    android:textSize="18sp" />
+                    android:padding="7dp"
+                    android:src="@drawable/ic_configuracoes" />
 
                 <!-- Foto no canto, com o primeiro nome embaixo -->
                 <LinearLayout

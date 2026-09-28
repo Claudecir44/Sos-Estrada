@@ -40,4 +40,6 @@
     <color name="prestador_verde_escuro">#2E7D32</color>
     <color name="prestador_verde_claro">#E8F5E9</color>
     <color name="prestador_fundo">#F4FAF4</color>
+    <!-- Fundo do botão ⚙️ Configurações dos painéis -->
+    <color name="grafite">#37474F</color>
 </resources>

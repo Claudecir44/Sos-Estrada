@@ -4,7 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Painel Web SOS Estrada</title>
-<link rel="stylesheet" href="style.css" />
+<!-- ?v= força o navegador a buscar a versão nova (sem ele, usava o estilo antigo em cache) -->
+<link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
 
@@ -14,7 +15,10 @@
     <div class="login-logo">🛡️</div>
     <h2>Painel Web SOS Estrada</h2>
     <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username" />
-    <input type="password" id="loginSenha" placeholder="Senha (6 a 10 caracteres)" maxlength="10" autocomplete="current-password" />
+    <div class="campo-senha">
+      <input type="password" id="loginSenha" placeholder="Senha (6 a 10 caracteres)" maxlength="10" autocomplete="current-password" />
+      <button type="button" id="btnVerSenha" class="ver-senha" title="Mostrar senha" aria-label="Mostrar senha">👁</button>
+    </div>
     <button id="btnEntrar">Entrar</button>
     <div class="login-erro" id="loginErro"></div>
     <a href="#" id="btnEsqueciSenha" class="link-suave">Esqueci minha senha</a>
@@ -82,6 +86,6 @@
   <div class="carregando" id="carregando" style="display:none;">Carregando…</div>
 </div>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=4"></script>
 </body>
 </html>

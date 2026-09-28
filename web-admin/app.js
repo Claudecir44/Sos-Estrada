@@ -126,6 +126,37 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 document.getElementById("btnEntrar").addEventListener("click", entrar);
+
+// Olho do campo de senha: mostra/esconde o que foi digitado (ajuda a ver se
+// o navegador preencheu uma senha antiga salva).
+document.getElementById("btnVerSenha").addEventListener("click", () => {
+  const campo = document.getElementById("loginSenha");
+  const mostrar = campo.type === "password";
+  campo.type = mostrar ? "text" : "password";
+  const botao = document.getElementById("btnVerSenha");
+  botao.classList.toggle("ativo", mostrar);
+  botao.title = mostrar ? "Esconder senha" : "Mostrar senha";
+});
+
+// Mensagem de erro com o motivo real (antes, qualquer falha virava
+// "e-mail ou senha incorretos").
+function mensagemErroLogin(e) {
+  switch (e && e.code) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+    case "auth/invalid-email":
+      return "❌ E-mail ou senha incorretos. Confira a senha no 👁 (o navegador pode ter preenchido uma senha antiga).";
+    case "auth/too-many-requests":
+      return "⏳ Muitas tentativas seguidas. Aguarde alguns minutos ou use \"Esqueci minha senha\".";
+    case "auth/network-request-failed":
+      return "📶 Sem conexão com o servidor. Verifique a internet e tente de novo.";
+    case "auth/user-disabled":
+      return "🚫 Esta conta foi desativada.";
+    default:
+      return "❌ Não foi possível entrar (" + ((e && (e.code || e.message)) || "erro desconhecido") + ").";
+  }
+}
 document.getElementById("loginSenha").addEventListener("keydown", (e) => { if (e.key === "Enter") entrar(); });
 
 async function entrar() {
@@ -166,7 +197,7 @@ async function entrar() {
     }
     mostrarPainel(admin);
   } catch (e) {
-    erroEl.textContent = "❌ E-mail ou senha incorretos.";
+    erroEl.textContent = mensagemErroLogin(e);
   } finally {
     entrando = false;
   }
