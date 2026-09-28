@@ -3,6 +3,7 @@ package com.cjstudio.sosestrada
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -51,6 +52,16 @@ class PrestadorDashboardActivity : AppCompatActivity() {
         binding = ActivityPrestadorDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Reabrir o app cai direto aqui (MainActivity), sem pedir login de novo.
+        SessaoUtil.salvarPerfil(this, IChatRepository.PRESTADOR)
+        // Voltar não desloga: fecha a lista, se aberta; senão só minimiza o app.
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (binding.containerListaAtendimento.isShown) alternarListaAtendimento(abrir = false)
+                else moveTaskToBack(true)
+            }
+        })
+
         // As solicitações abrem logo abaixo, aqui mesmo (não em outra tela).
         binding.btnAtender.setOnClickListener { alternarListaAtendimento() }
         // Assinatura, termos e regras ficam nas Configurações.
@@ -64,8 +75,9 @@ class PrestadorDashboardActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 // Antes do signOut: este celular para de receber os avisos desta conta.
                 notificacaoRepository.removerToken(authRepository.uidLogado())
+                SessaoUtil.limpar(this@PrestadorDashboardActivity)
                 authRepository.sair()
-                startActivity(Intent(this@PrestadorDashboardActivity, LoginPrestadorActivity::class.java))
+                irParaLogin()
                 finish()
             }
         }
@@ -91,6 +103,15 @@ class PrestadorDashboardActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (::binding.isInitialized && intent.getBooleanExtra(EXTRA_ABRIR_LISTA, false)) alternarListaAtendimento(abrir = true)
+    }
+
+    // Depois de sair: login do prestador com a tela inicial por baixo (o
+    // "voltar" do login leva à escolha de perfil, não fecha o app).
+    private fun irParaLogin() {
+        startActivities(arrayOf(
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+            Intent(this, LoginPrestadorActivity::class.java)
+        ))
     }
 
     private fun fragmentoAtendimento() = supportFragmentManager.findFragmentByTag(TAG_LISTA) as? AtendimentoFragment
@@ -130,8 +151,9 @@ class PrestadorDashboardActivity : AppCompatActivity() {
                 // Bloqueado pelo admin com a sessão já aberta: volta pro login.
                 Toast.makeText(this@PrestadorDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()
                 notificacaoRepository.removerToken(authRepository.uidLogado())
+                SessaoUtil.limpar(this@PrestadorDashboardActivity)
                 authRepository.sair()
-                startActivity(Intent(this@PrestadorDashboardActivity, LoginPrestadorActivity::class.java))
+                irParaLogin()
                 finish()
                 return@launch
             }

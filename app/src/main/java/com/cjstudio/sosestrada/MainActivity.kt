@@ -26,12 +26,41 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var authRepository: IAuthRepository
 
+    @Inject
+    lateinit var motoristaRepository: IMotoristaRepository
+
+    @Inject
+    lateinit var prestadorRepository: IPrestadorRepository
+
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Já logado (a sessão do Firebase fica salva ao fechar o app): vai
+        // direto pro painel, sem passar pela escolha nem pelo login de novo.
+        if (authRepository.uidLogado() != null) {
+            when (SessaoUtil.perfil(this)) {
+                IChatRepository.MOTORISTA -> return abrirPainel(MotoristaDashboardActivity::class.java)
+                IChatRepository.PRESTADOR -> return abrirPainel(PrestadorDashboardActivity::class.java)
+            }
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Logado, mas sem o perfil salvo (sessão de uma versão anterior do
+        // app): descobre pelo cadastro qual painel abrir.
+        if (authRepository.uidLogado() != null) {
+            lifecycleScope.launch {
+                when {
+                    motoristaRepository.buscarMeuCadastro().getOrNull() != null ->
+                        abrirPainel(MotoristaDashboardActivity::class.java)
+                    prestadorRepository.buscarMeuCadastro().getOrNull() != null ->
+                        abrirPainel(PrestadorDashboardActivity::class.java)
+                }
+            }
+        }
 
         binding.cardMotorista.setOnClickListener {
             startActivity(Intent(this, LoginMotoristaActivity::class.java))
@@ -40,6 +69,11 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginPrestadorActivity::class.java))
         }
         binding.tvSuporte.setOnClickListener { mostrarSuporte() }
+    }
+
+    private fun abrirPainel(painel: Class<*>) {
+        startActivity(Intent(this, painel))
+        finish()
     }
 
     private fun mostrarSuporte() {
