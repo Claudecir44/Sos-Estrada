@@ -54,9 +54,13 @@ class PrestadorDashboardActivity : AppCompatActivity() {
         binding.ivFotoPrestadorPainel.setOnClickListener { startActivity(CadastroPrestadorActivity.intentEdicao(this)) }
         binding.btnVoltar.setOnClickListener {
             AppIconBadgeUtil.atualizar(this, 0)
-            authRepository.sair()
-            startActivity(Intent(this, LoginPrestadorActivity::class.java))
-            finish()
+            lifecycleScope.launch {
+                // Antes do signOut: este celular para de receber os avisos desta conta.
+                notificacaoRepository.removerToken(authRepository.uidLogado())
+                authRepository.sair()
+                startActivity(Intent(this@PrestadorDashboardActivity, LoginPrestadorActivity::class.java))
+                finish()
+            }
         }
 
         pedirPermissaoNotificacao(permissaoNotificacao)
@@ -84,6 +88,7 @@ class PrestadorDashboardActivity : AppCompatActivity() {
             if (prestador?.bloqueado == true || authRepository.contaBloqueada()) {
                 // Bloqueado pelo admin com a sessão já aberta: volta pro login.
                 Toast.makeText(this@PrestadorDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()
+                notificacaoRepository.removerToken(authRepository.uidLogado())
                 authRepository.sair()
                 startActivity(Intent(this@PrestadorDashboardActivity, LoginPrestadorActivity::class.java))
                 finish()

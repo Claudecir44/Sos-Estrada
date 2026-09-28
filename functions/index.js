@@ -4,7 +4,7 @@ require("dotenv").config();
 
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, Timestamp, FieldValue } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
@@ -468,6 +468,33 @@ async function enviarPush(uid, tipo, destino, corpo, id) {
     }
   }
 }
+
+// Um celular = uma conta. Quando o aparelho é registrado pra uma conta
+// (NotificacaoRepository.registrarToken), sai de qualquer outra que ainda o
+// tenha — senão, quem testou como prestador e depois entrou como motorista
+// no mesmo celular continuaria recebendo os avisos do prestador. (O app
+// também apaga o registro no "Sair", mas isso cobre quem só trocou de conta
+// sem sair, ou reinstalou o app.)
+exports.tokenUnicoPorAparelho = onDocumentWritten(
+    { document: "fcmTokens/{uid}", region: REGIAO_FIRESTORE },
+    async (event) => {
+      const token = event.data?.after?.get("token");
+      if (!token) return;
+      const iguais = await getFirestore().collection("fcmTokens").where("token", "==", token).get();
+      const lote = getFirestore().batch();
+      let removidos = 0;
+      iguais.forEach((doc) => {
+        if (doc.id !== event.params.uid) {
+          lote.delete(doc.ref);
+          removidos++;
+        }
+      });
+      if (removidos > 0) {
+        await lote.commit();
+        logger.info(`tokenUnicoPorAparelho: aparelho saiu de ${removidos} outra(s) conta(s).`);
+      }
+    },
+);
 
 // Motorista pediu socorro -> "Solicitação Sos Estrada" pro prestador.
 exports.notificarNovaSolicitacao = onDocumentCreated(

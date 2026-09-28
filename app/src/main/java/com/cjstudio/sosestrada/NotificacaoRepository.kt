@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,6 +25,12 @@ class NotificacaoRepository @Inject constructor(
                     .addOnFailureListener { e -> Log.e(TAG, "Erro ao salvar token: ${e.message}") }
             }
             .addOnFailureListener { e -> Log.e(TAG, "Erro ao obter token: ${e.message}") }
+    }
+
+    override suspend fun removerToken(uid: String?) {
+        if (uid.isNullOrBlank()) return
+        runCatching { db.collection("fcmTokens").document(uid).delete().await() }
+            .onFailure { e -> Log.e(TAG, "Erro ao remover token: ${e.message}") }
     }
 
     private companion object {

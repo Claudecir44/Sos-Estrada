@@ -51,9 +51,13 @@ class MotoristaDashboardActivity : AppCompatActivity() {
         binding.ivFotoMotoristaPainel.setOnClickListener { startActivity(CadastroMotoristaActivity.intentEdicao(this)) }
         binding.btnVoltar.setOnClickListener {
             AppIconBadgeUtil.atualizar(this, 0)
-            authRepository.sair()
-            startActivity(Intent(this, LoginMotoristaActivity::class.java))
-            finish()
+            lifecycleScope.launch {
+                // Antes do signOut: este celular para de receber os avisos desta conta.
+                notificacaoRepository.removerToken(authRepository.uidLogado())
+                authRepository.sair()
+                startActivity(Intent(this@MotoristaDashboardActivity, LoginMotoristaActivity::class.java))
+                finish()
+            }
         }
 
         pedirPermissaoNotificacao(permissaoNotificacao)
@@ -84,6 +88,7 @@ class MotoristaDashboardActivity : AppCompatActivity() {
             if (motorista?.bloqueado == true || authRepository.contaBloqueada()) {
                 // Bloqueado pelo admin com a sessão já aberta: volta pro login.
                 Toast.makeText(this@MotoristaDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()
+                notificacaoRepository.removerToken(authRepository.uidLogado())
                 authRepository.sair()
                 startActivity(Intent(this@MotoristaDashboardActivity, LoginMotoristaActivity::class.java))
                 finish()

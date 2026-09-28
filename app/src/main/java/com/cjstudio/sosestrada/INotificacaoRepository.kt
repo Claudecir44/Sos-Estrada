@@ -9,4 +9,9 @@ interface INotificacaoRepository {
     // motoristas/prestadores) porque "prestadores" é lido por qualquer
     // usuário logado; o token não deve ficar exposto assim.
     fun registrarToken(uid: String?)
+
+    // No "Sair": o aparelho deixa de receber os avisos dessa conta (senão
+    // quem entrasse com outra conta no mesmo celular receberia os dela).
+    // Precisa rodar ANTES do signOut — as regras exigem estar logado como o dono.
+    suspend fun removerToken(uid: String?)
 }
