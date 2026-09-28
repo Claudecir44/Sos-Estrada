@@ -137,7 +137,10 @@ class AdminRepository @Inject constructor(
 
     override suspend fun listarPrestadores(): Result<List<Prestador>> = runCatching {
         db.collection("prestadores").get().await().documents
-            .mapNotNull { it.toObject(Prestador::class.java) }
+            .mapNotNull { doc ->
+                // Cadastros antigos podem não ter o campo uid gravado.
+                doc.toObject(Prestador::class.java)?.apply { if (uid.isNullOrEmpty()) uid = doc.id }
+            }
             .sortedBy { it.nome?.lowercase() }
     }
 

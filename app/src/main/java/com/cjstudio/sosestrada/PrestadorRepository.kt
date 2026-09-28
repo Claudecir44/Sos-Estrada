@@ -57,13 +57,16 @@ class PrestadorRepository @Inject constructor(
         Unit
     }
 
-    // "ativo" só existe em prestadores criados depois do módulo de assinatura
-    // (Cloud Function aoRegistrarPrestador) ou migrados por
-    // migrarAssinaturaPrestadores. Enquanto a migração não rodar em produção
-    // (exige o plano Blaze), cadastros antigos não aparecem aqui.
+    // Só some da busca quem as Cloud Functions marcaram ativo == false (trial
+    // ou assinatura vencida). Cadastros sem o campo (anteriores ao módulo de
+    // assinatura, ou criados antes das functions estarem publicadas) aparecem
+    // normalmente — antes, whereEqualTo("ativo", true) escondia todos eles.
     override suspend fun listarAtivos(): Result<List<Prestador>> = runCatching {
-        db.collection("prestadores").whereEqualTo("ativo", true).get().await()
-            .documents.mapNotNull { it.toObject(Prestador::class.java) }
-            .filter { !it.bloqueado }
+        db.collection("prestadores").get().await()
+            .documents.mapNotNull { doc ->
+                // Cadastros antigos podem não ter o campo uid gravado.
+                doc.toObject(Prestador::class.java)?.apply { if (uid.isNullOrEmpty()) uid = doc.id }
+            }
+            .filter { !it.bloqueado && it.ativo != false }
     }
 }

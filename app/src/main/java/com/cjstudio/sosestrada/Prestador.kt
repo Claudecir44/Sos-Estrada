@@ -15,6 +15,9 @@ data class Prestador(
     var logo: String? = null,
     // Bloqueado pelo admin: não entra e some da busca de socorro.
     var bloqueado: Boolean = false,
+    // Gravado só pelas Cloud Functions de assinatura. null = cadastro anterior
+    // ao módulo de assinatura (ainda não migrado); false = trial/assinatura vencida.
+    var ativo: Boolean? = null,
     // Campos antigos de endereço (cadastros anteriores aos campos separados)
     var localizacao: String? = null,
     var endereco: String? = null,
