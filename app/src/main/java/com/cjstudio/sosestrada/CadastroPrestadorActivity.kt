@@ -39,6 +39,8 @@ class CadastroPrestadorActivity : AppCompatActivity() {
     private var editando = false
     private var imagemSelecionada: Uri? = null
     private var logoUrlAtual: String? = null
+    // CPF/CNPJ já gravado no cadastro: não muda mais (firestore.rules).
+    private var documentoSalvo: String? = null
 
     private val galeriaLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { resultado ->
         val uri = resultado.data?.data
@@ -64,6 +66,7 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         TelefoneUtil.aplicarMascara(binding.edtTelefone)
+        DocumentoUtil.aplicarMascara(binding.edtCnpj)
         binding.ivLogo.setOnClickListener { verificarPermissaoEAbrirGaleria() }
         binding.btnSelecionarLogo.setOnClickListener { verificarPermissaoEAbrirGaleria() }
 
@@ -93,7 +96,10 @@ class CadastroPrestadorActivity : AppCompatActivity() {
                 .onSuccess { prestador ->
                     if (prestador == null) return@onSuccess
                     binding.edtNome.setText(prestador.nome)
-                    binding.edtCnpj.setText(prestador.cnpj)
+                    documentoSalvo = prestador.documento?.takeIf { it.isNotEmpty() }
+                    binding.edtCnpj.setText(documentoSalvo?.let { DocumentoUtil.formatar(it) } ?: prestador.cnpj)
+                    // Cadastro antigo sem CPF/CNPJ informa uma vez; depois fica travado.
+                    binding.edtCnpj.isEnabled = documentoSalvo == null
                     binding.edtTelefone.setText(prestador.telefone)
                     binding.edtServico.setText(prestador.servico)
                     binding.edtPreco.setText(prestador.preco)
@@ -133,9 +139,11 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         galeriaLauncher.launch(Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI))
     }
 
+    private var semPeriodoGratis = false
+
     private fun realizarCadastro() {
         val nome = binding.edtNome.textoLimpo()
-        val cnpj = binding.edtCnpj.textoLimpo()
+        val documento = documentoSalvo ?: DocumentoUtil.somenteDigitos(binding.edtCnpj.textoLimpo())
         val telefone = binding.edtTelefone.textoLimpo()
         val email = binding.edtEmail.textoLimpo()
         val senha = binding.edtSenha.textoLimpo()
@@ -152,6 +160,8 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         // Endereço: tudo obrigatório, exceto complemento.
         when {
             nome.isEmpty() -> return binding.edtNome.erro("Nome obrigatório")
+            documento.isEmpty() -> return binding.edtCnpj.erro("CPF ou CNPJ obrigatório")
+            !DocumentoUtil.valido(documento) -> return binding.edtCnpj.erro("CPF ou CNPJ inválido")
             telefone.isEmpty() -> return binding.edtTelefone.erro("Telefone obrigatório")
             email.isEmpty() -> return binding.edtEmail.erro("E-mail obrigatório")
             !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> return binding.edtEmail.erro("E-mail inválido")
@@ -166,7 +176,7 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         }
 
         val prestador = Prestador(
-            nome = nome, cnpj = cnpj, telefone = telefone, email = email, servico = servico, preco = preco,
+            nome = nome, cnpj = DocumentoUtil.formatar(documento), documento = documento, telefone = telefone, email = email, servico = servico, preco = preco,
             rua = rua, numero = numero, bairro = bairro, cidade = cidade, complemento = complemento,
             estado = estado, pais = pais
         )
@@ -181,6 +191,21 @@ class CadastroPrestadorActivity : AppCompatActivity() {
                     Toast.makeText(this@CadastroPrestadorActivity, "Erro ao criar conta: ${conta.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                     return@launch
                 }
+                // Um cadastro de prestador por CPF/CNPJ; o período grátis vale
+                // uma vez por documento (o servidor garante isso de novo em
+                // aoRegistrarPrestador). Falha de rede aqui não trava o cadastro.
+                val situacao = prestadorRepository.verificarDocumento(documento).getOrNull()
+                if (situacao == "em_uso") {
+                    authRepository.excluirConta()
+                    binding.btnCadastrar.isEnabled = true
+                    AlertDialog.Builder(this@CadastroPrestadorActivity)
+                        .setTitle("CPF/CNPJ já cadastrado")
+                        .setMessage("Já existe um cadastro de prestador com este CPF/CNPJ. Entre com o e-mail desse cadastro ou fale com o suporte.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                    return@launch
+                }
+                semPeriodoGratis = situacao == "sem_trial"
             }
 
             // Logo nova (opcional) vai reduzida dentro do próprio cadastro — o
@@ -210,7 +235,10 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         authRepository.sair()
         AlertDialog.Builder(this)
             .setTitle("✅ Cadastro realizado!")
-            .setMessage("Enviamos um e-mail de verificação para $email.\n\nAbra o link do e-mail (confira também o spam) e depois entre com seu e-mail e senha.")
+            .setMessage(
+                "Enviamos um e-mail de verificação para $email.\n\nAbra o link do e-mail (confira também o spam) e depois entre com seu e-mail e senha." +
+                    if (semPeriodoGratis) "\n\n⚠️ Este CPF/CNPJ já usou o período grátis de 60 dias. Seu cadastro fica inativo até você assinar um plano em Configurações → Assinatura." else ""
+            )
             .setCancelable(false)
             .setPositiveButton("OK") { _, _ ->
                 startActivity(Intent(this, LoginPrestadorActivity::class.java))

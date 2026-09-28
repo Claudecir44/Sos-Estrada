@@ -88,8 +88,12 @@ class AssinaturaActivity : AppCompatActivity() {
             }
             "expirada" -> {
                 binding.tvStatusAssinatura.text = "⛔ Cadastro inativo"
-                binding.tvDetalheAssinatura.text =
-                    "Seu período grátis ou sua assinatura venceu. Seu cadastro não aparece mais para motoristas até renovar."
+                binding.tvDetalheAssinatura.text = if (assinatura.trialNegado && expiraEm == null) {
+                    "Este CPF/CNPJ já usou o período grátis. Seu cadastro fica ativo assim que você assinar um plano."
+                } else {
+                    "Seu período grátis ou sua assinatura venceu. Seu cadastro não aparece mais para motoristas até renovar. " +
+                        "Sem renovar em 6 meses, o cadastro é removido."
+                }
                 textoBotoes("Assinar")
             }
             else -> { // trial
@@ -165,7 +169,6 @@ class AssinaturaActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "AssinaturaActivity"
-        // Mesmo prazo de TRIAL_DIAS em functions/index.js.
-        private const val TRIAL_DIAS = 60
+        private const val TRIAL_DIAS = IAssinaturaRepository.TRIAL_DIAS
     }
 }

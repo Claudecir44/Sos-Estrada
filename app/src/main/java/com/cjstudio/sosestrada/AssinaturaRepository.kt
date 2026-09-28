@@ -24,7 +24,11 @@ class AssinaturaRepository @Inject constructor(
     private fun DocumentSnapshot.paraStatus() = StatusAssinatura(
         status = getString("assinaturaStatus") ?: "trial",
         dataCadastro = getTimestamp("dataCadastro")?.toDate()?.time,
-        expiraEm = getTimestamp("assinaturaExpiraEm")?.toDate()?.time
+        expiraEm = getTimestamp("assinaturaExpiraEm")?.toDate()?.time,
+        ativo = getBoolean("ativo"),
+        bloqueado = getBoolean("bloqueado") == true,
+        diasTotal = getLong("assinaturaDiasTotal")?.toInt(),
+        trialNegado = getBoolean("trialNegado") == true
     )
 
     override suspend fun buscarMinhaAssinatura(): Result<StatusAssinatura> = runCatching {

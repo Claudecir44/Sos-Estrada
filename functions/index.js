@@ -11,6 +11,7 @@ const { getStorage } = require("firebase-admin/storage");
 const { getAuth } = require("firebase-admin/auth");
 const { getMessaging } = require("firebase-admin/messaging");
 const mercadopago = require("mercadopago");
+const nodemailer = require("nodemailer");
 const logger = require("firebase-functions/logger");
 
 initializeApp();
@@ -24,6 +25,19 @@ if (!MERCADO_PAGO_ACCESS_TOKEN) {
   );
 } else {
   mercadopago.configure({ access_token: MERCADO_PAGO_ACCESS_TOKEN });
+}
+
+// E-mail pros prestadores (aviso de fim do plano) — Gmail com senha de app,
+// mesmo esquema do Caronas: SOS_EMAIL_USER / SOS_EMAIL_PASSWORD em
+// functions/.env (não versionado). Sem isso o e-mail não sai (só o push) e
+// fica registrado no log.
+const SOS_EMAIL_USER = process.env.SOS_EMAIL_USER || "";
+const SOS_EMAIL_PASSWORD = process.env.SOS_EMAIL_PASSWORD || "";
+const transporteEmail = SOS_EMAIL_USER && SOS_EMAIL_PASSWORD ?
+  nodemailer.createTransport({ service: "gmail", auth: { user: SOS_EMAIL_USER, pass: SOS_EMAIL_PASSWORD } }) :
+  null;
+if (!transporteEmail) {
+  logger.warn("SOS_EMAIL_USER/SOS_EMAIL_PASSWORD não configurados — avisos de fim de plano vão só por push.");
 }
 
 async function isAdmin(uid) {
@@ -143,8 +157,10 @@ exports.provisionarAdminInicial = onCall(async (request) => {
 // R$129,90 / 180 dias — ver PLANOS) pra manter o
 // cadastro visível na busca do motorista (SocorroFragment filtra por
 // "ativo"==true). Espelha o desenho do Match (createPaymentPreference/
-// paymentWebhook/checkPaymentStatus), simplificado: aqui é só um plano, e
-// vencer sem pagar apenas desativa a listagem — nunca apaga a conta.
+// paymentWebhook/checkPaymentStatus). Vencer sem pagar desativa a listagem
+// (avisos com 5 e 2 dias antes — avisarVencimentoPrestadores); 6 meses
+// inativo remove o cadastro (removerPrestadoresInativos). O período grátis
+// vale uma vez por CPF/CNPJ (documentosPrestador).
 // ============================================================
 
 const TRIAL_DIAS = 60;
@@ -158,6 +174,90 @@ const PLANOS = {
 };
 const PLANO_PADRAO = "trimestral";
 
+// CPF (11 dígitos) ou CNPJ (14) com os dígitos verificadores conferidos —
+// mesma conta do app (DocumentoUtil).
+function somenteDigitos(valor) {
+  return String(valor || "").replace(/\D/g, "");
+}
+
+function cpfValido(d) {
+  if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
+  for (const tamanho of [9, 10]) {
+    let soma = 0;
+    for (let i = 0; i < tamanho; i++) soma += Number(d[i]) * (tamanho + 1 - i);
+    if (((soma * 10) % 11) % 10 !== Number(d[tamanho])) return false;
+  }
+  return true;
+}
+
+function cnpjValido(d) {
+  if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
+  const pesos = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  for (const tamanho of [12, 13]) {
+    const p = pesos.slice(pesos.length - tamanho);
+    let soma = 0;
+    for (let i = 0; i < tamanho; i++) soma += Number(d[i]) * p[i];
+    const resto = soma % 11;
+    if ((resto < 2 ? 0 : 11 - resto) !== Number(d[tamanho])) return false;
+  }
+  return true;
+}
+
+function documentoValido(d) {
+  return d.length === 11 ? cpfValido(d) : cnpjValido(d);
+}
+
+// Só os 3 últimos dígitos no log (CPF é dado pessoal).
+function documentoNoLog(d) {
+  return `***${String(d).slice(-3)}`;
+}
+
+// documentosPrestador/{cpf ou cnpj}: quem já usou o período grátis. Fica
+// guardado pra sempre (mesmo depois que o cadastro é removido por
+// inatividade) — o mesmo CPF/CNPJ não ganha os 60 dias grátis de novo, só
+// ativa com plano pago. Devolve true se ESTE cadastro ganha o período grátis.
+async function registrarDocumento(uid, documento) {
+  const d = somenteDigitos(documento);
+  if (!documentoValido(d)) {
+    logger.warn(`Prestador ${uid} sem CPF/CNPJ válido — começa sem período grátis.`);
+    return false;
+  }
+  const ref = getFirestore().collection("documentosPrestador").doc(d);
+  try {
+    await ref.create({ uid, usouTrialEm: Timestamp.now(), historicoUids: [uid] });
+    return true;
+  } catch (erro) {
+    if (erro.code !== 6) throw erro; // 6 = ALREADY_EXISTS
+    const registro = await ref.get();
+    // Gatilho repetido pro mesmo cadastro: o período grátis já era dele.
+    if (registro.get("uid") === uid && (registro.get("historicoUids") || []).length === 1) return true;
+    await ref.update({ uid, historicoUids: FieldValue.arrayUnion(uid), atualizadoEm: Timestamp.now() });
+    logger.info(`Documento ${documentoNoLog(d)} já usou o período grátis — ${uid} começa sem trial.`);
+    return false;
+  }
+}
+
+// Cadastro novo (CadastroPrestadorActivity), logo depois de criar a conta:
+// "livre" (ganha o período grátis), "sem_trial" (CPF/CNPJ já usou os 60
+// dias; o cadastro nasce inativo até pagar) ou "em_uso" (outro cadastro de
+// prestador que ainda existe tem esse CPF/CNPJ — o app desfaz a conta nova).
+exports.verificarDocumentoPrestador = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Usuário não autenticado.");
+  }
+  const d = somenteDigitos(request.data && request.data.documento);
+  if (!documentoValido(d)) {
+    throw new HttpsError("invalid-argument", "CPF ou CNPJ inválido.");
+  }
+  const db = getFirestore();
+  const registro = await db.collection("documentosPrestador").doc(d).get();
+  if (!registro.exists) return { situacao: "livre" };
+  const dono = registro.get("uid");
+  if (dono === request.auth.uid) return { situacao: "livre" };
+  if (dono && (await db.collection("prestadores").doc(dono).get()).exists) return { situacao: "em_uso" };
+  return { situacao: "sem_trial" };
+});
+
 // Campos que só esta Cloud Function (Admin SDK, ignora firestore.rules)
 // pode escrever — o cliente nunca grava "ativo" nem os campos de
 // assinatura diretamente (ver firestore.rules, camposDoServidorPrestador).
@@ -169,15 +269,49 @@ exports.aoRegistrarPrestador = onDocumentCreated({ document: "prestadores/{uid}"
   // esses campos (não deveria, as regras bloqueiam), não sobrescreve.
   if (dados.dataCadastro && dados.assinaturaStatus) return;
 
+  const agora = Timestamp.now();
+  if (await registrarDocumento(event.params.uid, dados.documento)) {
+    await snap.ref.update({
+      dataCadastro: dados.dataCadastro || agora,
+      ativo: true,
+      assinaturaStatus: "trial",
+      assinaturaExpiraEm: null,
+      assinaturaUltimoPagamento: null,
+    });
+    logger.info(`Trial de ${TRIAL_DIAS} dias iniciado para prestador ${event.params.uid}`);
+    return;
+  }
+  // CPF/CNPJ que já usou o período grátis: nasce inativo, só ativa pagando.
   await snap.ref.update({
-    dataCadastro: dados.dataCadastro || Timestamp.now(),
-    ativo: true,
-    assinaturaStatus: "trial",
+    dataCadastro: dados.dataCadastro || agora,
+    ativo: false,
+    assinaturaStatus: "expirada",
+    trialNegado: true,
+    inativoDesde: agora,
     assinaturaExpiraEm: null,
     assinaturaUltimoPagamento: null,
   });
-  logger.info(`Trial de ${TRIAL_DIAS} dias iniciado para prestador ${event.params.uid}`);
 });
+
+// Cadastro antigo (anterior ao CPF/CNPJ obrigatório) que informou o
+// documento agora no Meu Perfil: entra no registro de quem já usou o
+// período grátis (o dele já foi usado/está em uso).
+exports.registrarDocumentoPrestador = onDocumentUpdated(
+    { document: "prestadores/{uid}", region: REGIAO_FIRESTORE },
+    async (event) => {
+      if (event.data.before.get("documento") || !event.data.after.get("documento")) return;
+      const d = somenteDigitos(event.data.after.get("documento"));
+      if (!documentoValido(d)) return;
+      const uid = event.params.uid;
+      const ref = getFirestore().collection("documentosPrestador").doc(d);
+      try {
+        await ref.create({ uid, usouTrialEm: event.data.after.get("dataCadastro") || Timestamp.now(), historicoUids: [uid] });
+      } catch (erro) {
+        if (erro.code !== 6) throw erro;
+        await ref.update({ historicoUids: FieldValue.arrayUnion(uid) });
+      }
+    },
+);
 
 // Backfill pra prestadores cadastrados ANTES do módulo de assinatura
 // existir — sem os campos novos, o filtro whereEqualTo("ativo", true) do
@@ -357,6 +491,11 @@ exports.paymentWebhookPrestador = onRequest(async (req, res) => {
         assinaturaStatus: "ativa",
         assinaturaExpiraEm: Timestamp.fromMillis(expiraEm),
         assinaturaUltimoPagamento: Timestamp.fromMillis(agora),
+        // "Plano pago 00/90 dias" no painel: o total inclui dias que sobraram
+        // de antes (renovação antecipada soma).
+        assinaturaDiasTotal: Math.round((expiraEm - agora) / DIA_MS),
+        inativoDesde: FieldValue.delete(),
+        avisosVencimento: FieldValue.delete(),
       });
 
       logger.info(`Assinatura ativada para prestador ${prestadorId}, expira em ${new Date(expiraEm).toISOString()}`);
@@ -440,7 +579,7 @@ exports.expirarAssinaturasPrestadores = onSchedule("every day 04:00", async () =
     if (dados.assinaturaStatus === "ativa") {
       const expiraEm = dados.assinaturaExpiraEm ? dados.assinaturaExpiraEm.toMillis() : 0;
       if (expiraEm && expiraEm > agora) continue; // assinatura em dia
-      await doc.ref.update({ ativo: false, assinaturaStatus: "expirada" });
+      await doc.ref.update({ ativo: false, assinaturaStatus: "expirada", inativoDesde: Timestamp.now() });
       desativados++;
       continue;
     }
@@ -451,11 +590,115 @@ exports.expirarAssinaturasPrestadores = onSchedule("every day 04:00", async () =
     const diasDesdeCadastro = Math.floor((agora - dataCadastro) / DIA_MS);
     if (diasDesdeCadastro < TRIAL_DIAS) continue; // ainda no período grátis
 
-    await doc.ref.update({ ativo: false, assinaturaStatus: "expirada" });
+    await doc.ref.update({ ativo: false, assinaturaStatus: "expirada", inativoDesde: Timestamp.now() });
     desativados++;
   }
 
   logger.info(`expirarAssinaturasPrestadores: ${desativados} prestador(es) desativado(s).`);
+});
+
+// Fim do plano atual (período grátis ou pago) e dias que faltam — mesmas
+// contas do app (StatusAssinatura.resumo), arredondando pra cima.
+function fimDoPlano(dados) {
+  if (dados.assinaturaStatus === "ativa") return dados.assinaturaExpiraEm ? dados.assinaturaExpiraEm.toMillis() : null;
+  if (dados.assinaturaStatus === "trial" && dados.dataCadastro) return dados.dataCadastro.toMillis() + TRIAL_DIAS * DIA_MS;
+  return null;
+}
+
+async function enviarEmailVencimento(email, nome, pago, restam, fim) {
+  if (!transporteEmail || !email) return false;
+  const plano = pago ? "plano pago" : "plano free (período grátis de 60 dias)";
+  const data = new Date(fim).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const dias = restam === 1 ? "1 dia" : `${restam} dias`;
+  try {
+    await transporteEmail.sendMail({
+      from: `"SOS Estrada" <${SOS_EMAIL_USER}>`,
+      to: email,
+      subject: `SOS Estrada: seu plano termina em ${dias}`,
+      html: `<p>Olá, ${primeiroNome(nome, "prestador")}!</p>
+<p>Seu <b>${plano}</b> do SOS Estrada termina em <b>${dias}</b>, no dia <b>${data}</b>.</p>
+<p>Depois disso seu cadastro fica <b>inativo</b> e deixa de aparecer para os motoristas.</p>
+<p>Para continuar aparecendo, abra o app SOS Estrada → ⚙️ Configurações → <b>Assinatura</b> e escolha um plano:
+Trimestral (R$ 79,90 / 90 dias) ou Semestral (R$ 129,90 / 180 dias).</p>
+<p>Cadastros que ficam 6 meses inativos sem renovar são removidos automaticamente.</p>
+<p>Equipe SOS Estrada</p>`,
+    });
+    return true;
+  } catch (erro) {
+    logger.warn(`Erro ao enviar e-mail de vencimento para ${email}:`, erro.message);
+    return false;
+  }
+}
+
+// Todo dia às 9h: avisa (e-mail + push) quem está a 5 e a 2 dias do fim do
+// plano, grátis ou pago. avisosVencimento guarda pra qual fim de plano cada
+// aviso já saiu — renovar muda o fim e zera os avisos.
+exports.avisarVencimentoPrestadores = onSchedule(
+    { schedule: "every day 09:00", timeZone: "America/Sao_Paulo" },
+    async () => {
+      const agora = Date.now();
+      const snapshot = await getFirestore().collection("prestadores").where("ativo", "==", true).get();
+      let avisados = 0;
+      for (const doc of snapshot.docs) {
+        const dados = doc.data();
+        if (dados.bloqueado === true) continue;
+        const fim = fimDoPlano(dados);
+        if (!fim) continue;
+        const restam = Math.ceil((fim - agora) / DIA_MS);
+        if (restam <= 0 || restam > 5) continue;
+        const marco = restam <= 2 ? "2" : "5";
+        if ((dados.avisosVencimento || {})[marco] === fim) continue;
+
+        const pago = dados.assinaturaStatus === "ativa";
+        const dias = restam === 1 ? "1 dia" : `${restam} dias`;
+        const email = await getAuth().getUser(doc.id).then((u) => u.email).catch(() => null) || dados.email;
+        const porEmail = await enviarEmailVencimento(email, dados.nome, pago, restam, fim);
+        const porPush = await enviarPush(doc.id, null, "assinatura", "prestador",
+            `Seu ${pago ? "plano pago" : "plano free"} termina em ${dias}. Renove em Configurações → Assinatura.`, `plano-${marco}`);
+        if (porEmail || porPush) {
+          await doc.ref.update({ [`avisosVencimento.${marco}`]: fim });
+          avisados++;
+        }
+      }
+      logger.info(`avisarVencimentoPrestadores: ${avisados} aviso(s) enviado(s).`);
+    },
+);
+
+// Todo dia: cadastro inativo (plano vencido sem renovar) há 6 meses sai do
+// sistema. Os dados vão pra prestadoresRemovidos/{uid} e o CPF/CNPJ continua
+// em documentosPrestador — se a pessoa se cadastrar de novo, não ganha outro
+// período grátis. Bloqueado pelo admin nunca é removido aqui.
+exports.removerPrestadoresInativos = onSchedule("every day 05:00", async () => {
+  const db = getFirestore();
+  const limite = Date.now() - SEIS_MESES_EM_MS;
+  const snapshot = await db.collection("prestadores").where("ativo", "==", false).get();
+  let removidos = 0;
+  for (const doc of snapshot.docs) {
+    const dados = doc.data();
+    if (dados.bloqueado === true) continue;
+    // Inativo de antes deste controle: começa a contar os 6 meses agora.
+    if (!dados.inativoDesde) {
+      await doc.ref.update({ inativoDesde: Timestamp.now() });
+      continue;
+    }
+    if (dados.inativoDesde.toMillis() > limite) continue;
+
+    const uid = doc.id;
+    await db.collection("prestadoresRemovidos").doc(uid).set({
+      ...dados, removidoEm: Timestamp.now(), motivo: "inativo_6_meses",
+    });
+    await doc.ref.delete();
+    await db.collection("fcmTokens").doc(uid).delete();
+    // Sem a conta, o e-mail fica livre pra um cadastro novo. Quem também é
+    // motorista (conta antiga com os dois perfis) mantém a conta.
+    if (!(await db.collection("motoristas").doc(uid).get()).exists) {
+      await getAuth().deleteUser(uid).catch((erro) => {
+        if (erro.code !== "auth/user-not-found") logger.warn(`Erro ao apagar a conta ${uid}:`, erro.message);
+      });
+    }
+    removidos++;
+  }
+  logger.info(`removerPrestadoresInativos: ${removidos} cadastro(s) removido(s).`);
 });
 
 // ============================================================
@@ -498,6 +741,7 @@ async function enviarPush(uid, remetenteUid, tipo, destino, corpo, id) {
       android: { priority: "high" },
     });
     logger.info(`push ${tipo}: enviado para ${uid}.`);
+    return true;
   } catch (erro) {
     logger.warn(`Erro ao enviar push (${tipo}) para ${uid}:`, erro.message);
     // App desinstalado ou dados limpos: token morto, não tenta mais.

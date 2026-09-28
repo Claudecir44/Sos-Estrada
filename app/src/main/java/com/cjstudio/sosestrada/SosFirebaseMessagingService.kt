@@ -20,6 +20,7 @@ import javax.inject.Inject
 // - novaSolicitacao    -> "Solicitação Sos Estrada" (prestador: Atender solicitações)
 // - respostaPrestador  -> "Prestador respondeu"     (motorista: Preciso de socorro)
 // - localizacaoMotorista -> "Localização Sos Estrada" (prestador: Atender solicitações)
+// - assinatura         -> "Plano Sos Estrada"      (prestador: plano termina em 5/2 dias)
 @AndroidEntryPoint
 class SosFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -51,10 +52,12 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
             "novaSolicitacao" -> Triple("Solicitação Sos Estrada", "solicitacoes_sos", "Novas solicitações")
             "respostaPrestador" -> Triple("Prestador respondeu", "respostas_sos", "Respostas do prestador")
             "localizacaoMotorista" -> Triple("Localização Sos Estrada", "localizacoes_sos", "Localização do motorista")
+            "assinatura" -> Triple("Plano Sos Estrada", "plano_sos", "Fim do plano")
             else -> return
         }
         val idNotificacao = dados["id"]?.hashCode() ?: System.currentTimeMillis().toInt()
-        mostrarNotificacao(canalId, canalNome, titulo, corpo, idNotificacao, paraPrestador)
+        // Aviso do plano abre só o painel; os outros já abrem a lista.
+        mostrarNotificacao(canalId, canalNome, titulo, corpo, idNotificacao, paraPrestador, abrirLista = dados["tipo"] != "assinatura")
     }
 
     private fun mostrarNotificacao(
@@ -63,13 +66,14 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
         titulo: String,
         corpo: String,
         idNotificacao: Int,
-        paraPrestador: Boolean
+        paraPrestador: Boolean,
+        abrirLista: Boolean
     ) {
         // Abre o painel do lado certo já com a lista aberta embaixo do cartão
         // (a lista agora fica dentro do painel, não numa tela separada).
         val painel = if (paraPrestador) PrestadorDashboardActivity::class.java else MotoristaDashboardActivity::class.java
         val abrir = Intent(this, painel)
-            .putExtra(MotoristaDashboardActivity.EXTRA_ABRIR_LISTA, true)
+            .putExtra(MotoristaDashboardActivity.EXTRA_ABRIR_LISTA, abrirLista)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pendingIntent = PendingIntent.getActivity(
             this, idNotificacao, abrir, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

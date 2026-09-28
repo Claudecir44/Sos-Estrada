@@ -51,7 +51,7 @@ class AcoesCadastroAdmin(
             Campo("Telefone", "telefone", prestador.telefone, InputType.TYPE_CLASS_PHONE),
             Campo("Serviço", "servico", prestador.servico, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES),
             Campo("Preço", "preco", prestador.preco),
-            Campo("CNPJ", "cnpj", prestador.cnpj, InputType.TYPE_CLASS_NUMBER)
+            Campo("CPF/CNPJ", "cnpj", prestador.cnpj, InputType.TYPE_CLASS_NUMBER)
         ),
         salvar = { uid, dados, senha -> adminRepository.editarPrestador(uid, dados, senha) }
     )

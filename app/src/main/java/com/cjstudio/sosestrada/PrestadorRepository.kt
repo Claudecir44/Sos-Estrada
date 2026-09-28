@@ -3,6 +3,7 @@ package com.cjstudio.sosestrada
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,7 +11,8 @@ import javax.inject.Singleton
 @Singleton
 class PrestadorRepository @Inject constructor(
     private val auth: FirebaseAuth,
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val functions: FirebaseFunctions
 ) : IPrestadorRepository {
 
     private fun uidLogado(): String = auth.currentUser?.uid ?: throw IllegalStateException("Não há sessão ativa.")
@@ -40,6 +42,8 @@ class PrestadorRepository @Inject constructor(
             "pais" to prestador.pais
         )
         if (!prestador.logo.isNullOrEmpty()) dados["logo"] = prestador.logo
+        // Depois de gravado o documento não muda (firestore.rules).
+        if (!prestador.documento.isNullOrEmpty()) dados["documento"] = prestador.documento
 
         val documento = db.collection("prestadores").document(uid)
         if (cadastroNovo) {
@@ -50,6 +54,12 @@ class PrestadorRepository @Inject constructor(
             documento.set(dados, SetOptions.merge()).await()
         }
         Unit
+    }
+
+    override suspend fun verificarDocumento(documento: String): Result<String> = runCatching {
+        val resultado = functions.getHttpsCallable("verificarDocumentoPrestador")
+            .call(mapOf("documento" to documento)).await()
+        (resultado.data as? Map<*, *>)?.get("situacao") as? String ?: "livre"
     }
 
     override suspend fun excluirMeuCadastro(): Result<Unit> = runCatching {

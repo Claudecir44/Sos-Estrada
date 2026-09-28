@@ -7,7 +7,11 @@ import com.google.firebase.firestore.Exclude
 data class Prestador(
     var uid: String? = null,
     var nome: String? = null,
+    // CPF ou CNPJ formatado (o campo antigo se chamava só CNPJ).
     var cnpj: String? = null,
+    // O mesmo CPF/CNPJ só com os dígitos — chave do período grátis (uma vez
+    // por documento, ver documentosPrestador em functions/index.js).
+    var documento: String? = null,
     var telefone: String? = null,
     var email: String? = null,
     var servico: String? = null,

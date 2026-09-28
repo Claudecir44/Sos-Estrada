@@ -61,7 +61,7 @@ object ConteudoSos {
             "O descumprimento pode levar ao <b>bloqueio da conta</b>, que também impede um novo cadastro."
         )),
         Secao("📊", "Dados que coletamos e para quê", listOf(
-            "<b>Cadastro:</b> nome, e-mail, telefone e foto; do motorista, veículo e placa; do prestador, CNPJ, serviço, preço e endereço — para identificar você e aparecer para o outro lado do atendimento.",
+            "<b>Cadastro:</b> nome, e-mail, telefone e foto; do motorista, veículo e placa; do prestador, CPF ou CNPJ, serviço, preço e endereço — para identificar você e aparecer para o outro lado do atendimento.",
             "<b>Localização:</b> usada para calcular a distância até os prestadores. Só é compartilhada quando <b>você</b> toca em \"Enviar Minha Localização\", <b>somente</b> com o prestador que aceitou o seu pedido — e você pode parar de enviar quando quiser. O app não rastreia você em segundo plano.",
             "<b>Solicitações e chat:</b> guardados para o atendimento funcionar. Mensagens com mais de <b>6 meses</b> são apagadas automaticamente.",
             "<b>Notificações:</b> um identificador do aparelho é guardado só para enviar os avisos do app.",
@@ -77,7 +77,8 @@ object ConteudoSos {
             "Para outras solicitações sobre seus dados, escreva para <b>$EMAIL_SUPORTE</b>."
         )),
         Secao("💳", "Assinatura do prestador", listOf(
-            "O prestador tem um período gratuito e, depois dele, precisa de assinatura ativa para continuar aparecendo na busca. As condições ficam em Configurações → Assinatura."
+            "O prestador tem 60 dias grátis (uma vez por CPF/CNPJ) e, depois deles, precisa de um plano pago ativo para continuar aparecendo na busca. As condições ficam em Configurações → Assinatura.",
+            "Faltando 5 e 2 dias para o fim do plano, grátis ou pago, o prestador recebe um aviso por e-mail. Plano vencido deixa o cadastro <b>inativo</b> (fora da busca); inativo por 6 meses sem renovar, o cadastro é removido — e um novo cadastro com o mesmo CPF/CNPJ só ativa com plano pago."
         )),
         Secao("📝", "Alterações e contato", listOf(
             "Estes termos podem ser atualizados, e mudanças importantes serão avisadas no app. Continuar usando o app depois disso significa que você concorda com a nova versão.",
@@ -148,7 +149,9 @@ object ConteudoSos {
             "Atendimento desrespeitoso, cobranças abusivas ou pedidos aceitos e não atendidos podem levar ao <b>bloqueio</b> da conta."
         )),
         Secao("💳", "Assinatura", listOf(
-            "Seu cadastro tem um período gratuito. Depois dele, é preciso manter a assinatura ativa para continuar aparecendo na busca dos motoristas.",
+            "Seu cadastro tem <b>60 dias grátis</b> (uma vez por CPF/CNPJ). Depois dele, é preciso um plano pago — Trimestral (90 dias) ou Semestral (180 dias) — para continuar aparecendo na busca dos motoristas.",
+            "No painel, abaixo de ⚙️ Configurações, aparece se seu cadastro está <b>ativo</b> ou <b>inativo</b> e quantos dias faltam do plano (ex.: Plano free 45/60 dias).",
+            "Faltando <b>5</b> e <b>2 dias</b> para o fim do plano você recebe um aviso por e-mail. Se o plano vencer, seu cadastro fica inativo e some da busca dos motoristas; depois de <b>6 meses</b> inativo sem renovar, ele é removido.",
             "Veja o prazo e o plano em <b>Configurações → Assinatura</b>."
         )),
         Secao("✉️", "Dúvidas ou problemas", listOf(

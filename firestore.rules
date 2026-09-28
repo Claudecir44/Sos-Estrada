@@ -176,13 +176,30 @@ service cloud.firestore {
       // isso o prestador poderia se marcar "ativo"/com assinatura em dia
       // sem nunca ter pago.
       function camposDoServidorPrestador() {
-        return ['ativo', 'dataCadastro', 'assinaturaStatus', 'assinaturaExpiraEm', 'assinaturaUltimoPagamento', 'bloqueado'];
+        return ['ativo', 'dataCadastro', 'assinaturaStatus', 'assinaturaExpiraEm', 'assinaturaUltimoPagamento', 'bloqueado',
+                'assinaturaDiasTotal', 'inativoDesde', 'trialNegado', 'avisosVencimento'];
+      }
+
+      // CPF (11) ou CNPJ (14 dígitos), só números — os dígitos verificadores
+      // são conferidos no app e na Cloud Function (aoRegistrarPrestador).
+      function formatoDocumento(valor) {
+        return valor is string && valor.matches('^([0-9]{11}|[0-9]{14})$');
+      }
+
+      // O CPF/CNPJ decide quem já usou o período grátis: depois de gravado o
+      // dono não troca mais. Cadastro antigo sem o campo pode informar uma vez.
+      function documentoMantido() {
+        return (('documento' in resource.data)
+            && request.resource.data.get('documento', null) == resource.data.documento)
+          || (!('documento' in resource.data)
+            && (!('documento' in request.resource.data) || formatoDocumento(request.resource.data.documento)));
       }
 
       // Cadastro e edição do próprio perfil (CadastroPrestadorActivity,
       // PrestadorDashboardActivity).
       // Um e-mail = um perfil: conta que já é motorista não vira prestador.
       allow create: if ehDono(uid) && !request.resource.data.keys().hasAny(camposDoServidorPrestador())
+        && formatoDocumento(request.resource.data.get('documento', null))
         && !estaBloqueado(uid)
         && !exists(/databases/$(database)/documents/motoristas/$(uid));
       // Admin só com a senha master (editar/bloquear no painel). Dono
@@ -190,6 +207,7 @@ service cloud.firestore {
       allow update: if acaoAdminAutorizada('prestadores', uid)
         || (ehDono(uid)
             && resource.data.get('bloqueado', false) != true
+            && documentoMantido()
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(camposDoServidorPrestador()));
       // "Excluir cadastro" (PrestadorDashboardActivity) — sem esta linha a
       // exclusão sempre falhava, porque não havia regra de delete.

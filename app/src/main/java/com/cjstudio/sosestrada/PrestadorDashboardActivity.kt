@@ -6,7 +6,10 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.cjstudio.sosestrada.databinding.ActivityPrestadorDashboardBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -33,6 +36,9 @@ class PrestadorDashboardActivity : AppCompatActivity() {
 
     @Inject
     lateinit var notificacaoRepository: INotificacaoRepository
+
+    @Inject
+    lateinit var assinaturaRepository: IAssinaturaRepository
 
     private lateinit var binding: ActivityPrestadorDashboardBinding
 
@@ -93,8 +99,26 @@ class PrestadorDashboardActivity : AppCompatActivity() {
             }
         }
 
+        // "Cadastro ativo/inativo" e os dias do plano embaixo das
+        // Configurações, atualizados na hora (pagamento, vencimento). Ao
+        // voltar pra tela, recalcula os dias.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                assinaturaRepository.escutarMinhaAssinatura().collect { mostrarPlano(it.resumo()) }
+            }
+        }
+
         // Veio de uma notificação: já abre as solicitações.
         if (intent.getBooleanExtra(EXTRA_ABRIR_LISTA, false)) alternarListaAtendimento(abrir = true)
+    }
+
+    private fun mostrarPlano(resumo: ResumoPlano) {
+        binding.tvCadastroStatus.text = if (resumo.cadastroAtivo) "Cadastro ativo" else "Cadastro inativo"
+        binding.tvCadastroStatus.setTextColor(
+            ContextCompat.getColor(this, if (resumo.cadastroAtivo) R.color.verde_neon else R.color.vermelho_inativo)
+        )
+        binding.tvCadastroStatus.visibility = android.view.View.VISIBLE
+        binding.tvPlanoStatus.text = resumo.plano
     }
 
     // App já aberto e chegou outra notificação: abre a lista também.

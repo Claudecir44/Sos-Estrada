@@ -268,7 +268,7 @@ async function carregarPrestadores() {
   await carregarTabela(corpo, vazio, "prestadores", (p) => {
     const cidade = [p.cidade, p.estado].filter(Boolean).join(" - ") || p.endereco || p.localizacao || "—";
     const situacao = p.bloqueado ? '<span class="badge bloqueado">Bloqueado</span>'
-      : p.ativo === false ? '<span class="badge cancelado">Fora da busca</span>'
+      : p.ativo === false ? '<span class="badge cancelado">Inativo</span>'
       : '<span class="badge ativo">Ativo</span>';
     return `
       <td><img class="foto-linha" src="${escapeHtml(p.logo ? srcFoto(p.logo) : FOTO_PADRAO)}" alt=""></td>

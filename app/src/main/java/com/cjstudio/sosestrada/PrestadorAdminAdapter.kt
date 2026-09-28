@@ -34,9 +34,9 @@ class PrestadorAdminAdapter(
             tvEmailPrestador.text = "✉️ ${p.email.orEmpty()}"
             tvEnderecoPrestador.text = "📍 ${p.enderecoCompleto}"
             tvCnpjPrestador.text = listOfNotNull(
-                p.cnpj?.takeIf { it.isNotBlank() }?.let { "CNPJ $it" },
+                p.cnpj?.takeIf { it.isNotBlank() }?.let { "CPF/CNPJ $it" },
                 p.preco?.takeIf { it.isNotBlank() }?.let { "💲 $it" }
-            ).joinToString("  •  ").ifEmpty { "CNPJ não informado" }
+            ).joinToString("  •  ").ifEmpty { "CPF/CNPJ não informado" }
             tvBloqueadoPrestador.visibility = if (p.bloqueado) View.VISIBLE else View.GONE
             root.setOnLongClickListener { aoSegurar(p); true }
             FotoUtil.mostrar(ivLogoPrestador, p.logo, R.drawable.ic_placeholder_logo)
