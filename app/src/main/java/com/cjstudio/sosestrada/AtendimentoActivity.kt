@@ -65,6 +65,9 @@ class AtendimentoActivity : AppCompatActivity() {
                 .onSuccess { lista ->
                     adapter.atualizarLista(lista)
                     binding.tvEmptyAtendimento.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
+                    // Viu a lista: as solicitações novas deixam de contar na
+                    // bolinha do painel e no ícone do app.
+                    if (lista.any { it.novaParaPrestador }) solicitacaoRepository.marcarNovasComoVistas()
                 }
                 .onFailure { e ->
                     Toast.makeText(this@AtendimentoActivity, "Erro ao carregar: ${e.message}", Toast.LENGTH_SHORT).show()

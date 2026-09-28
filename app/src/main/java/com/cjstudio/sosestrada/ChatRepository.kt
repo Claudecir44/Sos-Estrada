@@ -51,7 +51,8 @@ class ChatRepository @Inject constructor(
         solicitacaoId: String,
         meuTipo: String,
         texto: String?,
-        imagemUrl: String?
+        imagemUrl: String?,
+        automatica: Boolean
     ): Result<Unit> = runCatching {
         val dados = hashMapOf(
             "remetenteUid" to auth.currentUser?.uid,
@@ -61,6 +62,7 @@ class ChatRepository @Inject constructor(
             "timestamp" to Date(),
             "lida" to false
         )
+        if (automatica) dados["automatica"] = true
         mensagens(solicitacaoId).add(dados).await()
         solicitacao(solicitacaoId).update(campoNaoLidasDe(outroTipo(meuTipo)), FieldValue.increment(1)).await()
         Unit

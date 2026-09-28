@@ -26,5 +26,11 @@ data class Solicitacao(
     // Contadores de mensagens não lidas por lado, mantidos pelo chat
     // (incrementados ao enviar, zerados ao abrir o chat do respectivo lado).
     var naoLidasMotorista: Int = 0,
-    var naoLidasPrestador: Int = 0
+    var naoLidasPrestador: Int = 0,
+    // Alertas (bolinha no painel, ícone do app): nasce true na criação e o
+    // prestador zera ao abrir "Atender solicitações".
+    var novaParaPrestador: Boolean = false,
+    // Vira true quando o prestador aceita/recusa; o motorista zera ao abrir
+    // "Preciso de socorro".
+    var respostaNaoVistaMotorista: Boolean = false
 )

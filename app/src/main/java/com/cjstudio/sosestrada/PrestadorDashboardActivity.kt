@@ -3,6 +3,7 @@ package com.cjstudio.sosestrada
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.cjstudio.sosestrada.databinding.ActivityPrestadorDashboardBinding
@@ -19,7 +20,16 @@ class PrestadorDashboardActivity : AppCompatActivity() {
     @Inject
     lateinit var prestadorRepository: IPrestadorRepository
 
+    @Inject
+    lateinit var solicitacaoRepository: ISolicitacaoRepository
+
+    @Inject
+    lateinit var notificacaoRepository: INotificacaoRepository
+
     private lateinit var binding: ActivityPrestadorDashboardBinding
+
+    // Resultado ignorado: sem permissão o app funciona igual, só sem push.
+    private val permissaoNotificacao = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,9 +53,21 @@ class PrestadorDashboardActivity : AppCompatActivity() {
         binding.btnMeuPerfilPrestador.setOnClickListener { startActivity(CadastroPrestadorActivity.intentEdicao(this)) }
         binding.ivFotoPrestadorPainel.setOnClickListener { startActivity(CadastroPrestadorActivity.intentEdicao(this)) }
         binding.btnVoltar.setOnClickListener {
+            AppIconBadgeUtil.atualizar(this, 0)
             authRepository.sair()
             startActivity(Intent(this, LoginPrestadorActivity::class.java))
             finish()
+        }
+
+        pedirPermissaoNotificacao(permissaoNotificacao)
+        notificacaoRepository.registrarToken(authRepository.uidLogado())
+        // Bolinha em "Atender solicitações" e número no ícone do app, em
+        // tempo real enquanto o painel existir.
+        lifecycleScope.launch {
+            solicitacaoRepository.escutarAlertasPrestador().collect { total ->
+                BadgeUtil.mostrar(binding.badgeAtender, total)
+                AppIconBadgeUtil.atualizar(this@PrestadorDashboardActivity, total)
+            }
         }
     }
 

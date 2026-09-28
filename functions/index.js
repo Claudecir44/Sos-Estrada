@@ -4,11 +4,12 @@ require("dotenv").config();
 
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, Timestamp, FieldValue } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
 const { getAuth } = require("firebase-admin/auth");
+const { getMessaging } = require("firebase-admin/messaging");
 const mercadopago = require("mercadopago");
 const logger = require("firebase-functions/logger");
 
@@ -29,6 +30,12 @@ async function isAdmin(uid) {
   const doc = await getFirestore().collection("admins").doc(uid).get();
   return doc.exists;
 }
+
+// Gatilhos do Firestore precisam rodar na mesma região do banco
+// (southamerica-east1). As callables continuam no padrão (us-central1), que
+// é onde o app (FirebaseFunctions.getInstance()) e o webhook do Mercado Pago
+// procuram.
+const REGIAO_FIRESTORE = "southamerica-east1";
 
 const SEIS_MESES_EM_MS = 1000 * 60 * 60 * 24 * 30 * 6;
 const TAMANHO_LOTE = 400;
@@ -146,7 +153,7 @@ const PLANO_ANUAL = { valor: 49.90, diasValidade: 365 };
 // Campos que só esta Cloud Function (Admin SDK, ignora firestore.rules)
 // pode escrever — o cliente nunca grava "ativo" nem os campos de
 // assinatura diretamente (ver firestore.rules, camposDoServidorPrestador).
-exports.aoRegistrarPrestador = onDocumentCreated("prestadores/{uid}", async (event) => {
+exports.aoRegistrarPrestador = onDocumentCreated({ document: "prestadores/{uid}", region: REGIAO_FIRESTORE }, async (event) => {
   const snap = event.data;
   if (!snap) return;
   const dados = snap.data();
@@ -428,3 +435,84 @@ exports.expirarAssinaturasPrestadores = onSchedule("every day 04:00", async () =
 
   logger.info(`expirarAssinaturasPrestadores: ${desativados} prestador(es) desativado(s).`);
 });
+
+// ============================================================
+// Notificações push (SosFirebaseMessagingService no app). Sempre só "data"
+// (nunca um bloco "notification"): o app decide título e tela pelo "tipo".
+// O token de cada conta fica em fcmTokens/{uid} (NotificacaoRepository).
+// Nunca manda o texto da mensagem do chat — a notificação aparece na tela
+// de bloqueio.
+// ============================================================
+
+function primeiroNome(nome, padrao) {
+  return (nome || "").trim().split(/\s+/)[0] || padrao;
+}
+
+async function enviarPush(uid, tipo, destino, corpo, id) {
+  if (!uid) return;
+  const db = getFirestore();
+  const snap = await db.collection("fcmTokens").doc(uid).get();
+  const token = snap.exists ? snap.get("token") : null;
+  if (!token) return;
+  try {
+    await getMessaging().send({
+      token,
+      data: { tipo, destino, corpo, id },
+      android: { priority: "high" },
+    });
+  } catch (erro) {
+    logger.warn(`Erro ao enviar push (${tipo}) para ${uid}:`, erro.message);
+    // App desinstalado ou dados limpos: token morto, não tenta mais.
+    if (erro.code === "messaging/registration-token-not-registered") {
+      await db.collection("fcmTokens").doc(uid).delete();
+    }
+  }
+}
+
+// Motorista pediu socorro -> "Solicitação Sos Estrada" pro prestador.
+exports.notificarNovaSolicitacao = onDocumentCreated(
+    { document: "solicitacoes/{id}", region: REGIAO_FIRESTORE },
+    async (event) => {
+      const s = event.data?.data();
+      if (!s) return;
+      const nome = primeiroNome(s.motoristaNome, "Um motorista");
+      await enviarPush(s.prestadorUid, "novaSolicitacao", "prestador",
+          `${nome} precisa de socorro. Toque para ver a solicitação.`, event.params.id);
+    },
+);
+
+// Prestador aceitou ou recusou -> "Prestador respondeu" pro motorista. Só
+// na mudança de pendente para aceito/recusado (não em qualquer update).
+exports.notificarRespostaPrestador = onDocumentUpdated(
+    { document: "solicitacoes/{id}", region: REGIAO_FIRESTORE },
+    async (event) => {
+      const antes = event.data?.before?.data();
+      const depois = event.data?.after?.data();
+      if (!antes || !depois || antes.status === depois.status) return;
+      if (depois.status !== "aceito" && depois.status !== "recusado") return;
+      const nome = depois.prestadorNome || "O prestador";
+      const corpo = depois.status === "aceito" ?
+        `${nome} aceitou sua solicitação e está a caminho.` :
+        `${nome} recusou sua solicitação. Procure outro prestador.`;
+      await enviarPush(depois.motoristaUid, "respostaPrestador", "motorista", corpo, event.params.id);
+    },
+);
+
+// Mensagem nova no chat -> "Mensagem Sos Estrada" pro outro lado. Mensagem
+// automática do app (aviso de aceite) não gera push: o motorista já recebe
+// o "Prestador respondeu" na mesma hora.
+exports.notificarMensagemSos = onDocumentCreated(
+    { document: "solicitacoes/{solicitacaoId}/mensagens/{mensagemId}", region: REGIAO_FIRESTORE },
+    async (event) => {
+      const m = event.data?.data();
+      if (!m || m.automatica === true) return;
+      const solicitacao = await getFirestore().collection("solicitacoes").doc(event.params.solicitacaoId).get();
+      if (!solicitacao.exists) return;
+      const s = solicitacao.data();
+      const doMotorista = m.remetenteTipo === "motorista";
+      const destinatario = doMotorista ? s.prestadorUid : s.motoristaUid;
+      const remetente = doMotorista ? primeiroNome(s.motoristaNome, "O motorista") : (s.prestadorNome || "O prestador");
+      await enviarPush(destinatario, "mensagemSos", doMotorista ? "prestador" : "motorista",
+          `Nova mensagem de ${remetente}.`, event.params.solicitacaoId);
+    },
+);

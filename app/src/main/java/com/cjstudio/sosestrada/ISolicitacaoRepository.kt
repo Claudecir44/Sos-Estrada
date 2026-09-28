@@ -1,5 +1,7 @@
 package com.cjstudio.sosestrada
 
+import kotlinx.coroutines.flow.Flow
+
 // Pedidos de socorro (coleção solicitacoes) dos dois lados: o motorista
 // pede/cancela, o prestador aceita/recusa.
 interface ISolicitacaoRepository {
@@ -25,6 +27,17 @@ interface ISolicitacaoRepository {
     // Motorista envia a localização atual pro prestador (só com a
     // solicitação aceita — reforçado nas regras).
     suspend fun enviarMinhaLocalizacao(solicitacaoId: String, latitude: Double, longitude: Double): Result<Unit>
+
+    // Total de alertas em tempo real, pra bolinha do painel e o número no
+    // ícone do app. Motorista: respostas do prestador ainda não vistas +
+    // mensagens não lidas. Prestador: solicitações novas + mensagens não lidas.
+    fun escutarAlertasMotorista(): Flow<Int>
+    fun escutarAlertasPrestador(): Flow<Int>
+
+    // Zera os alertas de "resposta"/"nova" ao abrir a lista correspondente
+    // (as mensagens não lidas só zeram abrindo o chat).
+    suspend fun marcarRespostasComoVistas()
+    suspend fun marcarNovasComoVistas()
 
     // Exclusão permanente (as regras só permitem com status "cancelado").
     suspend fun excluir(solicitacaoId: String): Result<Unit>

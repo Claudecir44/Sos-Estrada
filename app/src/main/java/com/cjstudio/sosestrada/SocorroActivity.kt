@@ -134,6 +134,9 @@ class SocorroActivity : AppCompatActivity() {
 
             // Sem as solicitações, a lista aparece do mesmo jeito (só sem status).
             val solicitacoes = solicitacaoRepository.minhasSolicitacoesPorPrestador().getOrDefault(emptyMap())
+            // Viu a lista: as respostas do prestador deixam de contar na
+            // bolinha do painel e no ícone do app.
+            if (solicitacoes.values.any { it.respostaNaoVistaMotorista }) solicitacaoRepository.marcarRespostasComoVistas()
             for (p in prestadores) {
                 val solicitacao = solicitacoes[p.uid]
                 p.statusSolicitacao = solicitacao?.status

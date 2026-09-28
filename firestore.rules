@@ -177,6 +177,19 @@ service cloud.firestore {
       allow read: if estaLogado();
     }
 
+    // ---------------- fcmTokens ----------------
+    // Token de push do aparelho (NotificacaoRepository.registrarToken). Só
+    // o dono grava o próprio; ninguém lê pelo app — quem usa são as Cloud
+    // Functions (Admin SDK, ignora estas regras). Fica fora de
+    // "prestadores" de propósito: aquela coleção é lida por todo usuário.
+    match /fcmTokens/{uid} {
+      allow create, update: if ehDono(uid)
+        && request.resource.data.keys().hasOnly(['token', 'atualizadoEm'])
+        && request.resource.data.token is string;
+      allow delete: if ehDono(uid);
+      allow read: if false;
+    }
+
     // ---------------- solicitacoes ----------------
     match /solicitacoes/{solicitacaoId} {
       function souMotorista() {
@@ -202,9 +215,14 @@ service cloud.firestore {
       // - naoLidasMotorista/naoLidasPrestador: contadores de mensagem não
       //   lida, mantidos pelo ChatActivity (incrementados ao enviar,
       //   zerados ao abrir o chat do respectivo lado).
+      // - novaParaPrestador/respostaNaoVistaMotorista: só alertas visuais
+      //   (bolinha no painel, número no ícone). O prestador acende o do
+      //   motorista junto com aceitar/recusar, e cada lado apaga o seu ao
+      //   abrir a lista (SolicitacaoRepository).
       allow update: if (souMotorista() || souPrestador())
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['status', 'naoLidasMotorista', 'naoLidasPrestador']);
+             .hasOnly(['status', 'naoLidasMotorista', 'naoLidasPrestador',
+                       'novaParaPrestador', 'respostaNaoVistaMotorista']);
 
       // "Enviar Minha Localização" (SocorroActivity): só o motorista, só
       // depois que o prestador aceitou, só as coordenadas + horário do

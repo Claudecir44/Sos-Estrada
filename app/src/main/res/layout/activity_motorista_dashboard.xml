@@ -180,14 +180,26 @@
                 android:orientation="horizontal"
                 android:padding="20dp">
 
-                <TextView
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:background="@drawable/bg_admin_avatar"
-                    android:backgroundTint="#33FFFFFF"
-                    android:gravity="center"
-                    android:text="🚨"
-                    android:textSize="30sp" />
+                <!-- Ícone + bolinha de alertas (respostas do prestador e
+                     mensagens não lidas), ver MotoristaDashboardActivity. -->
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:layout_margin="4dp"
+                        android:background="@drawable/bg_admin_avatar"
+                        android:backgroundTint="#33FFFFFF"
+                        android:gravity="center"
+                        android:text="🚨"
+                        android:textSize="30sp" />
+
+                    <TextView
+                        android:id="@+id/badgeSocorro"
+                        style="@style/BadgeNotificacao" />
+                </FrameLayout>
 
                 <LinearLayout
                     android:layout_width="0dp"

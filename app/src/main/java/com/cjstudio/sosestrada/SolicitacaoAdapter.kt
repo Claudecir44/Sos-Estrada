@@ -53,18 +53,11 @@ class SolicitacaoAdapter(
 
         val cancelada = s.status == CANCELADO
         b.tvCancelamento.visibility = if (cancelada) View.VISIBLE else View.GONE
-        b.btnMensagem.visibility = if (cancelada) View.GONE else View.VISIBLE
+        b.containerMensagem.visibility = if (cancelada) View.GONE else View.VISIBLE
         // Aceitar/recusar só enquanto está pendente.
         b.layoutBotoes.visibility = if (s.status == PENDENTE) View.VISIBLE else View.GONE
 
-        if (s.naoLidasPrestador > 0) {
-            val plural = if (s.naoLidasPrestador > 1) "s" else ""
-            b.btnMensagem.text = "💬 Mensagem (${s.naoLidasPrestador} nova$plural)"
-            b.btnMensagem.backgroundTintList = ColorStateList.valueOf(0xFFD32F2F.toInt())
-        } else {
-            b.btnMensagem.text = "💬 Mensagem"
-            b.btnMensagem.backgroundTintList = ColorStateList.valueOf(0xFF9C27B0.toInt())
-        }
+        BadgeUtil.mostrar(b.badgeMensagem, s.naoLidasPrestador)
 
         b.btnAceitar.setOnClickListener {
             if (s.status == PENDENTE) confirmarAceite(b, s)

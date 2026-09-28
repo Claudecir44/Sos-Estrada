@@ -10,7 +10,16 @@ interface IChatRepository {
     fun escutarMensagens(solicitacaoId: String): Flow<List<Mensagem>>
 
     // Grava a mensagem e soma 1 no contador de não lidas do outro lado.
-    suspend fun enviarMensagem(solicitacaoId: String, meuTipo: String, texto: String?, imagemUrl: String?): Result<Unit>
+    // automatica = mensagem gerada pelo app (ex.: aviso de aceite), que não
+    // dispara o push "Mensagem Sos Estrada" (o motorista já recebe o
+    // "Prestador respondeu" — ver functions/index.js:notificarMensagemSos).
+    suspend fun enviarMensagem(
+        solicitacaoId: String,
+        meuTipo: String,
+        texto: String?,
+        imagemUrl: String?,
+        automatica: Boolean = false
+    ): Result<Unit>
 
     // Sobe a foto pro Storage e devolve a URL pública.
     suspend fun enviarImagem(solicitacaoId: String, imagem: Uri): Result<String>

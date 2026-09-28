@@ -10,6 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // ShortcutBadger (número no ícone do app) só é publicado no JitPack.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 rootProject.name = "SOSEstrada"

@@ -3,6 +3,7 @@ package com.cjstudio.sosestrada
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.cjstudio.sosestrada.databinding.ActivityMotoristaDashboardBinding
@@ -19,7 +20,16 @@ class MotoristaDashboardActivity : AppCompatActivity() {
     @Inject
     lateinit var motoristaRepository: IMotoristaRepository
 
+    @Inject
+    lateinit var solicitacaoRepository: ISolicitacaoRepository
+
+    @Inject
+    lateinit var notificacaoRepository: INotificacaoRepository
+
     private lateinit var binding: ActivityMotoristaDashboardBinding
+
+    // Resultado ignorado: sem permissão o app funciona igual, só sem push.
+    private val permissaoNotificacao = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,9 +50,22 @@ class MotoristaDashboardActivity : AppCompatActivity() {
         binding.btnMeuPerfilMotorista.setOnClickListener { startActivity(CadastroMotoristaActivity.intentEdicao(this)) }
         binding.ivFotoMotoristaPainel.setOnClickListener { startActivity(CadastroMotoristaActivity.intentEdicao(this)) }
         binding.btnVoltar.setOnClickListener {
+            AppIconBadgeUtil.atualizar(this, 0)
             authRepository.sair()
             startActivity(Intent(this, LoginMotoristaActivity::class.java))
             finish()
+        }
+
+        pedirPermissaoNotificacao(permissaoNotificacao)
+        notificacaoRepository.registrarToken(authRepository.uidLogado())
+        // Bolinha em "Preciso de socorro" e número no ícone do app, em tempo
+        // real enquanto o painel existir (continua valendo com o socorro ou o
+        // chat abertos por cima).
+        lifecycleScope.launch {
+            solicitacaoRepository.escutarAlertasMotorista().collect { total ->
+                BadgeUtil.mostrar(binding.badgeSocorro, total)
+                AppIconBadgeUtil.atualizar(this@MotoristaDashboardActivity, total)
+            }
         }
     }
 

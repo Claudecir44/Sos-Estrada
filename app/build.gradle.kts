@@ -82,6 +82,11 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.functions)
     implementation("com.google.firebase:firebase-storage:20.3.0")
+    // Push de mensagem/solicitação/resposta (SosFirebaseMessagingService).
+    implementation(libs.firebase.messaging)
+    // Número no ícone do app na tela inicial (AppIconBadgeUtil) — quem
+    // desenha é o launcher de cada fabricante; a biblioteca fala com cada um.
+    implementation(libs.shortcutbadger)
 
     // Kotlin/corrotinas — usado pelo módulo de assinatura (AssinaturaActivity)
     // e pela migração do SocorroActivity pra Kotlin.

@@ -1,11 +1,16 @@
 package com.cjstudio.sosestrada
 
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.ACEITO
+import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.CANCELADO
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.PENDENTE
+import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.RECUSADO
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 import javax.inject.Inject
@@ -62,7 +67,8 @@ class SolicitacaoRepository @Inject constructor(
             "status" to PENDENTE,
             "timestamp" to Date(),
             "latitudeMotorista" to latitude,
-            "longitudeMotorista" to longitude
+            "longitudeMotorista" to longitude,
+            "novaParaPrestador" to true
         )
         if (endereco != null) dados["enderecoMotorista"] = endereco
         colecao().add(dados).await().id
@@ -75,8 +81,61 @@ class SolicitacaoRepository @Inject constructor(
     }
 
     override suspend fun atualizarStatus(solicitacaoId: String, status: String): Result<Unit> = runCatching {
-        colecao().document(solicitacaoId).update("status", status).await()
+        val mudancas = mutableMapOf<String, Any>("status" to status)
+        // Resposta do prestador: acende o alerta do motorista (bolinha em
+        // "Preciso de socorro" + push "Prestador respondeu").
+        if (status == ACEITO || status == RECUSADO) mudancas["respostaNaoVistaMotorista"] = true
+        colecao().document(solicitacaoId).update(mudancas).await()
         Unit
+    }
+
+    // Motorista: só a solicitação mais recente com cada prestador (é a única
+    // que aparece na lista do socorro, então é a única cujo chat dá pra abrir
+    // e zerar — contar as antigas deixaria a bolinha presa pra sempre).
+    override fun escutarAlertasMotorista(): Flow<Int> = callbackFlow {
+        val uid = auth.currentUser?.uid ?: run { trySend(0); close(); return@callbackFlow }
+        val registro = colecao().whereEqualTo("motoristaUid", uid).addSnapshotListener { snapshots, erro ->
+            if (erro != null || snapshots == null) return@addSnapshotListener
+            val total = snapshots.documents.mapNotNull { it.paraSolicitacao() }
+                .filter { it.prestadorUid != null }
+                .groupBy { it.prestadorUid!! }
+                .values.map { lista -> lista.maxBy { it.timestamp?.time ?: 0L } }
+                .sumOf { (if (it.respostaNaoVistaMotorista) 1 else 0) + it.naoLidasMotorista }
+            trySend(total)
+        }
+        awaitClose { registro.remove() }
+    }
+
+    // Prestador: solicitação cancelada não mostra o botão Mensagem, então
+    // suas mensagens não lidas não entram na conta.
+    override fun escutarAlertasPrestador(): Flow<Int> = callbackFlow {
+        val uid = auth.currentUser?.uid ?: run { trySend(0); close(); return@callbackFlow }
+        val registro = colecao().whereEqualTo("prestadorUid", uid).addSnapshotListener { snapshots, erro ->
+            if (erro != null || snapshots == null) return@addSnapshotListener
+            val total = snapshots.documents.mapNotNull { it.paraSolicitacao() }
+                .filter { it.status != CANCELADO }
+                .sumOf { (if (it.novaParaPrestador) 1 else 0) + it.naoLidasPrestador }
+            trySend(total)
+        }
+        awaitClose { registro.remove() }
+    }
+
+    override suspend fun marcarRespostasComoVistas() {
+        val uid = auth.currentUser?.uid ?: return
+        runCatching {
+            colecao().whereEqualTo("motoristaUid", uid).get().await().documents
+                .filter { it.getBoolean("respostaNaoVistaMotorista") == true }
+                .forEach { it.reference.update("respostaNaoVistaMotorista", false).await() }
+        }
+    }
+
+    override suspend fun marcarNovasComoVistas() {
+        val uid = auth.currentUser?.uid ?: return
+        runCatching {
+            colecao().whereEqualTo("prestadorUid", uid).get().await().documents
+                .filter { it.getBoolean("novaParaPrestador") == true }
+                .forEach { it.reference.update("novaParaPrestador", false).await() }
+        }
     }
 
     override suspend fun aceitar(solicitacaoId: String): Result<Unit> = runCatching {
@@ -87,7 +146,8 @@ class SolicitacaoRepository @Inject constructor(
             solicitacaoId,
             IChatRepository.PRESTADOR,
             texto = "✅ Aceitei sua solicitação e estou a caminho para o socorro.",
-            imagemUrl = null
+            imagemUrl = null,
+            automatica = true
         )
         Unit
     }

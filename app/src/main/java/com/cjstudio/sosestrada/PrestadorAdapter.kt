@@ -110,14 +110,7 @@ class PrestadorAdapter(
             }
             else -> b.btnEnviarLocalizacao.visibility = View.GONE
         }
-        if (p.naoLidasMotorista > 0) {
-            val plural = if (p.naoLidasMotorista > 1) "s" else ""
-            b.btnMensagem.text = "💬 Mensagem (${p.naoLidasMotorista} nova$plural)"
-            b.btnMensagem.backgroundTintList = ColorStateList.valueOf(0xFFD32F2F.toInt())
-        } else {
-            b.btnMensagem.text = "💬 Mensagem"
-            b.btnMensagem.backgroundTintList = ColorStateList.valueOf(0xFF9C27B0.toInt())
-        }
+        BadgeUtil.mostrar(b.badgeMensagem, p.naoLidasMotorista)
         b.btnMensagem.setOnClickListener {
             val context = b.root.context
             context.startActivity(

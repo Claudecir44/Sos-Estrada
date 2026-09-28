@@ -127,22 +127,38 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="-3dp"
             android:layout_marginEnd="-3dp"
-            android:layout_marginTop="6dp"
             android:orientation="horizontal"
+            android:clipChildren="false"
             android:visibility="gone">
 
-            <!-- Só com solicitação pendente ou aceita -->
+            <!-- Ativo só com a solicitação aceita (cinza enquanto pendente).
+                 marginTop = espaço da bolinha do Mensagem ao lado. -->
             <Button
                 android:id="@+id/btnEnviarLocalizacao"
                 style="@style/BotaoCardSocorro"
+                android:layout_marginTop="6dp"
                 android:text="📡 Enviar Minha Localização"
                 android:backgroundTint="#00897B" />
 
-            <Button
-                android:id="@+id/btnMensagem"
-                style="@style/BotaoCardSocorro"
-                android:text="💬 Mensagem"
-                android:backgroundTint="#9C27B0" />
+            <!-- Mensagem + bolinha com as não lidas (naoLidasMotorista) -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:clipChildren="false">
+
+                <Button
+                    android:id="@+id/btnMensagem"
+                    style="@style/BotaoCardSocorro"
+                    android:layout_width="match_parent"
+                    android:layout_marginTop="6dp"
+                    android:text="💬 Mensagem"
+                    android:backgroundTint="#9C27B0" />
+
+                <TextView
+                    android:id="@+id/badgeMensagem"
+                    style="@style/BadgeNotificacao" />
+            </FrameLayout>
 
         </LinearLayout>
 

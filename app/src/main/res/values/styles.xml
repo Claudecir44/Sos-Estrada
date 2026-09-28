@@ -115,6 +115,25 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
+    <!-- Bolinha de alertas (número) sobreposta a um botão/ícone, num
+         FrameLayout. Some quando o total é 0 (BadgeUtil.mostrar). -->
+    <style name="BadgeNotificacao">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_gravity">top|end</item>
+        <item name="android:minWidth">20dp</item>
+        <item name="android:minHeight">20dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">5dp</item>
+        <item name="android:paddingEnd">5dp</item>
+        <item name="android:background">@drawable/bg_badge_notificacao</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:elevation">6dp</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
     <!-- Chips do seletor de listas -->
     <style name="AdminChipSeletor" parent="Widget.MaterialComponents.Chip.Choice">
         <item name="android:layout_width">wrap_content</item>
