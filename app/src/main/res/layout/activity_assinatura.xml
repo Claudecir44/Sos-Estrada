@@ -110,7 +110,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="R$ 59,90"
+                    android:text="R$ 79,90"
                     android:textColor="#FF9800"
                     android:textSize="22sp"
                     android:textStyle="bold" />
@@ -126,7 +126,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="≈ R$ 19,97 por mês"
+                    android:text="≈ R$ 26,63 por mês"
                     android:textColor="#888"
                     android:textSize="11sp" />
 

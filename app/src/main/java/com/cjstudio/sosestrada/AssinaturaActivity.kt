@@ -21,7 +21,7 @@ import javax.inject.Inject
 
 // Tela de assinatura do prestador: 60 dias grátis a partir do cadastro
 // (aoRegistrarPrestador, Cloud Function), depois o plano Trimestral
-// (R$59,90/90 dias) ou Semestral (R$129,90/180 dias) pra manter o cadastro
+// (R$79,90/90 dias) ou Semestral (R$129,90/180 dias) pra manter o cadastro
 // visível na busca do motorista
 // (a busca só lista prestadores com ativo==true). A confirmação de
 // pagamento NUNCA vem desta tela sozinha — vem do webhook

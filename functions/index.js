@@ -139,7 +139,7 @@ exports.provisionarAdminInicial = onCall(async (request) => {
 
 // ============================================================
 // Assinatura de prestadores (Mercado Pago) — 60 dias grátis a partir do
-// cadastro, depois um dos planos (Trimestral R$59,90 / 90 dias ou Semestral
+// cadastro, depois um dos planos (Trimestral R$79,90 / 90 dias ou Semestral
 // R$129,90 / 180 dias — ver PLANOS) pra manter o
 // cadastro visível na busca do motorista (SocorroFragment filtra por
 // "ativo"==true). Espelha o desenho do Match (createPaymentPreference/
@@ -153,7 +153,7 @@ const DIA_MS = 1000 * 60 * 60 * 24;
 // só a chave do plano; valor e prazo sempre saem daqui (o cliente não
 // escolhe preço).
 const PLANOS = {
-  trimestral: { nome: "Trimestral", valor: 59.90, diasValidade: 90 },
+  trimestral: { nome: "Trimestral", valor: 79.90, diasValidade: 90 },
   semestral: { nome: "Semestral", valor: 129.90, diasValidade: 180 },
 };
 const PLANO_PADRAO = "trimestral";
