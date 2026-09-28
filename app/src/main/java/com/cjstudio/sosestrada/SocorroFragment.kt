@@ -14,7 +14,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doOnTextChanged
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.CANCELADO
 import com.cjstudio.sosestrada.databinding.FragmentSocorroBinding
@@ -90,6 +92,7 @@ class SocorroFragment : Fragment() {
         binding.rvPrestadoresSocorro.layoutManager = LinearLayoutManager(requireContext())
         binding.rvPrestadoresSocorro.adapter = adapter
         binding.edtPesquisa.doOnTextChanged { texto, _, _, _ -> adapter.filtrar(texto?.toString().orEmpty()) }
+        escutarSolicitacoes()
 
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             obterLocalizacaoECarregar()
@@ -98,13 +101,46 @@ class SocorroFragment : Fragment() {
         }
     }
 
-    // Volta do chat: recarrega status e contadores de mensagens.
-    override fun onResume() {
-        super.onResume()
-        if (primeiraCargaFeita) carregarPrestadores()
+    // Prestadores já carregados (com distância) e a solicitação mais recente
+    // com cada um — esta vem em tempo real (escutarSolicitacoes), então
+    // status, mensagens não lidas e botões mudam na hora, sem reabrir a lista.
+    private var prestadores: List<Prestador> = emptyList()
+    private var solicitacoes: Map<String, Solicitacao> = emptyMap()
+
+    private fun escutarSolicitacoes() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                solicitacaoRepository.escutarMinhasSolicitacoesPorPrestador().collect {
+                    solicitacoes = it
+                    aplicarSolicitacoes()
+                }
+            }
+        }
     }
 
-    // O painel chama ao reabrir a lista (ela fica escondida, não é recriada).
+    // Junta o status de cada solicitação no cartão do prestador e redesenha.
+    private fun aplicarSolicitacoes() {
+        if (!primeiraCargaFeita) return
+        for (p in prestadores) {
+            val solicitacao = solicitacoes[p.uid]
+            p.statusSolicitacao = solicitacao?.status
+            p.solicitacaoId = solicitacao?.id
+            p.naoLidasMotorista = solicitacao?.naoLidasMotorista ?: 0
+            p.localizacaoEnviada = solicitacao?.latitudeCompartilhada != null
+        }
+        adapter.atualizarLista(prestadores)
+        marcarRespostasVistasSeVisivel()
+    }
+
+    // Lista aberta na tela: as respostas do prestador já foram vistas (tiram
+    // a bolinha do painel e o número do ícone do app).
+    private fun marcarRespostasVistasSeVisivel() {
+        if (view?.isShown != true || solicitacoes.values.none { it.respostaNaoVistaMotorista }) return
+        viewLifecycleOwner.lifecycleScope.launch { solicitacaoRepository.marcarRespostasComoVistas() }
+    }
+
+    // O painel chama ao reabrir a lista (ela fica escondida, não é recriada):
+    // busca de novo os prestadores (pode ter entrado um novo).
     fun recarregar() {
         if (primeiraCargaFeita && view != null) carregarPrestadores()
     }
@@ -145,21 +181,11 @@ class SocorroFragment : Fragment() {
                 .filter { it.uid != meuUid }
             if (temLocalizacao) calcularDistancias(prestadores)
 
-            // Sem as solicitações, a lista aparece do mesmo jeito (só sem status).
-            val solicitacoes = solicitacaoRepository.minhasSolicitacoesPorPrestador().getOrDefault(emptyMap())
-            // Viu a lista: as respostas do prestador deixam de contar na
-            // bolinha do painel e no ícone do app.
-            if (solicitacoes.values.any { it.respostaNaoVistaMotorista }) solicitacaoRepository.marcarRespostasComoVistas()
-            for (p in prestadores) {
-                val solicitacao = solicitacoes[p.uid]
-                p.statusSolicitacao = solicitacao?.status
-                p.solicitacaoId = solicitacao?.id
-                p.naoLidasMotorista = solicitacao?.naoLidasMotorista ?: 0
-            }
-
+            this@SocorroFragment.prestadores = prestadores
             binding.progressBarSocorro.visibility = View.GONE
             binding.tvEmptySocorro.visibility = if (prestadores.isEmpty()) View.VISIBLE else View.GONE
-            adapter.atualizarLista(prestadores)
+            // Status das solicitações: os últimos recebidos em tempo real.
+            aplicarSolicitacoes()
         }
     }
 
@@ -176,11 +202,31 @@ class SocorroFragment : Fragment() {
     }
 
     private fun aoEnviarLocalizacao(prestador: Prestador) {
+        // Segundo toque (já está enviando): para e remove do prestador.
+        if (prestador.localizacaoEnviada) {
+            pararDeEnviarLocalizacao(prestador)
+            return
+        }
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             enviarMinhaLocalizacao(prestador)
         } else {
             enviarLocalizacaoPara = prestador
             permissaoParaEnviarLocalizacao.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    // Apaga a localização da solicitação: o botão do prestador volta a ficar
+    // cinza na hora (ele está escutando a solicitação em tempo real).
+    private fun pararDeEnviarLocalizacao(prestador: Prestador) {
+        val solicitacaoId = prestador.solicitacaoId ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            solicitacaoRepository.removerMinhaLocalizacao(solicitacaoId)
+                .onSuccess {
+                    Toast.makeText(requireContext(), "Você parou de enviar sua localização. ${prestador.nome ?: "O prestador"} não vê mais onde você está.", Toast.LENGTH_LONG).show()
+                }
+                .onFailure { e ->
+                    Toast.makeText(requireContext(), "Não foi possível parar de enviar: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
@@ -212,7 +258,6 @@ class SocorroFragment : Fragment() {
                     val texto = if (negado) "Só é possível enviar sua localização com a solicitação aceita pelo prestador."
                     else "Erro ao enviar localização: ${e.message}"
                     Toast.makeText(requireContext(), texto, Toast.LENGTH_LONG).show()
-                    if (negado) carregarPrestadores()
                 }
         }
     }
@@ -236,7 +281,6 @@ class SocorroFragment : Fragment() {
             solicitacaoRepository.solicitar(prestador, latitude, longitude, endereco)
                 .onSuccess {
                     Toast.makeText(requireContext(), "✅ Solicitação enviada para ${prestador.nome}", Toast.LENGTH_LONG).show()
-                    carregarPrestadores()
                 }
                 .onFailure { e ->
                     Toast.makeText(requireContext(), "Erro ao enviar solicitação: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -292,7 +336,6 @@ class SocorroFragment : Fragment() {
             solicitacaoRepository.atualizarStatus(solicitacaoId, CANCELADO)
                 .onSuccess {
                     Toast.makeText(requireContext(), "Solicitação cancelada com sucesso.", Toast.LENGTH_SHORT).show()
-                    carregarPrestadores()
                 }
                 .onFailure { e ->
                     Toast.makeText(requireContext(), "Erro ao cancelar: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -305,7 +348,6 @@ class SocorroFragment : Fragment() {
             solicitacaoRepository.excluir(solicitacaoId)
                 .onSuccess {
                     Toast.makeText(requireContext(), "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show()
-                    carregarPrestadores()
                 }
                 .onFailure { e ->
                     Toast.makeText(requireContext(), "Erro ao excluir: ${e.message}", Toast.LENGTH_SHORT).show()

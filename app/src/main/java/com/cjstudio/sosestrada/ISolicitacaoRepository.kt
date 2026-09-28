@@ -9,6 +9,12 @@ interface ISolicitacaoRepository {
     // indexada pelo uid do prestador.
     suspend fun minhasSolicitacoesPorPrestador(): Result<Map<String, Solicitacao>>
 
+    // Tempo real (listas dentro dos painéis): cada mudança em qualquer
+    // solicitação do motorista/prestador logado chega na hora — nova,
+    // aceita, recusada, cancelada, mensagem, localização.
+    fun escutarMinhasSolicitacoesPorPrestador(): Flow<Map<String, Solicitacao>>
+    fun escutarRecebidasPeloPrestador(): Flow<List<Solicitacao>>
+
     // Se o motorista logado já tem solicitação pendente ou aceita com o prestador.
     suspend fun temSolicitacaoAtivaCom(prestadorUid: String): Result<Boolean>
 
@@ -27,6 +33,10 @@ interface ISolicitacaoRepository {
     // Motorista envia a localização atual pro prestador (só com a
     // solicitação aceita — reforçado nas regras).
     suspend fun enviarMinhaLocalizacao(solicitacaoId: String, latitude: Double, longitude: Double): Result<Unit>
+
+    // Segundo toque no "Enviar Minha Localização": para de compartilhar —
+    // apaga a localização da solicitação e o prestador deixa de ver na hora.
+    suspend fun removerMinhaLocalizacao(solicitacaoId: String): Result<Unit>
 
     // Total de alertas em tempo real, pra bolinha do painel e o número no
     // ícone do app. Motorista: respostas do prestador ainda não vistas +

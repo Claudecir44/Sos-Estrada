@@ -95,10 +95,15 @@ class PrestadorAdapter(
             return
         }
         b.layoutBotoesSolicitacao.visibility = View.VISIBLE
+        // Já enviando: o mesmo botão vira "Parar de Enviar" (segundo toque
+        // remove a localização do prestador — ver SocorroFragment).
+        b.btnEnviarLocalizacao.text = if (p.statusSolicitacao == ACEITO && p.localizacaoEnviada)
+            "🛑 Parar de Enviar Localização" else "📡 Enviar Minha Localização"
         when (p.statusSolicitacao) {
             ACEITO -> {
                 b.btnEnviarLocalizacao.visibility = View.VISIBLE
-                b.btnEnviarLocalizacao.backgroundTintList = ColorStateList.valueOf(0xFF00897B.toInt())
+                b.btnEnviarLocalizacao.backgroundTintList =
+                    ColorStateList.valueOf(if (p.localizacaoEnviada) 0xFFE65100.toInt() else 0xFF00897B.toInt())
                 b.btnEnviarLocalizacao.setOnClickListener { aoEnviarLocalizacao(p) }
             }
             PENDENTE -> {

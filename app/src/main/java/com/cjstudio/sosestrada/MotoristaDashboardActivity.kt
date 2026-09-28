@@ -90,8 +90,6 @@ class MotoristaDashboardActivity : AppCompatActivity() {
             solicitacaoRepository.escutarAlertasMotorista().collect { total ->
                 BadgeUtil.mostrar(binding.badgeSocorro, total)
                 AppIconBadgeUtil.atualizar(this@MotoristaDashboardActivity, total)
-                // Lista aberta: mostra a novidade (resposta, mensagem) na hora.
-                if (binding.containerListaSocorro.isShown) fragmentoSocorro()?.recarregar()
             }
         }
 

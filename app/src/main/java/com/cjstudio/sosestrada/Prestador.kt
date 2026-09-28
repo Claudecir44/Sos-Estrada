@@ -34,7 +34,10 @@ data class Prestador(
     // Id da solicitação ativa com este prestador (usado para abrir o chat)
     var solicitacaoId: String? = null,
     // Mensagens do prestador ainda não lidas pelo motorista, na solicitação ativa.
-    var naoLidasMotorista: Int = 0
+    var naoLidasMotorista: Int = 0,
+    // O motorista está compartilhando a localização nessa solicitação: o
+    // botão vira "Parar de enviar localização" (segundo toque remove).
+    var localizacaoEnviada: Boolean = false
 ) {
     // Endereço montado dos campos novos; sem eles, cai nos campos antigos.
     @get:Exclude

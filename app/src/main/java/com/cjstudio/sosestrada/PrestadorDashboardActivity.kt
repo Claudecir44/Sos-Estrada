@@ -90,8 +90,6 @@ class PrestadorDashboardActivity : AppCompatActivity() {
             solicitacaoRepository.escutarAlertasPrestador().collect { total ->
                 BadgeUtil.mostrar(binding.badgeAtender, total)
                 AppIconBadgeUtil.atualizar(this@PrestadorDashboardActivity, total)
-                // Lista aberta: mostra a novidade (pedido, mensagem, localização) na hora.
-                if (binding.containerListaAtendimento.isShown) fragmentoAtendimento()?.recarregar()
             }
         }
 

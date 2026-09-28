@@ -34,13 +34,11 @@ class ConfiguracoesActivity : AppCompatActivity() {
 
         binding.btnVoltarConfiguracoes.setOnClickListener { finish() }
         binding.cardTermos.setOnClickListener {
-            startActivity(TextoInformativoActivity.intent(this, ConteudoSos.TITULO_TERMOS, ConteudoSos.termos, prestador))
+            startActivity(TextoInformativoActivity.intent(this, ConteudoSos.TERMOS, prestador))
         }
         binding.cardRegras.setOnClickListener {
-            startActivity(
-                if (prestador) TextoInformativoActivity.intent(this, ConteudoSos.TITULO_REGRAS_PRESTADOR, ConteudoSos.regrasPrestador, true)
-                else TextoInformativoActivity.intent(this, ConteudoSos.TITULO_REGRAS_MOTORISTA, ConteudoSos.regrasMotorista, false)
-            )
+            val chave = if (prestador) ConteudoSos.REGRAS_PRESTADOR else ConteudoSos.REGRAS_MOTORISTA
+            startActivity(TextoInformativoActivity.intent(this, chave, prestador))
         }
         binding.cardAssinatura.setOnClickListener {
             startActivity(Intent(this, AssinaturaActivity::class.java))

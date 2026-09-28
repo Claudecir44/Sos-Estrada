@@ -31,13 +31,33 @@ class SolicitacaoRepository @Inject constructor(
     private fun DocumentSnapshot.paraSolicitacao(): Solicitacao? =
         toObject(Solicitacao::class.java)?.also { it.id = id }
 
-    override suspend fun minhasSolicitacoesPorPrestador(): Result<Map<String, Solicitacao>> = runCatching {
-        colecao().whereEqualTo("motoristaUid", uidLogado()).get().await().documents
-            .mapNotNull { it.paraSolicitacao() }
+    // Com mais de uma solicitação pro mesmo prestador, vale a mais recente.
+    private fun maisRecentePorPrestador(documentos: List<DocumentSnapshot>): Map<String, Solicitacao> =
+        documentos.mapNotNull { it.paraSolicitacao() }
             .filter { it.prestadorUid != null }
-            // Com mais de uma solicitação pro mesmo prestador, vale a mais recente.
             .groupBy { it.prestadorUid!! }
             .mapValues { (_, solicitacoes) -> solicitacoes.maxBy { it.timestamp?.time ?: 0L } }
+
+    override suspend fun minhasSolicitacoesPorPrestador(): Result<Map<String, Solicitacao>> = runCatching {
+        maisRecentePorPrestador(colecao().whereEqualTo("motoristaUid", uidLogado()).get().await().documents)
+    }
+
+    override fun escutarMinhasSolicitacoesPorPrestador(): Flow<Map<String, Solicitacao>> = callbackFlow {
+        val uid = auth.currentUser?.uid ?: run { close(); return@callbackFlow }
+        val registro = colecao().whereEqualTo("motoristaUid", uid).addSnapshotListener { snapshots, erro ->
+            if (erro != null || snapshots == null) return@addSnapshotListener
+            trySend(maisRecentePorPrestador(snapshots.documents))
+        }
+        awaitClose { registro.remove() }
+    }
+
+    override fun escutarRecebidasPeloPrestador(): Flow<List<Solicitacao>> = callbackFlow {
+        val uid = auth.currentUser?.uid ?: run { close(); return@callbackFlow }
+        val registro = colecao().whereEqualTo("prestadorUid", uid).addSnapshotListener { snapshots, erro ->
+            if (erro != null || snapshots == null) return@addSnapshotListener
+            trySend(snapshots.documents.mapNotNull { it.paraSolicitacao() }.sortedByDescending { it.timestamp?.time ?: 0L })
+        }
+        awaitClose { registro.remove() }
     }
 
     override suspend fun temSolicitacaoAtivaCom(prestadorUid: String): Result<Boolean> = runCatching {
@@ -122,6 +142,18 @@ class SolicitacaoRepository @Inject constructor(
             trySend(total)
         }
         awaitClose { registro.remove() }
+    }
+
+    override suspend fun removerMinhaLocalizacao(solicitacaoId: String): Result<Unit> = runCatching {
+        colecao().document(solicitacaoId).update(
+            mapOf(
+                "latitudeCompartilhada" to FieldValue.delete(),
+                "longitudeCompartilhada" to FieldValue.delete(),
+                "localizacaoCompartilhadaEm" to FieldValue.delete(),
+                "localizacaoNaoVistaPrestador" to false
+            )
+        ).await()
+        Unit
     }
 
     override suspend fun marcarLocalizacaoComoVista(solicitacaoId: String) {

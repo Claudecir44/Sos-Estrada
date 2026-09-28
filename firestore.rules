@@ -262,6 +262,18 @@ service cloud.firestore {
         && request.resource.data.longitudeCompartilhada is number
         && request.resource.data.localizacaoCompartilhadaEm == request.time;
 
+      // Segundo toque no "Enviar Minha Localização": o motorista para de
+      // compartilhar a qualquer momento — só pode APAGAR as coordenadas (e
+      // o alerta do prestador), nunca trocar por outras aqui.
+      allow update: if souMotorista()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['latitudeCompartilhada', 'longitudeCompartilhada', 'localizacaoCompartilhadaEm',
+                       'localizacaoNaoVistaPrestador'])
+        && !('latitudeCompartilhada' in request.resource.data)
+        && !('longitudeCompartilhada' in request.resource.data)
+        && !('localizacaoCompartilhadaEm' in request.resource.data)
+        && request.resource.data.get('localizacaoNaoVistaPrestador', false) == false;
+
       // Exclusão permanente só de solicitação já cancelada (SocorroFragment
       // e AtendimentoFragment só mostram essa opção com status=="cancelado"
       // — reforçado aqui pra não virar só uma checagem de UI).
