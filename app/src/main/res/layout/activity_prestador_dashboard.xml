@@ -16,6 +16,25 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Configurações fora do cabeçalho verde, no canto superior
+             esquerdo (termos, regras, assinatura). -->
+        <ImageView
+            android:id="@+id/btnConfiguracoesPrestador"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/bg_admin_avatar"
+            android:backgroundTint="@color/grafite"
+            android:clickable="true"
+            android:contentDescription="Configurações"
+            android:elevation="3dp"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:padding="7dp"
+            android:src="@drawable/ic_configuracoes" />
+
         <!-- Cabeçalho (mesmo formato do painel admin, em verde) -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -33,64 +52,10 @@
                 android:gravity="top"
                 android:orientation="horizontal">
 
-                <!-- Configurações no canto superior esquerdo, ao lado da foto
-                     (termos, regras, assinatura), com a situação do cadastro
-                     e os dias do plano embaixo (StatusAssinatura.resumo). -->
+                <!-- Foto no canto, com a situação do cadastro e os dias do
+                     plano embaixo (StatusAssinatura.resumo). -->
                 <LinearLayout
-                    android:layout_width="70dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="2dp"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical">
-
-                <ImageView
-                    android:id="@+id/btnConfiguracoesPrestador"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/bg_admin_avatar"
-                    android:backgroundTint="@color/grafite"
-                    android:elevation="3dp"
-                    android:clickable="true"
-                    android:contentDescription="Configurações"
-                    android:focusable="true"
-                    android:foreground="?attr/selectableItemBackgroundBorderless"
-                    android:padding="7dp"
-                    android:src="@drawable/ic_configuracoes" />
-
-                <TextView
-                    android:id="@+id/tvCadastroStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:background="@drawable/bg_status_cadastro"
-                    android:gravity="center"
-                    android:maxLines="2"
-                    android:paddingStart="4dp"
-                    android:paddingTop="1dp"
-                    android:paddingEnd="4dp"
-                    android:paddingBottom="1dp"
-                    android:textSize="8sp"
-                    android:textStyle="bold"
-                    android:visibility="invisible"
-                    tools:text="Cadastro ativo"
-                    tools:textColor="@color/verde_neon"
-                    tools:visibility="visible" />
-
-                <TextView
-                    android:id="@+id/tvPlanoStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:gravity="center"
-                    android:maxLines="2"
-                    android:textColor="@android:color/black"
-                    android:textSize="8sp"
-                    tools:text="Plano free 45/60 dias" />
-                </LinearLayout>
-
-                <!-- Foto no canto, com o primeiro nome embaixo -->
-                <LinearLayout
-                    android:layout_width="72dp"
+                    android:layout_width="88dp"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal"
                     android:orientation="vertical">
@@ -108,52 +73,83 @@
                         app:strokeWidth="2dp" />
 
                     <TextView
+                        android:id="@+id/tvCadastroStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_status_cadastro"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:paddingStart="5dp"
+                        android:paddingTop="1dp"
+                        android:paddingEnd="5dp"
+                        android:paddingBottom="1dp"
+                        android:textSize="8sp"
+                        android:textStyle="bold"
+                        android:visibility="invisible"
+                        tools:text="Cadastro ativo"
+                        tools:textColor="@color/verde_neon"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:id="@+id/tvPlanoStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:gravity="center"
+                        android:maxLines="2"
+                        android:textColor="@android:color/black"
+                        android:textSize="8sp"
+                        tools:text="Plano free 45/60 dias" />
+                </LinearLayout>
+
+                <!-- Primeiro nome ao lado da foto e o título numa linha só -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
                         android:id="@+id/tvNomePrestadorPainel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:ellipsize="end"
-                        android:gravity="center"
                         android:maxLines="1"
                         android:text="Prestador"
                         android:textColor="@android:color/white"
-                        android:textSize="12sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="6dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
                         android:letterSpacing="0.1"
                         android:maxLines="1"
                         android:text="🛡️ SOS ESTRADA"
                         android:textColor="#CCFFFFFF"
-                        android:textSize="11sp"
+                        android:textSize="10sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:maxLines="2"
+                        android:layout_height="24dp"
+                        android:maxLines="1"
                         android:text="Painel do Prestador"
                         android:textColor="@android:color/white"
-                        android:textSize="17sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        app:autoSizeMaxTextSize="18sp"
+                        app:autoSizeMinTextSize="11sp"
+                        app:autoSizeTextType="uniform" />
                 </LinearLayout>
-
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
                     android:layout_marginTop="2dp"
                     android:orientation="vertical">
 
@@ -201,6 +197,7 @@
                 android:id="@+id/tvServicoPainel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/bg_admin_chip"
                 android:backgroundTint="#26FFFFFF"
