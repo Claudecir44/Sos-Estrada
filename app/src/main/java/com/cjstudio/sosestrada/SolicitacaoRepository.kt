@@ -4,6 +4,7 @@ import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.ACEITO
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.PENDENTE
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.util.Date
@@ -88,6 +89,21 @@ class SolicitacaoRepository @Inject constructor(
             texto = "✅ Aceitei sua solicitação e estou a caminho para o socorro.",
             imagemUrl = null
         )
+        Unit
+    }
+
+    override suspend fun enviarMinhaLocalizacao(
+        solicitacaoId: String,
+        latitude: Double,
+        longitude: Double
+    ): Result<Unit> = runCatching {
+        colecao().document(solicitacaoId).update(
+            mapOf(
+                "latitudeCompartilhada" to latitude,
+                "longitudeCompartilhada" to longitude,
+                "localizacaoCompartilhadaEm" to FieldValue.serverTimestamp()
+            )
+        ).await()
         Unit
     }
 

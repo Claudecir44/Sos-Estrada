@@ -7,6 +7,10 @@ interface ILocalizacaoRepository {
     // Última localização conhecida; null sem permissão ou com o GPS desligado.
     suspend fun ultimaLocalizacao(): Result<Location?>
 
+    // Pede uma leitura nova do GPS (alta precisão); sem leitura nova, cai na
+    // última conhecida. null sem permissão ou com o GPS desligado.
+    suspend fun localizacaoAtual(): Result<Location?>
+
     // Endereço legível das coordenadas; null se o geocoder não achar.
     suspend fun enderecoDe(latitude: Double, longitude: Double): String?
 

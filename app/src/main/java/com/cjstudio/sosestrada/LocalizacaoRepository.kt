@@ -5,6 +5,8 @@ import android.content.Context
 import android.location.Geocoder
 import android.location.Location
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
@@ -28,6 +30,12 @@ class LocalizacaoRepository @Inject constructor(
     @SuppressLint("MissingPermission")
     override suspend fun ultimaLocalizacao(): Result<Location?> = runCatching {
         fusedLocationClient.lastLocation.await()
+    }
+
+    @SuppressLint("MissingPermission")
+    override suspend fun localizacaoAtual(): Result<Location?> = runCatching {
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, CancellationTokenSource().token).await()
+            ?: fusedLocationClient.lastLocation.await()
     }
 
     // O Geocoder faz rede e bloqueia a thread — sempre fora da thread principal.

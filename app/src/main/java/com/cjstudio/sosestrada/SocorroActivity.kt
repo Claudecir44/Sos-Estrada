@@ -58,12 +58,29 @@ class SocorroActivity : AppCompatActivity() {
         }
     }
 
+    // Prestador escolhido no "Enviar Minha Localização" enquanto a permissão é pedida.
+    private var enviarLocalizacaoPara: Prestador? = null
+
+    private val permissaoParaEnviarLocalizacao = registerForActivityResult(ActivityResultContracts.RequestPermission()) { concedida ->
+        val prestador = enviarLocalizacaoPara
+        enviarLocalizacaoPara = null
+        if (concedida && prestador != null) {
+            enviarMinhaLocalizacao(prestador)
+        } else {
+            Toast.makeText(this, "Sem permissão de localização não é possível enviar sua localização.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySocorroBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        adapter = PrestadorAdapter(aoSolicitar = ::solicitarServico, aoSegurar = ::aoSegurarPrestador)
+        adapter = PrestadorAdapter(
+            aoSolicitar = ::solicitarServico,
+            aoSegurar = ::aoSegurarPrestador,
+            aoEnviarLocalizacao = ::aoEnviarLocalizacao
+        )
         binding.rvPrestadoresSocorro.layoutManager = LinearLayoutManager(this)
         binding.rvPrestadoresSocorro.adapter = adapter
         binding.edtPesquisa.doOnTextChanged { texto, _, _, _ -> adapter.filtrar(texto?.toString().orEmpty()) }
@@ -139,6 +156,42 @@ class SocorroActivity : AppCompatActivity() {
                 }
             }
         }.awaitAll()
+    }
+
+    private fun aoEnviarLocalizacao(prestador: Prestador) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            enviarMinhaLocalizacao(prestador)
+        } else {
+            enviarLocalizacaoPara = prestador
+            permissaoParaEnviarLocalizacao.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    // Lê o GPS agora (não a última posição guardada) e grava na solicitação;
+    // o prestador passa a ver o botão "Localização do Motorista".
+    private fun enviarMinhaLocalizacao(prestador: Prestador) {
+        val solicitacaoId = prestador.solicitacaoId ?: return
+        Toast.makeText(this, "Obtendo sua localização...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val local = localizacaoRepository.localizacaoAtual().getOrElse { e ->
+                Toast.makeText(this@SocorroActivity, "Erro ao obter localização: ${e.message}", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            if (local == null) {
+                Toast.makeText(this@SocorroActivity, "Não foi possível obter sua localização. Verifique se o GPS está ligado.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            latitude = local.latitude
+            longitude = local.longitude
+            temLocalizacao = true
+            solicitacaoRepository.enviarMinhaLocalizacao(solicitacaoId, local.latitude, local.longitude)
+                .onSuccess {
+                    Toast.makeText(this@SocorroActivity, "Localização enviada para ${prestador.nome ?: "o prestador"}.", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure { e ->
+                    Toast.makeText(this@SocorroActivity, "Erro ao enviar localização: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+        }
     }
 
     private fun solicitarServico(prestador: Prestador) {

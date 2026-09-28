@@ -22,6 +22,10 @@ interface ISolicitacaoRepository {
     // Prestador aceita: muda o status e avisa o motorista pelo chat.
     suspend fun aceitar(solicitacaoId: String): Result<Unit>
 
+    // Motorista envia a localização atual pro prestador (só com a
+    // solicitação pendente ou aceita — reforçado nas regras).
+    suspend fun enviarMinhaLocalizacao(solicitacaoId: String, latitude: Double, longitude: Double): Result<Unit>
+
     // Exclusão permanente (as regras só permitem com status "cancelado").
     suspend fun excluir(solicitacaoId: String): Result<Unit>
 

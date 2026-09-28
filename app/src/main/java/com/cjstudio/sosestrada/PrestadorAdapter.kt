@@ -18,7 +18,8 @@ import java.util.Locale
 // Lista de prestadores na busca de socorro do motorista (SocorroActivity).
 class PrestadorAdapter(
     private val aoSolicitar: (Prestador) -> Unit,
-    private val aoSegurar: (Prestador) -> Unit
+    private val aoSegurar: (Prestador) -> Unit,
+    private val aoEnviarLocalizacao: (Prestador) -> Unit
 ) : RecyclerView.Adapter<PrestadorAdapter.ViewHolder>() {
 
     private var todos: List<Prestador> = emptyList()
@@ -50,7 +51,7 @@ class PrestadorAdapter(
         FotoUtil.mostrar(b.ivLogoPrestador, p.logo, R.drawable.ic_placeholder_logo)
 
         mostrarStatus(b, p.statusSolicitacao)
-        mostrarBotaoMensagem(b, p)
+        mostrarBotoesSolicitacao(b, p)
 
         b.root.setOnLongClickListener {
             if (p.statusSolicitacao.isNullOrEmpty()) return@setOnLongClickListener false
@@ -83,14 +84,19 @@ class PrestadorAdapter(
         b.btnSolicitar.visibility = if (podeSolicitar) View.VISIBLE else View.GONE
     }
 
-    // Só aparece quando já existe uma solicitação com este prestador.
-    private fun mostrarBotaoMensagem(b: ItemPrestadorSocorroBinding, p: Prestador) {
+    // Mensagem e Enviar Minha Localização só aparecem quando já existe uma
+    // solicitação com este prestador; enviar a localização, só enquanto ela
+    // está pendente ou aceita (as regras também só permitem nesses status).
+    private fun mostrarBotoesSolicitacao(b: ItemPrestadorSocorroBinding, p: Prestador) {
         val solicitacaoId = p.solicitacaoId
         if (solicitacaoId.isNullOrEmpty()) {
-            b.btnMensagem.visibility = View.GONE
+            b.layoutBotoesSolicitacao.visibility = View.GONE
             return
         }
-        b.btnMensagem.visibility = View.VISIBLE
+        b.layoutBotoesSolicitacao.visibility = View.VISIBLE
+        val emAndamento = p.statusSolicitacao == PENDENTE || p.statusSolicitacao == ACEITO
+        b.btnEnviarLocalizacao.visibility = if (emAndamento) View.VISIBLE else View.GONE
+        b.btnEnviarLocalizacao.setOnClickListener { aoEnviarLocalizacao(p) }
         if (p.naoLidasMotorista > 0) {
             val plural = if (p.naoLidasMotorista > 1) "s" else ""
             b.btnMensagem.text = "💬 Mensagem (${p.naoLidasMotorista} nova$plural)"

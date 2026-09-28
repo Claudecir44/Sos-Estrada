@@ -206,6 +206,17 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'naoLidasMotorista', 'naoLidasPrestador']);
 
+      // "Enviar Minha Localização" (SocorroActivity): só o motorista, só com
+      // a solicitação em andamento, só as coordenadas + horário do servidor.
+      // O prestador vê isso como o botão "Localização do Motorista".
+      allow update: if souMotorista()
+        && resource.data.status in ['pendente', 'aceito']
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['latitudeCompartilhada', 'longitudeCompartilhada', 'localizacaoCompartilhadaEm'])
+        && request.resource.data.latitudeCompartilhada is number
+        && request.resource.data.longitudeCompartilhada is number
+        && request.resource.data.localizacaoCompartilhadaEm == request.time;
+
       // Exclusão permanente só de solicitação já cancelada (SocorroActivity
       // e AtendimentoActivity só mostram essa opção com status=="cancelado"
       // — reforçado aqui pra não virar só uma checagem de UI).

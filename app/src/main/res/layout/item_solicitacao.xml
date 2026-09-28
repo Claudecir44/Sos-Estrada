@@ -118,5 +118,23 @@
             android:layout_marginTop="8dp"
             app:cornerRadius="8dp" />
 
+        <!-- Localização atual enviada pelo motorista ("Enviar Minha
+             Localização"); só aparece depois que ele enviar. -->
+        <Button
+            android:id="@+id/btnLocalizacaoMotorista"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:paddingHorizontal="16dp"
+            android:gravity="center"
+            android:text="📍 Localização do Motorista"
+            android:backgroundTint="#00897B"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            app:cornerRadius="8dp" />
+
     </LinearLayout>
 </androidx.cardview.widget.CardView>

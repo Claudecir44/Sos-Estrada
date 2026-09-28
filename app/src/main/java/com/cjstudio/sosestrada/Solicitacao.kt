@@ -17,6 +17,12 @@ data class Solicitacao(
     var latitudeMotorista: Double = 0.0,
     var longitudeMotorista: Double = 0.0,
     var enderecoMotorista: String? = null,
+    // Localização atual enviada pelo motorista no botão "Enviar Minha
+    // Localização" (null enquanto ele não enviar). Vira o botão
+    // "Localização do Motorista" no card do prestador.
+    var latitudeCompartilhada: Double? = null,
+    var longitudeCompartilhada: Double? = null,
+    var localizacaoCompartilhadaEm: Date? = null,
     // Contadores de mensagens não lidas por lado, mantidos pelo chat
     // (incrementados ao enviar, zerados ao abrir o chat do respectivo lado).
     var naoLidasMotorista: Int = 0,

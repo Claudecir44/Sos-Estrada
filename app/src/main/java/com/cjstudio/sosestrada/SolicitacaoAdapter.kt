@@ -3,6 +3,7 @@ package com.cjstudio.sosestrada
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +16,8 @@ import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.CANCELADO
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.PENDENTE
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.RECUSADO
 import com.cjstudio.sosestrada.databinding.ItemSolicitacaoBinding
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // Solicitações recebidas pelo prestador (AtendimentoActivity).
 class SolicitacaoAdapter(
@@ -71,6 +74,7 @@ class SolicitacaoAdapter(
             if (s.status == PENDENTE) aoRecusar(s)
             else Toast.makeText(context, "Esta solicitação já foi respondida.", Toast.LENGTH_SHORT).show()
         }
+        mostrarLocalizacaoMotorista(b, s, cancelada)
         b.btnMensagem.setOnClickListener {
             context.startActivity(
                 Intent(context, ChatActivity::class.java)
@@ -89,6 +93,26 @@ class SolicitacaoAdapter(
                 .setNegativeButton("Não", null)
                 .show()
             true
+        }
+    }
+
+    // Botão com o link do mapa da localização que o motorista enviou; mostra
+    // o horário do envio pra o prestador saber se é recente.
+    private fun mostrarLocalizacaoMotorista(b: ItemSolicitacaoBinding, s: Solicitacao, cancelada: Boolean) {
+        val lat = s.latitudeCompartilhada
+        val lng = s.longitudeCompartilhada
+        if (cancelada || lat == null || lng == null) {
+            b.btnLocalizacaoMotorista.visibility = View.GONE
+            return
+        }
+        b.btnLocalizacaoMotorista.visibility = View.VISIBLE
+        b.btnLocalizacaoMotorista.text = s.localizacaoCompartilhadaEm
+            ?.let { "📍 Localização do Motorista (${SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(it)})" }
+            ?: "📍 Localização do Motorista"
+        b.btnLocalizacaoMotorista.setOnClickListener {
+            val context = b.root.context
+            val link = "https://www.google.com/maps/search/?api=1&query=$lat,$lng"
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
         }
     }
 
