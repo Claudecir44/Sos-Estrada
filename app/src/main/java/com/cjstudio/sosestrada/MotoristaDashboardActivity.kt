@@ -14,6 +14,13 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MotoristaDashboardActivity : AppCompatActivity() {
 
+    companion object {
+        // Notificação "Prestador respondeu"/"Mensagem Sos Estrada": abre com
+        // a lista de prestadores já aberta (SosFirebaseMessagingService).
+        const val EXTRA_ABRIR_LISTA = "abrirLista"
+        private const val TAG_LISTA = "listaSocorro"
+    }
+
     @Inject
     lateinit var authRepository: IAuthRepository
 
@@ -44,8 +51,10 @@ class MotoristaDashboardActivity : AppCompatActivity() {
         binding = ActivityMotoristaDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnSocorro.setOnClickListener {
-            startActivity(Intent(this, SocorroActivity::class.java))
+        // A lista de prestadores abre logo abaixo, aqui mesmo (não em outra tela).
+        binding.btnSocorro.setOnClickListener { alternarListaSocorro() }
+        binding.btnConfiguracoesMotorista.setOnClickListener {
+            startActivity(ConfiguracoesActivity.intent(this, IChatRepository.MOTORISTA))
         }
         binding.btnMeuPerfilMotorista.setOnClickListener { startActivity(CadastroMotoristaActivity.intentEdicao(this)) }
         binding.ivFotoMotoristaPainel.setOnClickListener { startActivity(CadastroMotoristaActivity.intentEdicao(this)) }
@@ -69,7 +78,41 @@ class MotoristaDashboardActivity : AppCompatActivity() {
             solicitacaoRepository.escutarAlertasMotorista().collect { total ->
                 BadgeUtil.mostrar(binding.badgeSocorro, total)
                 AppIconBadgeUtil.atualizar(this@MotoristaDashboardActivity, total)
+                // Lista aberta: mostra a novidade (resposta, mensagem) na hora.
+                if (binding.containerListaSocorro.isShown) fragmentoSocorro()?.recarregar()
             }
+        }
+
+        // Veio de uma notificação: já abre a lista.
+        if (intent.getBooleanExtra(EXTRA_ABRIR_LISTA, false)) alternarListaSocorro(abrir = true)
+    }
+
+    // App já aberto e chegou outra notificação: abre a lista também.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (::binding.isInitialized && intent.getBooleanExtra(EXTRA_ABRIR_LISTA, false)) alternarListaSocorro(abrir = true)
+    }
+
+    private fun fragmentoSocorro() = supportFragmentManager.findFragmentByTag(TAG_LISTA) as? SocorroFragment
+
+    // Abre/fecha a lista de prestadores embaixo do cartão. O fragmento é
+    // criado uma vez e só escondido ao fechar (reabrir recarrega os dados).
+    private fun alternarListaSocorro(abrir: Boolean = !binding.containerListaSocorro.isShown) {
+        if (abrir) {
+            binding.containerListaSocorro.visibility = android.view.View.VISIBLE
+            val existente = fragmentoSocorro()
+            if (existente == null) {
+                supportFragmentManager.beginTransaction()
+                    .replace(binding.containerListaSocorro.id, SocorroFragment(), TAG_LISTA)
+                    .commit()
+            } else {
+                existente.recarregar()
+            }
+            binding.tvSetaSocorro.text = "⌄"
+            binding.root.post { binding.root.smoothScrollTo(0, binding.btnSocorro.top) }
+        } else {
+            binding.containerListaSocorro.visibility = android.view.View.GONE
+            binding.tvSetaSocorro.text = "›"
         }
     }
 

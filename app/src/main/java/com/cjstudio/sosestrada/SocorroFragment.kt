@@ -10,13 +10,14 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doOnTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.CANCELADO
-import com.cjstudio.sosestrada.databinding.ActivitySocorroBinding
+import com.cjstudio.sosestrada.databinding.FragmentSocorroBinding
 import com.google.firebase.firestore.FirebaseFirestoreException
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
@@ -26,9 +27,11 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // Busca de socorro do motorista: lista os prestadores ativos (com distância,
-// quando há GPS), pede o serviço, cancela e exclui solicitações.
+// quando há GPS), pede o serviço, cancela e exclui solicitações. Abre logo
+// abaixo do cartão "Preciso de socorro", dentro do próprio painel
+// (MotoristaDashboardActivity), e não numa tela separada.
 @AndroidEntryPoint
-class SocorroActivity : AppCompatActivity() {
+class SocorroFragment : Fragment() {
 
     @Inject
     lateinit var authRepository: IAuthRepository
@@ -42,7 +45,7 @@ class SocorroActivity : AppCompatActivity() {
     @Inject
     lateinit var localizacaoRepository: ILocalizacaoRepository
 
-    private lateinit var binding: ActivitySocorroBinding
+    private lateinit var binding: FragmentSocorroBinding
     private lateinit var adapter: PrestadorAdapter
 
     private var latitude = 0.0
@@ -54,7 +57,7 @@ class SocorroActivity : AppCompatActivity() {
         if (concedida) {
             obterLocalizacaoECarregar()
         } else {
-            Toast.makeText(this, "Permissão de localização negada. A distância não será calculada.", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "Permissão de localização negada. A distância não será calculada.", Toast.LENGTH_LONG).show()
             carregarPrestadores()
         }
     }
@@ -68,25 +71,27 @@ class SocorroActivity : AppCompatActivity() {
         if (concedida && prestador != null) {
             enviarMinhaLocalizacao(prestador)
         } else {
-            Toast.makeText(this, "Sem permissão de localização não é possível enviar sua localização.", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "Sem permissão de localização não é possível enviar sua localização.", Toast.LENGTH_LONG).show()
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivitySocorroBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        binding = FragmentSocorroBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         adapter = PrestadorAdapter(
             aoSolicitar = ::solicitarServico,
             aoSegurar = ::aoSegurarPrestador,
             aoEnviarLocalizacao = ::aoEnviarLocalizacao
         )
-        binding.rvPrestadoresSocorro.layoutManager = LinearLayoutManager(this)
+        binding.rvPrestadoresSocorro.layoutManager = LinearLayoutManager(requireContext())
         binding.rvPrestadoresSocorro.adapter = adapter
         binding.edtPesquisa.doOnTextChanged { texto, _, _, _ -> adapter.filtrar(texto?.toString().orEmpty()) }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             obterLocalizacaoECarregar()
         } else {
             permissaoLocalizacao.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -99,8 +104,13 @@ class SocorroActivity : AppCompatActivity() {
         if (primeiraCargaFeita) carregarPrestadores()
     }
 
+    // O painel chama ao reabrir a lista (ela fica escondida, não é recriada).
+    fun recarregar() {
+        if (primeiraCargaFeita && view != null) carregarPrestadores()
+    }
+
     private fun obterLocalizacaoECarregar() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             localizacaoRepository.ultimaLocalizacao()
                 .onSuccess { local ->
                     if (local != null) {
@@ -108,11 +118,11 @@ class SocorroActivity : AppCompatActivity() {
                         longitude = local.longitude
                         temLocalizacao = true
                     } else {
-                        Toast.makeText(this@SocorroActivity, "Não foi possível obter a localização. Verifique o GPS.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Não foi possível obter a localização. Verifique o GPS.", Toast.LENGTH_SHORT).show()
                     }
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@SocorroActivity, "Erro ao obter localização: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Erro ao obter localização: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             carregarPrestadores()
         }
@@ -123,11 +133,11 @@ class SocorroActivity : AppCompatActivity() {
         binding.progressBarSocorro.visibility = View.VISIBLE
         binding.tvEmptySocorro.visibility = View.GONE
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val prestadores = prestadorRepository.listarAtivos().getOrElse { e ->
                 binding.progressBarSocorro.visibility = View.GONE
                 binding.tvEmptySocorro.visibility = View.VISIBLE
-                Toast.makeText(this@SocorroActivity, "Erro ao carregar prestadores: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Erro ao carregar prestadores: ${e.message}", Toast.LENGTH_SHORT).show()
                 return@launch
             }
             if (temLocalizacao) calcularDistancias(prestadores)
@@ -163,7 +173,7 @@ class SocorroActivity : AppCompatActivity() {
     }
 
     private fun aoEnviarLocalizacao(prestador: Prestador) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             enviarMinhaLocalizacao(prestador)
         } else {
             enviarLocalizacaoPara = prestador
@@ -175,14 +185,14 @@ class SocorroActivity : AppCompatActivity() {
     // o prestador passa a ver o botão "Localização do Motorista".
     private fun enviarMinhaLocalizacao(prestador: Prestador) {
         val solicitacaoId = prestador.solicitacaoId ?: return
-        Toast.makeText(this, "Obtendo sua localização...", Toast.LENGTH_SHORT).show()
-        lifecycleScope.launch {
+        Toast.makeText(requireContext(), "Obtendo sua localização...", Toast.LENGTH_SHORT).show()
+        viewLifecycleOwner.lifecycleScope.launch {
             val local = localizacaoRepository.localizacaoAtual().getOrElse { e ->
-                Toast.makeText(this@SocorroActivity, "Erro ao obter localização: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Erro ao obter localização: ${e.message}", Toast.LENGTH_SHORT).show()
                 return@launch
             }
             if (local == null) {
-                Toast.makeText(this@SocorroActivity, "Não foi possível obter sua localização. Verifique se o GPS está ligado.", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Não foi possível obter sua localização. Verifique se o GPS está ligado.", Toast.LENGTH_LONG).show()
                 return@launch
             }
             latitude = local.latitude
@@ -190,7 +200,7 @@ class SocorroActivity : AppCompatActivity() {
             temLocalizacao = true
             solicitacaoRepository.enviarMinhaLocalizacao(solicitacaoId, local.latitude, local.longitude)
                 .onSuccess {
-                    Toast.makeText(this@SocorroActivity, "Localização enviada para ${prestador.nome ?: "o prestador"}.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Localização enviada para ${prestador.nome ?: "o prestador"}.", Toast.LENGTH_SHORT).show()
                 }
                 .onFailure { e ->
                     // As regras recusam se a solicitação deixou de estar aceita
@@ -198,7 +208,7 @@ class SocorroActivity : AppCompatActivity() {
                     val negado = (e as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
                     val texto = if (negado) "Só é possível enviar sua localização com a solicitação aceita pelo prestador."
                     else "Erro ao enviar localização: ${e.message}"
-                    Toast.makeText(this@SocorroActivity, texto, Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), texto, Toast.LENGTH_LONG).show()
                     if (negado) carregarPrestadores()
                 }
         }
@@ -207,26 +217,26 @@ class SocorroActivity : AppCompatActivity() {
     private fun solicitarServico(prestador: Prestador) {
         val prestadorUid = prestador.uid ?: return
         if (authRepository.uidLogado() == null) {
-            Toast.makeText(this, "Faça login como motorista primeiro", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Faça login como motorista primeiro", Toast.LENGTH_SHORT).show()
             return
         }
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val jaTem = solicitacaoRepository.temSolicitacaoAtivaCom(prestadorUid).getOrElse { e ->
-                Toast.makeText(this@SocorroActivity, "Erro ao enviar solicitação: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Erro ao enviar solicitação: ${e.message}", Toast.LENGTH_SHORT).show()
                 return@launch
             }
             if (jaTem) {
-                Toast.makeText(this@SocorroActivity, "Você já possui uma solicitação pendente ou aceita para este prestador.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Você já possui uma solicitação pendente ou aceita para este prestador.", Toast.LENGTH_SHORT).show()
                 return@launch
             }
             val endereco = if (temLocalizacao) localizacaoRepository.enderecoDe(latitude, longitude) else null
             solicitacaoRepository.solicitar(prestador, latitude, longitude, endereco)
                 .onSuccess {
-                    Toast.makeText(this@SocorroActivity, "✅ Solicitação enviada para ${prestador.nome}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), "✅ Solicitação enviada para ${prestador.nome}", Toast.LENGTH_LONG).show()
                     carregarPrestadores()
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@SocorroActivity, "Erro ao enviar solicitação: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Erro ao enviar solicitação: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         }
     }
@@ -234,11 +244,11 @@ class SocorroActivity : AppCompatActivity() {
     private fun aoSegurarPrestador(prestador: Prestador) {
         val solicitacaoId = prestador.solicitacaoId
         if (prestador.statusSolicitacao == null || solicitacaoId == null) {
-            Toast.makeText(this, "Não há solicitação ativa para este prestador.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Não há solicitação ativa para este prestador.", Toast.LENGTH_SHORT).show()
             return
         }
         if (prestador.statusSolicitacao == CANCELADO) {
-            AlertDialog.Builder(this)
+            AlertDialog.Builder(requireContext())
                 .setTitle("Excluir permanentemente")
                 .setMessage("Esta solicitação já foi cancelada. Deseja excluí-la permanentemente?")
                 .setPositiveButton("Sim") { _, _ -> excluir(solicitacaoId) }
@@ -250,17 +260,17 @@ class SocorroActivity : AppCompatActivity() {
     }
 
     private fun confirmarCancelamento(solicitacaoId: String) {
-        val view = LayoutInflater.from(this).inflate(R.layout.dialog_cancelar_solicitacao, null)
+        val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_cancelar_solicitacao, null)
         val checkBox = view.findViewById<CheckBox>(R.id.checkBoxConfirmacaoCancelamento)
         val edtSenha = view.findViewById<EditText>(R.id.edtSenhaCancelamento)
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(requireContext())
             .setTitle("Cancelar solicitação")
             .setView(view)
             .setPositiveButton("Cancelar solicitação") { _, _ ->
                 val senha = edtSenha.text.toString().trim()
                 when {
-                    !checkBox.isChecked -> Toast.makeText(this, "Marque a checkbox para confirmar.", Toast.LENGTH_SHORT).show()
-                    senha.isEmpty() -> Toast.makeText(this, "Digite sua senha.", Toast.LENGTH_SHORT).show()
+                    !checkBox.isChecked -> Toast.makeText(requireContext(), "Marque a checkbox para confirmar.", Toast.LENGTH_SHORT).show()
+                    senha.isEmpty() -> Toast.makeText(requireContext(), "Digite sua senha.", Toast.LENGTH_SHORT).show()
                     else -> cancelar(solicitacaoId, senha)
                 }
             }
@@ -271,31 +281,31 @@ class SocorroActivity : AppCompatActivity() {
     // Cancela só a solicitação deste card (antes cancelava todas as
     // solicitações já feitas com o prestador, inclusive as antigas).
     private fun cancelar(solicitacaoId: String, senha: String) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             if (authRepository.reautenticar(senha).isFailure) {
-                Toast.makeText(this@SocorroActivity, "Senha incorreta. Tente novamente.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Senha incorreta. Tente novamente.", Toast.LENGTH_SHORT).show()
                 return@launch
             }
             solicitacaoRepository.atualizarStatus(solicitacaoId, CANCELADO)
                 .onSuccess {
-                    Toast.makeText(this@SocorroActivity, "Solicitação cancelada com sucesso.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Solicitação cancelada com sucesso.", Toast.LENGTH_SHORT).show()
                     carregarPrestadores()
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@SocorroActivity, "Erro ao cancelar: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Erro ao cancelar: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         }
     }
 
     private fun excluir(solicitacaoId: String) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             solicitacaoRepository.excluir(solicitacaoId)
                 .onSuccess {
-                    Toast.makeText(this@SocorroActivity, "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show()
                     carregarPrestadores()
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@SocorroActivity, "Erro ao excluir: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Erro ao excluir: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         }
     }

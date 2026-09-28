@@ -96,6 +96,23 @@
                         app:autoSizeTextType="uniform" />
                 </LinearLayout>
 
+                <!-- Configurações (termos, regras) -->
+                <TextView
+                    android:id="@+id/btnConfiguracoesMotorista"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_admin_avatar"
+                    android:backgroundTint="#33FFFFFF"
+                    android:clickable="true"
+                    android:contentDescription="Configurações"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:text="⚙️"
+                    android:textSize="18sp" />
+
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -226,6 +243,7 @@
                 </LinearLayout>
 
                 <TextView
+                    android:id="@+id/tvSetaSocorro"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
@@ -233,6 +251,14 @@
                     android:textSize="34sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Lista de prestadores (SocorroFragment): abre aqui mesmo, ao tocar no cartão acima -->
+        <FrameLayout
+            android:id="@+id/containerListaSocorro"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="24dp"
+            android:visibility="gone" />
 
     </LinearLayout>
 </ScrollView>

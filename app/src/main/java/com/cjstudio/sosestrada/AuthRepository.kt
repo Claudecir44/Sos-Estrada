@@ -62,6 +62,25 @@ class AuthRepository @Inject constructor(
         Unit
     }
 
+    // Precisa da senha porque o Firebase só manda o e-mail de verificação pra
+    // um usuário logado (no Caronas o reenvio sem senha depende de uma Cloud
+    // Function com permissão extra no Google Cloud, que nunca foi liberada).
+    override suspend fun reenviarValidacao(email: String, senha: String): Result<String> = runCatching {
+        val usuario = auth.signInWithEmailAndPassword(email.trim(), senha).await().user
+            ?: throw IllegalStateException("Não foi possível entrar com esse e-mail.")
+        try {
+            usuario.reload().await()
+            if (usuario.isEmailVerified) {
+                "Este cadastro já está validado. Pode entrar normalmente."
+            } else {
+                reenviarVerificacaoComIntervalo(usuario)
+                    .replace("Valide seu cadastro pelo e-mail para poder entrar. ", "")
+            }
+        } finally {
+            auth.signOut()
+        }
+    }
+
     override suspend fun trocarEmail(novoEmail: String, senha: String): Result<Unit> = runCatching {
         reautenticar(senha).getOrElse { throw IllegalArgumentException("Senha incorreta.") }
         val usuario = auth.currentUser ?: throw IllegalStateException("Não há sessão ativa.")

@@ -1,51 +1,47 @@
 package com.cjstudio.sosestrada
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.RECUSADO
-import com.cjstudio.sosestrada.databinding.ActivityAtendimentoBinding
+import com.cjstudio.sosestrada.databinding.FragmentAtendimentoBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // Solicitações recebidas pelo prestador: aceitar, recusar, abrir o chat e
-// excluir as canceladas.
+// excluir as canceladas. Abre logo abaixo do cartão "Atender solicitações",
+// dentro do próprio painel (PrestadorDashboardActivity).
 @AndroidEntryPoint
-class AtendimentoActivity : AppCompatActivity() {
-
-    @Inject
-    lateinit var authRepository: IAuthRepository
+class AtendimentoFragment : Fragment() {
 
     @Inject
     lateinit var solicitacaoRepository: ISolicitacaoRepository
 
-    private lateinit var binding: ActivityAtendimentoBinding
+    private lateinit var binding: FragmentAtendimentoBinding
     private lateinit var adapter: SolicitacaoAdapter
     private var primeiraCargaFeita = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        binding = FragmentAtendimentoBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        if (authRepository.uidLogado() == null) {
-            Toast.makeText(this, "Faça login novamente", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-
-        binding = ActivityAtendimentoBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
+    // O login já é conferido pelo painel que hospeda esta lista.
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         adapter = SolicitacaoAdapter(
             aoAceitar = { s -> s.id?.let { aceitar(it) } },
             aoRecusar = { s -> s.id?.let { atualizarStatus(it, RECUSADO) } },
             aoExcluir = { s -> s.id?.let { excluir(it) } },
-            aoVerLocalizacao = { s -> s.id?.let { id -> lifecycleScope.launch { solicitacaoRepository.marcarLocalizacaoComoVista(id) } } }
+            aoVerLocalizacao = { s -> s.id?.let { id -> viewLifecycleOwner.lifecycleScope.launch { solicitacaoRepository.marcarLocalizacaoComoVista(id) } } }
         )
-        binding.rvAtendimento.layoutManager = LinearLayoutManager(this)
+        binding.rvAtendimento.layoutManager = LinearLayoutManager(requireContext())
         binding.rvAtendimento.adapter = adapter
 
         carregarSolicitacoes()
@@ -57,11 +53,16 @@ class AtendimentoActivity : AppCompatActivity() {
         if (primeiraCargaFeita) carregarSolicitacoes()
     }
 
+    // O painel chama ao reabrir a lista (ela fica escondida, não é recriada).
+    fun recarregar() {
+        if (primeiraCargaFeita && view != null) carregarSolicitacoes()
+    }
+
     private fun carregarSolicitacoes() {
         primeiraCargaFeita = true
         binding.progressBarAtendimento.visibility = View.VISIBLE
         binding.tvEmptyAtendimento.visibility = View.GONE
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             solicitacaoRepository.recebidasPeloPrestador()
                 .onSuccess { lista ->
                     adapter.atualizarLista(lista)
@@ -71,7 +72,7 @@ class AtendimentoActivity : AppCompatActivity() {
                     if (lista.any { it.novaParaPrestador }) solicitacaoRepository.marcarNovasComoVistas()
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@AtendimentoActivity, "Erro ao carregar: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Erro ao carregar: ${e.message}", Toast.LENGTH_SHORT).show()
                     binding.tvEmptyAtendimento.visibility = View.VISIBLE
                 }
             binding.progressBarAtendimento.visibility = View.GONE
@@ -79,40 +80,40 @@ class AtendimentoActivity : AppCompatActivity() {
     }
 
     private fun aceitar(solicitacaoId: String) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             solicitacaoRepository.aceitar(solicitacaoId)
                 .onSuccess {
-                    Toast.makeText(this@AtendimentoActivity, "Solicitação aceita! O motorista foi avisado pelo chat.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Solicitação aceita! O motorista foi avisado pelo chat.", Toast.LENGTH_SHORT).show()
                     carregarSolicitacoes()
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@AtendimentoActivity, "Erro ao atualizar: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Erro ao atualizar: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         }
     }
 
     private fun atualizarStatus(solicitacaoId: String, status: String) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             solicitacaoRepository.atualizarStatus(solicitacaoId, status)
                 .onSuccess {
-                    Toast.makeText(this@AtendimentoActivity, "Solicitação ${SolicitacaoAdapter.descricaoStatus(status)}!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Solicitação ${SolicitacaoAdapter.descricaoStatus(status)}!", Toast.LENGTH_SHORT).show()
                     carregarSolicitacoes()
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@AtendimentoActivity, "Erro ao atualizar: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Erro ao atualizar: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         }
     }
 
     private fun excluir(solicitacaoId: String) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             solicitacaoRepository.excluir(solicitacaoId)
                 .onSuccess {
-                    Toast.makeText(this@AtendimentoActivity, "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Solicitação excluída permanentemente.", Toast.LENGTH_SHORT).show()
                     carregarSolicitacoes()
                 }
                 .onFailure { e ->
-                    Toast.makeText(this@AtendimentoActivity, "Erro ao excluir: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Erro ao excluir: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         }
     }

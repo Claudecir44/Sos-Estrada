@@ -140,7 +140,7 @@ exports.provisionarAdminInicial = onCall(async (request) => {
 // ============================================================
 // Assinatura de prestadores (Mercado Pago) — 180 dias grátis a partir do
 // cadastro, depois um único plano anual (R$49,90 / 365 dias) pra manter o
-// cadastro visível na busca do motorista (SocorroActivity filtra por
+// cadastro visível na busca do motorista (SocorroFragment filtra por
 // "ativo"==true). Espelha o desenho do Match (createPaymentPreference/
 // paymentWebhook/checkPaymentStatus), simplificado: aqui é só um plano, e
 // vencer sem pagar apenas desativa a listagem — nunca apaga a conta.
@@ -173,7 +173,7 @@ exports.aoRegistrarPrestador = onDocumentCreated({ document: "prestadores/{uid}"
 
 // Backfill pra prestadores cadastrados ANTES do módulo de assinatura
 // existir — sem os campos novos, o filtro whereEqualTo("ativo", true) do
-// SocorroActivity os deixaria invisíveis pra sempre. dataCadastro real
+// SocorroFragment os deixaria invisíveis pra sempre. dataCadastro real
 // desses cadastros antigos não é conhecida, então usa a data de hoje como
 // início do trial (mais generoso que assumir que o trial já venceu).
 // Idempotente e de baixo risco (só preenche o que está faltando, nunca

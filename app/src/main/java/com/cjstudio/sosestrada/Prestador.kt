@@ -3,7 +3,7 @@ package com.cjstudio.sosestrada
 import com.google.firebase.firestore.Exclude
 
 // Documento prestadores/{uid}. Os campos do fim (distancia em diante) não
-// vêm do Firestore: são preenchidos na busca do motorista (SocorroActivity).
+// vêm do Firestore: são preenchidos na busca do motorista (SocorroFragment).
 data class Prestador(
     var uid: String? = null,
     var nome: String? = null,

@@ -1,42 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Lista de prestadores do "Preciso de socorro" — abre dentro do painel do
+     motorista, logo abaixo do cartão (SocorroFragment). A rolagem é a do
+     próprio painel, por isso a lista não rola sozinha. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="30dp"
-    android:paddingTop="80dp"
-    android:background="#F5F5F5">
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="12dp">
 
-    <!-- Título principal -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="🚨 Solicitar Socorro"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="#D32F2F"
-        android:gravity="center"
-        android:layout_marginBottom="8dp" />
-
-    <!-- Subtítulo -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Encontre prestadores próximos para ajudar você:"
-        android:textSize="16sp"
-        android:textColor="#666666"
-        android:gravity="center"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:text="Prestadores disponíveis"
+        android:textColor="@color/admin_texto"
+        android:textSize="15sp"
+        android:textStyle="bold" />
 
     <!-- Campo de Pesquisa -->
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:endIconMode="clear_text"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        app:endIconMode="clear_text">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/edtPesquisa"
@@ -47,30 +40,32 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- ProgressBar -->
     <ProgressBar
         android:id="@+id/progressBarSocorro"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_margin="16dp"
         android:visibility="gone" />
 
-    <!-- Mensagem de lista vazia -->
     <TextView
         android:id="@+id/tvEmptySocorro"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Nenhum prestador disponível no momento.\nTente novamente mais tarde."
-        android:textSize="16sp"
-        android:textColor="#666666"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
         android:gravity="center"
-        android:visibility="gone"
-        android:layout_marginTop="32dp" />
+        android:text="Nenhum prestador disponível no momento.\nTente novamente mais tarde."
+        android:textColor="#666666"
+        android:textSize="15sp"
+        android:visibility="gone" />
 
-    <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPrestadoresSocorro"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"
+        android:paddingBottom="16dp"
+        android:clipToPadding="false" />
 
 </LinearLayout>

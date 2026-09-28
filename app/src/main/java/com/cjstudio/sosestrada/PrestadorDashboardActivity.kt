@@ -14,6 +14,13 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PrestadorDashboardActivity : AppCompatActivity() {
 
+    companion object {
+        // Notificação de solicitação/mensagem/localização: abre com as
+        // solicitações já abertas (SosFirebaseMessagingService).
+        const val EXTRA_ABRIR_LISTA = "abrirLista"
+        private const val TAG_LISTA = "listaAtendimento"
+    }
+
     @Inject
     lateinit var authRepository: IAuthRepository
 
@@ -44,11 +51,11 @@ class PrestadorDashboardActivity : AppCompatActivity() {
         binding = ActivityPrestadorDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnAtender.setOnClickListener {
-            startActivity(Intent(this, AtendimentoActivity::class.java))
-        }
-        binding.btnAssinatura.setOnClickListener {
-            startActivity(Intent(this, AssinaturaActivity::class.java))
+        // As solicitações abrem logo abaixo, aqui mesmo (não em outra tela).
+        binding.btnAtender.setOnClickListener { alternarListaAtendimento() }
+        // Assinatura, termos e regras ficam nas Configurações.
+        binding.btnConfiguracoesPrestador.setOnClickListener {
+            startActivity(ConfiguracoesActivity.intent(this, IChatRepository.PRESTADOR))
         }
         binding.btnMeuPerfilPrestador.setOnClickListener { startActivity(CadastroPrestadorActivity.intentEdicao(this)) }
         binding.ivFotoPrestadorPainel.setOnClickListener { startActivity(CadastroPrestadorActivity.intentEdicao(this)) }
@@ -71,7 +78,41 @@ class PrestadorDashboardActivity : AppCompatActivity() {
             solicitacaoRepository.escutarAlertasPrestador().collect { total ->
                 BadgeUtil.mostrar(binding.badgeAtender, total)
                 AppIconBadgeUtil.atualizar(this@PrestadorDashboardActivity, total)
+                // Lista aberta: mostra a novidade (pedido, mensagem, localização) na hora.
+                if (binding.containerListaAtendimento.isShown) fragmentoAtendimento()?.recarregar()
             }
+        }
+
+        // Veio de uma notificação: já abre as solicitações.
+        if (intent.getBooleanExtra(EXTRA_ABRIR_LISTA, false)) alternarListaAtendimento(abrir = true)
+    }
+
+    // App já aberto e chegou outra notificação: abre a lista também.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (::binding.isInitialized && intent.getBooleanExtra(EXTRA_ABRIR_LISTA, false)) alternarListaAtendimento(abrir = true)
+    }
+
+    private fun fragmentoAtendimento() = supportFragmentManager.findFragmentByTag(TAG_LISTA) as? AtendimentoFragment
+
+    // Abre/fecha as solicitações embaixo do cartão. O fragmento é criado uma
+    // vez e só escondido ao fechar (reabrir recarrega os dados).
+    private fun alternarListaAtendimento(abrir: Boolean = !binding.containerListaAtendimento.isShown) {
+        if (abrir) {
+            binding.containerListaAtendimento.visibility = android.view.View.VISIBLE
+            val existente = fragmentoAtendimento()
+            if (existente == null) {
+                supportFragmentManager.beginTransaction()
+                    .replace(binding.containerListaAtendimento.id, AtendimentoFragment(), TAG_LISTA)
+                    .commit()
+            } else {
+                existente.recarregar()
+            }
+            binding.tvSetaAtender.text = "⌄"
+            binding.root.post { binding.root.smoothScrollTo(0, binding.btnAtender.top) }
+        } else {
+            binding.containerListaAtendimento.visibility = android.view.View.GONE
+            binding.tvSetaAtender.text = "›"
         }
     }
 

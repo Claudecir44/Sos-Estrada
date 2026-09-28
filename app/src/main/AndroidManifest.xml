@@ -42,10 +42,10 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".AtendimentoActivity"
+            android:name=".ConfiguracoesActivity"
             android:exported="false" />
         <activity
-            android:name=".SocorroActivity"
+            android:name=".TextoInformativoActivity"
             android:exported="false" />
         <activity
             android:name=".MainActivity"

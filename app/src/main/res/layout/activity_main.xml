@@ -133,4 +133,27 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
+    <!-- Suporte (canto superior direito): redefinir senha e reenviar o
+         e-mail de validação do cadastro, mesmo modelo do Caronas. -->
+    <TextView
+        android:id="@+id/tvSuporte"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_admin_chip"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp"
+        android:text="❓ Suporte"
+        android:textColor="#555555"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

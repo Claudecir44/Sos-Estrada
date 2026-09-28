@@ -19,7 +19,7 @@ import com.cjstudio.sosestrada.databinding.ItemSolicitacaoBinding
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-// Solicitações recebidas pelo prestador (AtendimentoActivity).
+// Solicitações recebidas pelo prestador (AtendimentoFragment).
 class SolicitacaoAdapter(
     private val aoAceitar: (Solicitacao) -> Unit,
     private val aoRecusar: (Solicitacao) -> Unit,

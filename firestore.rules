@@ -133,7 +133,7 @@ service cloud.firestore {
       // ampla: diferente de "prestadores", o perfil do motorista nunca é
       // lido por outro usuário — os dados relevantes (nome, telefone,
       // veículo, placa) são copiados pra dentro de "solicitacoes" na hora
-      // da solicitação (SocorroActivity.onSolicitarServico).
+      // da solicitação (SocorroFragment.onSolicitarServico).
       allow read: if ehDono(uid) || ehAdmin();
       // Dono: cria e edita o próprio perfil, mas nunca mexe em "bloqueado"
       // e, bloqueado, não edita mais nada. Admin: só com a senha master.
@@ -172,7 +172,7 @@ service cloud.firestore {
       allow delete: if ehDono(uid) || acaoAdminAutorizada('prestadores', uid);
       // Leitura ampla e proposital: é um diretório de prestadores — todo
       // motorista logado precisa listar/buscar todos pra pedir socorro
-      // (SocorroActivity lê "prestadores" filtrando só por ativo==true,
+      // (SocorroFragment lê "prestadores" filtrando só por ativo==true,
       // mas a leitura em si não é restrita por esse campo).
       allow read: if estaLogado();
     }
@@ -201,14 +201,14 @@ service cloud.firestore {
 
       allow read: if ehAdmin() || souMotorista() || souPrestador();
 
-      // Só o motorista cria (SocorroActivity.onSolicitarServico), sempre
+      // Só o motorista cria (SocorroFragment.onSolicitarServico), sempre
       // com o próprio uid.
       allow create: if estaLogado() && request.resource.data.motoristaUid == request.auth.uid
         && !estaBloqueado(request.auth.uid);
 
       // Update é sempre parcial e feito por quem participa da solicitação:
-      // - status: motorista cancela (SocorroActivity) ou prestador
-      //   aceita/recusa (AtendimentoActivity) — os dois lados usam o mesmo
+      // - status: motorista cancela (SocorroFragment) ou prestador
+      //   aceita/recusa (AtendimentoFragment) — os dois lados usam o mesmo
       //   campo, então não dá pra restringir qual valor cada lado escreve
       //   sem duplicar a regra; qualquer um dos dois já tem que ser
       //   participante da solicitação pra chegar aqui.
@@ -225,7 +225,7 @@ service cloud.firestore {
                        'novaParaPrestador', 'respostaNaoVistaMotorista',
                        'localizacaoNaoVistaPrestador']);
 
-      // "Enviar Minha Localização" (SocorroActivity): só o motorista, só
+      // "Enviar Minha Localização" (SocorroFragment): só o motorista, só
       // depois que o prestador aceitou, só as coordenadas + horário do
       // servidor. O prestador vê isso como o botão "Localização do Motorista".
       allow update: if souMotorista()
@@ -238,8 +238,8 @@ service cloud.firestore {
         && request.resource.data.longitudeCompartilhada is number
         && request.resource.data.localizacaoCompartilhadaEm == request.time;
 
-      // Exclusão permanente só de solicitação já cancelada (SocorroActivity
-      // e AtendimentoActivity só mostram essa opção com status=="cancelado"
+      // Exclusão permanente só de solicitação já cancelada (SocorroFragment
+      // e AtendimentoFragment só mostram essa opção com status=="cancelado"
       // — reforçado aqui pra não virar só uma checagem de UI).
       allow delete: if (souMotorista() || souPrestador()) && resource.data.status == 'cancelado';
 

@@ -96,6 +96,23 @@
                         app:autoSizeTextType="uniform" />
                 </LinearLayout>
 
+                <!-- Configurações (termos, regras, assinatura) -->
+                <TextView
+                    android:id="@+id/btnConfiguracoesPrestador"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_admin_avatar"
+                    android:backgroundTint="#33FFFFFF"
+                    android:clickable="true"
+                    android:contentDescription="Configurações"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:text="⚙️"
+                    android:textSize="18sp" />
+
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -226,6 +243,7 @@
                 </LinearLayout>
 
                 <TextView
+                    android:id="@+id/tvSetaAtender"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
@@ -234,70 +252,13 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Solicitações recebidas (AtendimentoFragment): abrem aqui mesmo, ao tocar no cartão acima -->
+        <FrameLayout
+            android:id="@+id/containerListaAtendimento"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:text="Minha conta"
-            android:textColor="@color/admin_texto"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <!-- Assinatura -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/btnAssinatura"
-            style="@style/AdminCard"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="24dp"
-            android:clickable="true"
-            android:focusable="true">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <TextView
-                    style="@style/AdminAvatar"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:backgroundTint="@color/admin_laranja_claro"
-                    android:text="💳"
-                    android:textSize="18sp" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/AdminTitulo"
-                        android:text="Assinatura"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Período grátis, plano e validade"
-                        android:textColor="@color/admin_texto_secundario"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="›"
-                    android:textColor="#9CA3AF"
-                    android:textSize="28sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            android:paddingBottom="24dp"
+            android:visibility="gone" />
 
     </LinearLayout>
 </ScrollView>

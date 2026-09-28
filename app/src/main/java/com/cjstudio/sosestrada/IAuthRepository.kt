@@ -21,6 +21,11 @@ interface IAuthRepository {
 
     suspend fun enviarRedefinicaoSenha(email: String): Result<Unit>
 
+    // Suporte da tela inicial ("Reenviar e-mail de validação"): entra com
+    // e-mail e senha só pra pedir o reenvio e sai em seguida. Devolve a
+    // mensagem pra mostrar (reenviado, já validado, aguarde, etc.).
+    suspend fun reenviarValidacao(email: String, senha: String): Result<String>
+
     // Troca o e-mail de login: confirma a senha atual e manda um link pro
     // e-mail NOVO — o login só muda depois que a pessoa abre esse link.
     suspend fun trocarEmail(novoEmail: String, senha: String): Result<Unit>

@@ -8,7 +8,6 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.core.app.TaskStackBuilder
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -66,17 +65,15 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
         idNotificacao: Int,
         paraPrestador: Boolean
     ) {
-        // Painel embaixo e a lista em cima: o "voltar" cai no painel.
-        val (painel, lista) = if (paraPrestador) {
-            PrestadorDashboardActivity::class.java to AtendimentoActivity::class.java
-        } else {
-            MotoristaDashboardActivity::class.java to SocorroActivity::class.java
-        }
-        val pendingIntent = TaskStackBuilder.create(this)
-            .addNextIntent(Intent(this, painel))
-            .addNextIntent(Intent(this, lista))
-            .getPendingIntent(idNotificacao, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            ?: return
+        // Abre o painel do lado certo já com a lista aberta embaixo do cartão
+        // (a lista agora fica dentro do painel, não numa tela separada).
+        val painel = if (paraPrestador) PrestadorDashboardActivity::class.java else MotoristaDashboardActivity::class.java
+        val abrir = Intent(this, painel)
+            .putExtra(MotoristaDashboardActivity.EXTRA_ABRIR_LISTA, true)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val pendingIntent = PendingIntent.getActivity(
+            this, idNotificacao, abrir, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val manager = getSystemService(NotificationManager::class.java) ?: return

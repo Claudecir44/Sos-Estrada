@@ -15,7 +15,7 @@ import com.cjstudio.sosestrada.ISolicitacaoRepository.Companion.RECUSADO
 import com.cjstudio.sosestrada.databinding.ItemPrestadorSocorroBinding
 import java.util.Locale
 
-// Lista de prestadores na busca de socorro do motorista (SocorroActivity).
+// Lista de prestadores na busca de socorro do motorista (SocorroFragment).
 class PrestadorAdapter(
     private val aoSolicitar: (Prestador) -> Unit,
     private val aoSegurar: (Prestador) -> Unit,
