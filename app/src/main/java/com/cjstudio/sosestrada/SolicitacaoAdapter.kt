@@ -23,7 +23,9 @@ import java.util.Locale
 class SolicitacaoAdapter(
     private val aoAceitar: (Solicitacao) -> Unit,
     private val aoRecusar: (Solicitacao) -> Unit,
-    private val aoExcluir: (Solicitacao) -> Unit
+    private val aoExcluir: (Solicitacao) -> Unit,
+    // Prestador abriu a localização que o motorista enviou: apaga o alerta.
+    private val aoVerLocalizacao: (Solicitacao) -> Unit
 ) : RecyclerView.Adapter<SolicitacaoAdapter.ViewHolder>() {
 
     private var solicitacoes: List<Solicitacao> = emptyList()
@@ -94,12 +96,14 @@ class SolicitacaoAdapter(
     // depois abre o mapa e mostra o horário do envio, pra saber se é recente.
     private fun mostrarLocalizacaoMotorista(b: ItemSolicitacaoBinding, s: Solicitacao, cancelada: Boolean) {
         if (cancelada) {
-            b.btnLocalizacaoMotorista.visibility = View.GONE
+            b.containerLocalizacaoMotorista.visibility = View.GONE
             return
         }
-        b.btnLocalizacaoMotorista.visibility = View.VISIBLE
+        b.containerLocalizacaoMotorista.visibility = View.VISIBLE
         val lat = s.latitudeCompartilhada
         val lng = s.longitudeCompartilhada
+        // Bolinha "1" enquanto o prestador não abriu a localização nova.
+        BadgeUtil.mostrar(b.badgeLocalizacaoMotorista, if (s.localizacaoNaoVistaPrestador && lat != null) 1 else 0)
         if (lat == null || lng == null) {
             b.btnLocalizacaoMotorista.text = "📍 Localização do Motorista"
             b.btnLocalizacaoMotorista.backgroundTintList = ColorStateList.valueOf(0xFF9E9E9E.toInt())
@@ -111,11 +115,17 @@ class SolicitacaoAdapter(
             return
         }
         b.btnLocalizacaoMotorista.backgroundTintList = ColorStateList.valueOf(0xFF00897B.toInt())
+        // Horário do envio na 2ª linha, pra caber no botão.
         b.btnLocalizacaoMotorista.text = s.localizacaoCompartilhadaEm
-            ?.let { "📍 Localização do Motorista (${SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(it)})" }
+            ?.let { "📍 Localização do Motorista\nenviada em ${SimpleDateFormat("dd/MM 'às' HH:mm", Locale.getDefault()).format(it)}" }
             ?: "📍 Localização do Motorista"
         b.btnLocalizacaoMotorista.setOnClickListener {
             val context = b.root.context
+            if (s.localizacaoNaoVistaPrestador) {
+                s.localizacaoNaoVistaPrestador = false
+                b.badgeLocalizacaoMotorista.visibility = View.GONE
+                aoVerLocalizacao(s)
+            }
             val link = "https://www.google.com/maps/search/?api=1&query=$lat,$lng"
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
         }

@@ -23,6 +23,8 @@ data class Solicitacao(
     var latitudeCompartilhada: Double? = null,
     var longitudeCompartilhada: Double? = null,
     var localizacaoCompartilhadaEm: Date? = null,
+    // Alerta: true a cada envio do motorista; o prestador zera ao abrir o mapa.
+    var localizacaoNaoVistaPrestador: Boolean = false,
     // Contadores de mensagens não lidas por lado, mantidos pelo chat
     // (incrementados ao enviar, zerados ao abrir o chat do respectivo lado).
     var naoLidasMotorista: Int = 0,

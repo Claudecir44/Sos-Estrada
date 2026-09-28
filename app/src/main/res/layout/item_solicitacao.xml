@@ -131,22 +131,40 @@
         </FrameLayout>
 
         <!-- Localização atual enviada pelo motorista ("Enviar Minha
-             Localização"); cinza até ele enviar (SolicitacaoAdapter). -->
-        <Button
-            android:id="@+id/btnLocalizacaoMotorista"
+             Localização"); cinza até ele enviar, com o horário do envio na
+             2ª linha e bolinha até o prestador abrir (SolicitacaoAdapter). -->
+        <FrameLayout
+            android:id="@+id/containerLocalizacaoMotorista"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:paddingHorizontal="16dp"
-            android:gravity="center"
-            android:text="📍 Localização do Motorista"
-            android:backgroundTint="#00897B"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:layout_marginTop="8dp"
-            android:visibility="gone"
-            app:cornerRadius="8dp" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnLocalizacaoMotorista"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:layout_marginTop="6dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp"
+                android:gravity="center"
+                android:text="📍 Localização do Motorista"
+                android:textAllCaps="false"
+                android:backgroundTint="#00897B"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:lineSpacingExtra="1dp"
+                app:cornerRadius="8dp" />
+
+            <TextView
+                android:id="@+id/badgeLocalizacaoMotorista"
+                style="@style/BadgeNotificacao" />
+        </FrameLayout>
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

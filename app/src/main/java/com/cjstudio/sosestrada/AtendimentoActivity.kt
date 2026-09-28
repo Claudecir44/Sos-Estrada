@@ -42,7 +42,8 @@ class AtendimentoActivity : AppCompatActivity() {
         adapter = SolicitacaoAdapter(
             aoAceitar = { s -> s.id?.let { aceitar(it) } },
             aoRecusar = { s -> s.id?.let { atualizarStatus(it, RECUSADO) } },
-            aoExcluir = { s -> s.id?.let { excluir(it) } }
+            aoExcluir = { s -> s.id?.let { excluir(it) } },
+            aoVerLocalizacao = { s -> s.id?.let { id -> lifecycleScope.launch { solicitacaoRepository.marcarLocalizacaoComoVista(id) } } }
         )
         binding.rvAtendimento.layoutManager = LinearLayoutManager(this)
         binding.rvAtendimento.adapter = adapter

@@ -114,10 +114,18 @@ class SolicitacaoRepository @Inject constructor(
             if (erro != null || snapshots == null) return@addSnapshotListener
             val total = snapshots.documents.mapNotNull { it.paraSolicitacao() }
                 .filter { it.status != CANCELADO }
-                .sumOf { (if (it.novaParaPrestador) 1 else 0) + it.naoLidasPrestador }
+                .sumOf {
+                    (if (it.novaParaPrestador) 1 else 0) +
+                        (if (it.localizacaoNaoVistaPrestador && it.latitudeCompartilhada != null) 1 else 0) +
+                        it.naoLidasPrestador
+                }
             trySend(total)
         }
         awaitClose { registro.remove() }
+    }
+
+    override suspend fun marcarLocalizacaoComoVista(solicitacaoId: String) {
+        runCatching { colecao().document(solicitacaoId).update("localizacaoNaoVistaPrestador", false).await() }
     }
 
     override suspend fun marcarRespostasComoVistas() {
@@ -161,7 +169,10 @@ class SolicitacaoRepository @Inject constructor(
             mapOf(
                 "latitudeCompartilhada" to latitude,
                 "longitudeCompartilhada" to longitude,
-                "localizacaoCompartilhadaEm" to FieldValue.serverTimestamp()
+                "localizacaoCompartilhadaEm" to FieldValue.serverTimestamp(),
+                // Acende a bolinha do botão no card do prestador (e o push
+                // "Localização Sos Estrada" — functions/index.js).
+                "localizacaoNaoVistaPrestador" to true
             )
         ).await()
         Unit

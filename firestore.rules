@@ -215,14 +215,15 @@ service cloud.firestore {
       // - naoLidasMotorista/naoLidasPrestador: contadores de mensagem não
       //   lida, mantidos pelo ChatActivity (incrementados ao enviar,
       //   zerados ao abrir o chat do respectivo lado).
-      // - novaParaPrestador/respostaNaoVistaMotorista: só alertas visuais
-      //   (bolinha no painel, número no ícone). O prestador acende o do
-      //   motorista junto com aceitar/recusar, e cada lado apaga o seu ao
-      //   abrir a lista (SolicitacaoRepository).
+      // - novaParaPrestador/respostaNaoVistaMotorista/localizacaoNaoVistaPrestador:
+      //   só alertas visuais (bolinha no painel, número no ícone). O
+      //   prestador acende o do motorista junto com aceitar/recusar, e cada
+      //   lado apaga o seu ao abrir a lista ou o mapa (SolicitacaoRepository).
       allow update: if (souMotorista() || souPrestador())
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'naoLidasMotorista', 'naoLidasPrestador',
-                       'novaParaPrestador', 'respostaNaoVistaMotorista']);
+                       'novaParaPrestador', 'respostaNaoVistaMotorista',
+                       'localizacaoNaoVistaPrestador']);
 
       // "Enviar Minha Localização" (SocorroActivity): só o motorista, só
       // depois que o prestador aceitou, só as coordenadas + horário do
@@ -230,7 +231,9 @@ service cloud.firestore {
       allow update: if souMotorista()
         && resource.data.status == 'aceito'
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['latitudeCompartilhada', 'longitudeCompartilhada', 'localizacaoCompartilhadaEm'])
+             .hasOnly(['latitudeCompartilhada', 'longitudeCompartilhada', 'localizacaoCompartilhadaEm',
+                       'localizacaoNaoVistaPrestador'])
+        && request.resource.data.get('localizacaoNaoVistaPrestador', true) == true
         && request.resource.data.latitudeCompartilhada is number
         && request.resource.data.longitudeCompartilhada is number
         && request.resource.data.localizacaoCompartilhadaEm == request.time;

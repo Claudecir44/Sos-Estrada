@@ -20,6 +20,7 @@ import javax.inject.Inject
 // - mensagemSos        -> "Mensagem Sos Estrada"   (abre a lista do lado de quem recebeu)
 // - novaSolicitacao    -> "Solicitação Sos Estrada" (prestador: Atender solicitações)
 // - respostaPrestador  -> "Prestador respondeu"     (motorista: Preciso de socorro)
+// - localizacaoMotorista -> "Localização Sos Estrada" (prestador: Atender solicitações)
 @AndroidEntryPoint
 class SosFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -45,6 +46,7 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
             "mensagemSos" -> Triple("Mensagem Sos Estrada", "mensagens_sos", "Mensagens")
             "novaSolicitacao" -> Triple("Solicitação Sos Estrada", "solicitacoes_sos", "Novas solicitações")
             "respostaPrestador" -> Triple("Prestador respondeu", "respostas_sos", "Respostas do prestador")
+            "localizacaoMotorista" -> Triple("Localização Sos Estrada", "localizacoes_sos", "Localização do motorista")
             else -> return
         }
         val idNotificacao = dados["id"]?.hashCode() ?: System.currentTimeMillis().toInt()

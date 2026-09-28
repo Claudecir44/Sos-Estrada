@@ -543,3 +543,20 @@ exports.notificarMensagemSos = onDocumentCreated(
           `Nova mensagem de ${remetente}.`, event.params.solicitacaoId);
     },
 );
+
+// Motorista tocou em "Enviar Minha Localização" (só com a solicitação
+// aceita) -> "Localização Sos Estrada" pro prestador. Dispara a cada envio
+// novo (o horário do servidor muda), inclusive reenvios.
+exports.notificarLocalizacaoMotorista = onDocumentUpdated(
+    { document: "solicitacoes/{id}", region: REGIAO_FIRESTORE },
+    async (event) => {
+      const antes = event.data?.before?.data();
+      const depois = event.data?.after?.data();
+      if (!antes || !depois || !depois.localizacaoCompartilhadaEm) return;
+      const emAntes = antes.localizacaoCompartilhadaEm ? antes.localizacaoCompartilhadaEm.toMillis() : 0;
+      if (depois.localizacaoCompartilhadaEm.toMillis() === emAntes) return;
+      const nome = primeiroNome(depois.motoristaNome, "O motorista");
+      await enviarPush(depois.prestadorUid, "localizacaoMotorista", "prestador",
+          `${nome} enviou a localização atual. Toque para ver no mapa.`, event.params.id);
+    },
+);
