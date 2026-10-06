@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reclamação/sugestão/denúncia no chip "📝 Sugestões" (ManifestacaoAdminAdapter). -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/AdminCard"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <TextView
+            android:id="@+id/tvManifestacaoTipo"
+            style="@style/AdminTitulo"
+            android:layout_width="match_parent"
+            android:text="Tipo" />
+
+        <TextView
+            android:id="@+id/tvManifestacaoAutor"
+            style="@style/AdminLinha"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Nome · e-mail" />
+
+        <TextView
+            android:id="@+id/tvManifestacaoDenunciado"
+            style="@style/AdminLinha"
+            android:layout_marginTop="2dp"
+            android:textColor="#C62828"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvManifestacaoMensagem"
+            style="@style/AdminLinha"
+            android:layout_marginTop="6dp"
+            android:ellipsize="end"
+            android:maxLines="4" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvManifestacaoStatus"
+                style="@style/AdminChip"
+                android:text="Status" />
+
+            <TextView
+                android:id="@+id/tvManifestacaoData"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/admin_texto_secundario"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

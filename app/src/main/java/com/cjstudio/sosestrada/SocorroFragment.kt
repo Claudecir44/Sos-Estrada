@@ -50,6 +50,9 @@ class SocorroFragment : Fragment() {
     @Inject
     lateinit var avaliacaoRepository: IAvaliacaoRepository
 
+    @Inject
+    lateinit var segurancaRepository: ISegurancaRepository
+
     private lateinit var binding: FragmentSocorroBinding
     private lateinit var adapter: PrestadorAdapter
 
@@ -183,12 +186,16 @@ class SocorroFragment : Fragment() {
             }
                 // Quem também é prestador (mesma conta) não pede socorro a si mesmo.
                 .filter { it.uid != meuUid }
-            if (temLocalizacao) calcularDistancias(prestadores)
+            // Bloqueio em qualquer sentido some da busca (as regras também
+            // recusam o pedido). Falha ao ler os bloqueios não impede a busca.
+            val bloqueados = segurancaRepository.idsComBloqueio().getOrDefault(emptySet())
+            val visiveis = prestadores.filter { it.uid !in bloqueados }
+            if (temLocalizacao) calcularDistancias(visiveis)
 
-            this@SocorroFragment.prestadores = prestadores
+            this@SocorroFragment.prestadores = visiveis
             carregarAvaliacoes()
             binding.progressBarSocorro.visibility = View.GONE
-            binding.tvEmptySocorro.visibility = if (prestadores.isEmpty()) View.VISIBLE else View.GONE
+            binding.tvEmptySocorro.visibility = if (visiveis.isEmpty()) View.VISIBLE else View.GONE
             // Status das solicitações: os últimos recebidos em tempo real.
             aplicarSolicitacoes()
         }

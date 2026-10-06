@@ -92,6 +92,7 @@ class SolicitacaoAdapter(
                     .putExtra(ChatActivity.EXTRA_SOLICITACAO_ID, s.id)
                     .putExtra(ChatActivity.EXTRA_MEU_TIPO, IChatRepository.PRESTADOR)
                     .putExtra(ChatActivity.EXTRA_TITULO, s.motoristaNome)
+                    .putExtra(ChatActivity.EXTRA_OUTRO_UID, s.motoristaUid)
             )
         }
         // Segurar: exclusão permanente, só de solicitação cancelada.

@@ -178,6 +178,7 @@ class AdminActivity : AppCompatActivity() {
             binding.chipPrestadores to Admin.PERM_PRESTADORES,
             binding.chipSolicitacoes to Admin.PERM_SOLICITACOES,
             binding.chipMensagens to Admin.PERM_MENSAGENS,
+            binding.chipSugestoes to Admin.PERM_MENSAGENS,
             binding.chipFinanceiro to Admin.PERM_FINANCEIRO
         )
         secoes.forEach { (chip, secao) -> chip.visibility = if (pode(secao)) View.VISIBLE else View.GONE }
@@ -219,8 +220,14 @@ class AdminActivity : AppCompatActivity() {
                 }
                 Triple(m.await(), p.await(), s.await())
             }
+            val manifestacoes = if (pode(Admin.PERM_MENSAGENS)) adminRepository.listarManifestacoes() else semAcesso
             binding.progressBar.visibility = View.GONE
 
+            manifestacoes.onSuccess { lista ->
+                manifestacaoAdapter.atualizarLista(lista)
+                val novas = lista.count { it.status == Manifestacao.STATUS_NOVA }
+                binding.chipSugestoes.text = if (novas > 0) "📝 Sugestões ($novas)" else "📝 Sugestões"
+            }
             motoristas.onSuccess { motoristaAdapter.atualizarLista(it) }
             prestadores.onSuccess { prestadorAdapter.atualizarLista(it) }
             solicitacoes.onSuccess {
@@ -235,7 +242,8 @@ class AdminActivity : AppCompatActivity() {
                 R.id.chipMotoristas to motoristas.exceptionOrNull()?.message,
                 R.id.chipPrestadores to prestadores.exceptionOrNull()?.message,
                 R.id.chipSolicitacoes to solicitacoes.exceptionOrNull()?.message,
-                R.id.chipMensagens to solicitacoes.exceptionOrNull()?.message
+                R.id.chipMensagens to solicitacoes.exceptionOrNull()?.message,
+                R.id.chipSugestoes to manifestacoes.exceptionOrNull()?.message
             )
             // Seção bloqueada pro colaborador não é erro: não avisa.
             val erroSecaoPermitida = listOf(
@@ -255,6 +263,45 @@ class AdminActivity : AppCompatActivity() {
     private val prestadorAdapter = PrestadorAdminAdapter { p -> abrirAcoes { acoes.abrir(p) } }
     private val solicitacaoAdapter = AdminSolicitacaoAdapter()
     private val conversaAdapter = AdminConversaAdapter()
+    private val manifestacaoAdapter = ManifestacaoAdminAdapter { m -> abrirManifestacao(m) }
+
+    // Responder (vai por e-mail) ou arquivar uma reclamação/sugestão/denúncia.
+    private fun abrirManifestacao(m: Manifestacao) {
+        val id = m.id ?: return
+        val detalhes = buildString {
+            append(listOfNotNull(m.nome, m.email).joinToString(" · "))
+            if (m.tipo == Manifestacao.DENUNCIA) append("\n\nDenunciado: ${m.denunciadoNome.orEmpty()}\nMotivo: ${m.motivo.orEmpty()}")
+            append("\n\n${m.mensagem?.takeIf { it.isNotBlank() } ?: "(sem texto)"}")
+            m.resposta?.let { append("\n\nResposta enviada:\n$it") }
+        }
+        val campo = android.widget.EditText(this).apply { hint = "Escreva a resposta (vai por e-mail)"; minLines = 3 }
+        val arquivada = m.status == Manifestacao.STATUS_ARQUIVADA
+        AlertDialog.Builder(this)
+            .setTitle(Manifestacao.rotuloTipo(m.tipo))
+            .setMessage(detalhes)
+            .setView(campo)
+            .setPositiveButton("Responder") { _, _ ->
+                val resposta = campo.text.toString().trim()
+                if (resposta.isEmpty()) { avisar("Escreva a resposta."); return@setPositiveButton }
+                lifecycleScope.launch {
+                    adminRepository.responderManifestacao(id, resposta)
+                        .onSuccess { porEmail ->
+                            avisar(if (porEmail) "Resposta enviada por e-mail." else "Resposta gravada, mas o e-mail do SOS Estrada ainda não está configurado no servidor — responda pelo e-mail ${m.email.orEmpty()}.")
+                            carregarTudo()
+                        }
+                        .onFailure { e -> avisar("Não foi possível responder: ${e.message}") }
+                }
+            }
+            .setNeutralButton(if (arquivada) "Desarquivar" else "Arquivar") { _, _ ->
+                lifecycleScope.launch {
+                    adminRepository.arquivarManifestacao(id, !arquivada)
+                        .onSuccess { carregarTudo() }
+                        .onFailure { e -> avisar("Não foi possível alterar: ${e.message}") }
+                }
+            }
+            .setNegativeButton("Fechar", null)
+            .show()
+    }
 
     // Troca a lista abaixo do seletor (sem abrir outra tela). O Financeiro
     // ocupa o lugar da lista, na mesma tela.
@@ -277,6 +324,7 @@ class AdminActivity : AppCompatActivity() {
             R.id.chipPrestadores -> prestadorAdapter to "Nenhum prestador cadastrado ainda."
             R.id.chipSolicitacoes -> solicitacaoAdapter to "Nenhuma solicitação encontrada."
             R.id.chipMensagens -> conversaAdapter to "Nenhuma conversa encontrada."
+            R.id.chipSugestoes -> manifestacaoAdapter to "Nenhuma reclamação, sugestão ou denúncia."
             else -> motoristaAdapter to "Nenhum motorista cadastrado ainda."
         }
         if (binding.rvLista.adapter !== adapter) binding.rvLista.adapter = adapter

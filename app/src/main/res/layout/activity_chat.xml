@@ -36,6 +36,20 @@
             android:textColor="#FFFFFF"
             android:layout_marginStart="8dp" />
 
+        <!-- Denunciar ou bloquear a outra pessoa (SegurancaDialogUtil). -->
+        <TextView
+            android:id="@+id/btnSegurancaChat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⋮"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="4dp"
+            android:contentDescription="Denunciar ou bloquear"
+            android:visibility="gone" />
+
     </LinearLayout>
 
     <TextView

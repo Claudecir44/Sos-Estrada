@@ -250,7 +250,8 @@ service cloud.firestore {
       allow create: if estaLogado() && request.resource.data.motoristaUid == request.auth.uid
         && request.resource.data.prestadorUid is string
         && request.resource.data.prestadorUid != request.auth.uid
-        && !estaBloqueado(request.auth.uid);
+        && !estaBloqueado(request.auth.uid)
+        && !temBloqueio(request.auth.uid, request.resource.data.prestadorUid);
 
       // Update é sempre parcial e feito por quem participa da solicitação:
       // - status: motorista cancela (SocorroFragment) ou prestador
@@ -322,7 +323,8 @@ service cloud.firestore {
               && request.auth.uid == participantesDaSolicitacao().motoristaUid) ||
             (request.resource.data.remetenteTipo == 'prestador'
               && request.auth.uid == participantesDaSolicitacao().prestadorUid)
-          );
+          )
+          && !temBloqueio(participantesDaSolicitacao().motoristaUid, participantesDaSolicitacao().prestadorUid);
 
         // Só o campo "lida" muda depois de criada (ChatActivity.marcarComoLidas).
         allow update: if souParticipante()
@@ -352,6 +354,47 @@ service cloud.firestore {
     }
     match /pagamentosProcessados/{id} {
       allow read, write: if false;
+    }
+
+    // Bloqueio entre dois usuários (SegurancaRepository), em qualquer
+    // sentido: some da busca, não deixa pedir socorro nem mandar mensagem.
+    // ID "{bloqueador}_{bloqueado}" pra checar com exists(), sem consulta.
+    function temBloqueio(a, b) {
+      return exists(/databases/$(database)/documents/bloqueios/$(a + '_' + b))
+        || exists(/databases/$(database)/documents/bloqueios/$(b + '_' + a));
+    }
+
+    match /bloqueios/{bloqueioId} {
+      allow read: if estaLogado() && (resource == null
+        || resource.data.bloqueadorUid == request.auth.uid
+        || resource.data.bloqueadoUid == request.auth.uid
+        || ehAdmin());
+      allow create, update: if estaLogado()
+        && request.resource.data.keys().hasOnly(['bloqueadorUid', 'bloqueadoUid', 'bloqueadoNome', 'criadoEm'])
+        && request.resource.data.bloqueadorUid == request.auth.uid
+        && request.resource.data.bloqueadoUid is string
+        && request.resource.data.bloqueadoUid != request.auth.uid
+        && bloqueioId == request.auth.uid + '_' + request.resource.data.bloqueadoUid;
+      allow delete: if estaLogado() && (resource == null || resource.data.bloqueadorUid == request.auth.uid);
+    }
+
+    // Reclamações, sugestões e denúncias (Manifestacao.kt). Quem envia só
+    // cria; o admin (ou colaborador com "mensagens") lê e arquiva; a
+    // resposta é gravada pelo servidor (responderManifestacao).
+    match /manifestacoes/{id} {
+      allow create: if estaLogado()
+        && request.resource.data.keys().hasOnly(['uid', 'nome', 'email', 'tipo', 'mensagem', 'status', 'criadoEm', 'motivo', 'denunciadoUid', 'denunciadoNome', 'origem'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.tipo in ['reclamacao', 'sugestao', 'denuncia']
+        && request.resource.data.status == 'nova'
+        && request.resource.data.mensagem is string
+        && request.resource.data.mensagem.size() <= 2000
+        && request.resource.data.criadoEm == request.time;
+      allow read: if podeAdmin('mensagens');
+      allow update: if podeAdmin('mensagens')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['nova', 'arquivada'];
+      allow delete: if ehAdminCompleto();
     }
 
     // Avaliações de atendimento (Avaliacao.kt), nos dois sentidos. Só quem

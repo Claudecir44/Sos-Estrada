@@ -139,6 +139,7 @@ class PrestadorAdapter(
                     .putExtra(ChatActivity.EXTRA_SOLICITACAO_ID, solicitacaoId)
                     .putExtra(ChatActivity.EXTRA_MEU_TIPO, IChatRepository.MOTORISTA)
                     .putExtra(ChatActivity.EXTRA_TITULO, p.nome)
+                    .putExtra(ChatActivity.EXTRA_OUTRO_UID, p.uid)
             )
         }
     }

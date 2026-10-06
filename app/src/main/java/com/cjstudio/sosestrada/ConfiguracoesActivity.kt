@@ -7,11 +7,17 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.cjstudio.sosestrada.databinding.ActivityConfiguracoesBinding
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 // Configurações (ícone ⚙️ no cabeçalho dos painéis): Termos de uso e
 // privacidade (iguais pros dois), Regras (cada lado com as suas) e, só pro
 // prestador, Assinatura. Cor do cabeçalho segue o painel de origem.
+@AndroidEntryPoint
 class ConfiguracoesActivity : AppCompatActivity() {
+
+    @Inject
+    lateinit var segurancaRepository: ISegurancaRepository
 
     private lateinit var binding: ActivityConfiguracoesBinding
 
@@ -40,6 +46,8 @@ class ConfiguracoesActivity : AppCompatActivity() {
             val chave = if (prestador) ConteudoSos.REGRAS_PRESTADOR else ConteudoSos.REGRAS_MOTORISTA
             startActivity(TextoInformativoActivity.intent(this, chave, prestador))
         }
+        binding.cardFaleConosco.setOnClickListener { SegurancaDialogUtil.mostrarFaleConosco(this, segurancaRepository) }
+        binding.cardBloqueados.setOnClickListener { SegurancaDialogUtil.mostrarBloqueados(this, segurancaRepository) }
         binding.cardAssinatura.setOnClickListener {
             startActivity(Intent(this, AssinaturaActivity::class.java))
         }

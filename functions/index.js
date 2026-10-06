@@ -1038,3 +1038,58 @@ exports.atualizarNotaUsuario = onDocumentWritten(
       if (dados?.avaliadoUid) await recalcularNotaUsuario(dados.avaliadoUid);
     },
 );
+
+// ============================================================
+// Resposta do admin a uma reclamação/sugestão/denúncia (chip "📝 Sugestões"
+// do painel), igual ao Caronas: grava a resposta e manda por e-mail pra
+// quem enviou. Admin completo ou colaborador com a permissão "mensagens".
+// Sem SOS_EMAIL_USER/SOS_EMAIL_PASSWORD a resposta fica só gravada (e o
+// admin é avisado).
+// ============================================================
+async function podeResponderManifestacoes(uid) {
+  const doc = await getFirestore().collection("admins").doc(uid).get();
+  if (!doc.exists) return false;
+  const dados = doc.data();
+  if ((dados.role || "admin") !== "colaborador") return true;
+  return dados.permissoes?.mensagens === true;
+}
+
+exports.responderManifestacao = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para continuar.");
+  if (!(await podeResponderManifestacoes(request.auth.uid))) {
+    throw new HttpsError("permission-denied", "Sem permissão para responder.");
+  }
+  const id = String(request.data?.id || "");
+  const resposta = String(request.data?.resposta || "").trim();
+  if (!id || !resposta) throw new HttpsError("invalid-argument", "Escreva a resposta.");
+  if (resposta.length > 4000) throw new HttpsError("invalid-argument", "Resposta muito longa.");
+
+  const ref = getFirestore().collection("manifestacoes").doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Mensagem não encontrada.");
+  const m = snap.data();
+
+  let enviadoPorEmail = false;
+  if (transporteEmail && m.email) {
+    const tipo = { reclamacao: "reclamação", sugestao: "sugestão", denuncia: "denúncia" }[m.tipo] || "mensagem";
+    const nome = String(m.nome || "").split(/\s+/)[0];
+    await transporteEmail.sendMail({
+      from: `"${NOME_APP}" <${SOS_EMAIL_USER}>`,
+      to: m.email,
+      subject: `Resposta à sua ${tipo} — ${NOME_APP}`,
+      text: `${nome ? `Olá, ${nome}!` : "Olá!"}\n\n` +
+        `Recebemos sua ${tipo}:\n"${m.mensagem || ""}"\n\n` +
+        `Nossa resposta:\n${resposta}\n\n` +
+        `${NOME_APP} · CJ Studio Technology`,
+    });
+    enviadoPorEmail = true;
+  }
+  await ref.update({
+    resposta,
+    status: "respondida",
+    respondidoEm: FieldValue.serverTimestamp(),
+    respondidoPor: request.auth.uid,
+    respostaEnviadaPorEmail: enviadoPorEmail,
+  });
+  return { enviadoPorEmail };
+});

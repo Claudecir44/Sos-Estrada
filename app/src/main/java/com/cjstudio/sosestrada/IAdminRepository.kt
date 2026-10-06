@@ -54,6 +54,15 @@ interface IAdminRepository {
     // Apaga o cadastro (o login no Firebase Auth fica — apagar a conta de
     // outra pessoa exige Cloud Function —, mas sem cadastro não entra no app).
     suspend fun excluirCadastro(colecao: String, uid: String, senhaMaster: String): Result<Unit>
+
+    // Chip "📝 Sugestões": reclamações, sugestões e denúncias, mais novas primeiro.
+    suspend fun listarManifestacoes(): Result<List<Manifestacao>>
+
+    // Resposta vai por e-mail pro usuário (responderManifestacao no servidor).
+    // true = saiu por e-mail; false = só gravada (e-mail do SOS não configurado).
+    suspend fun responderManifestacao(id: String, resposta: String): Result<Boolean>
+
+    suspend fun arquivarManifestacao(id: String, arquivar: Boolean): Result<Unit>
 }
 
 class SenhaMasterIncorretaException : Exception("Senha do administrador master incorreta.")

@@ -5,6 +5,9 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.functions.FirebaseFunctionsException
+import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.tasks.await
@@ -15,6 +18,7 @@ import javax.inject.Singleton
 class AdminRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val db: FirebaseFirestore,
+    private val functions: FirebaseFunctions,
     private val authRepository: IAuthRepository
 ) : IAdminRepository {
 
@@ -226,5 +230,28 @@ class AdminRepository @Inject constructor(
         // Campo temporário com a senha master digitada; as regras conferem o
         // hash dele na criação e só deixam o próprio admin apagá-lo depois.
         private const val CAMPO_AUTORIZACAO = "autorizacao"
+    }
+
+    override suspend fun listarManifestacoes(): Result<List<Manifestacao>> = runCatching {
+        db.collection(SegurancaRepository.COLECAO_MANIFESTACOES)
+            .orderBy("criadoEm", Query.Direction.DESCENDING)
+            .get().await().documents
+            .mapNotNull { doc -> doc.toObject(Manifestacao::class.java)?.apply { id = doc.id } }
+    }
+
+    override suspend fun responderManifestacao(id: String, resposta: String): Result<Boolean> = runCatching {
+        val dados = try {
+            functions.getHttpsCallable("responderManifestacao")
+                .call(mapOf("id" to id, "resposta" to resposta.trim())).await().getData() as? Map<*, *>
+        } catch (e: FirebaseFunctionsException) {
+            throw IllegalStateException(e.message ?: "Não foi possível responder.")
+        }
+        dados?.get("enviadoPorEmail") == true
+    }
+
+    override suspend fun arquivarManifestacao(id: String, arquivar: Boolean): Result<Unit> = runCatching {
+        db.collection(SegurancaRepository.COLECAO_MANIFESTACOES).document(id)
+            .update("status", if (arquivar) Manifestacao.STATUS_ARQUIVADA else Manifestacao.STATUS_NOVA).await()
+        Unit
     }
 }

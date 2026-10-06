@@ -25,3 +25,4 @@
 # cada fabricante por reflection.
 -keep class me.leolin.shortcutbadger.impl.** { <init>(); }
 -keep class com.cjstudio.sosestrada.Avaliacao { *; }
+-keep class com.cjstudio.sosestrada.Manifestacao { *; }

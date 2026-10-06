@@ -256,6 +256,11 @@
                 android:text="💬 Mensagens" />
 
             <com.google.android.material.chip.Chip
+                android:id="@+id/chipSugestoes"
+                style="@style/AdminChipSeletor"
+                android:text="📝 Sugestões" />
+
+            <com.google.android.material.chip.Chip
                 android:id="@+id/chipFinanceiro"
                 style="@style/AdminChipSeletor"
                 android:text="💰 Financeiro" />

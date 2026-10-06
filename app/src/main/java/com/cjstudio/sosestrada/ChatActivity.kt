@@ -24,6 +24,9 @@ class ChatActivity : AppCompatActivity() {
     @Inject
     lateinit var chatRepository: IChatRepository
 
+    @Inject
+    lateinit var segurancaRepository: ISegurancaRepository
+
     private lateinit var binding: ActivityChatBinding
     private lateinit var adapter: ChatAdapter
     private lateinit var solicitacaoId: String
@@ -52,6 +55,14 @@ class ChatActivity : AppCompatActivity() {
 
         binding.tvTituloChat.text = intent.getStringExtra(EXTRA_TITULO)?.takeIf { it.isNotEmpty() } ?: "Chat"
         binding.btnVoltarChat.setOnClickListener { finish() }
+        // Denunciar/bloquear: só pra quem participa (não no modo leitura do admin).
+        val outroUid = intent.getStringExtra(EXTRA_OUTRO_UID)
+        if (!somenteLeitura && !outroUid.isNullOrEmpty()) {
+            binding.btnSegurancaChat.visibility = View.VISIBLE
+            binding.btnSegurancaChat.setOnClickListener {
+                SegurancaDialogUtil.mostrarOpcoes(this, outroUid, intent.getStringExtra(EXTRA_TITULO), SegurancaDialogUtil.ORIGEM_CHAT, segurancaRepository)
+            }
+        }
 
         adapter = ChatAdapter(if (somenteLeitura) null else meuTipo)
         binding.rvMensagens.layoutManager = LinearLayoutManager(this)
@@ -117,5 +128,7 @@ class ChatActivity : AppCompatActivity() {
         const val EXTRA_MEU_TIPO = "meu_tipo" // "motorista" ou "prestador"
         const val EXTRA_TITULO = "titulo_chat"
         const val EXTRA_READ_ONLY = "read_only"
+        // Uid da outra pessoa da conversa (denunciar/bloquear).
+        const val EXTRA_OUTRO_UID = "outro_uid"
     }
 }

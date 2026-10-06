@@ -233,5 +233,113 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Reclamações, Sugestões e Denúncias -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardFaleConosco"
+            style="@style/AdminCard"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="16dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AdminAvatar"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:backgroundTint="#E3F2FD"
+                    android:text="📝"
+                    android:textSize="18sp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/AdminTitulo"
+                        android:text="Reclamações, Sugestões e Denúncias"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fale com a equipe do SOS Estrada"
+                        android:textColor="@color/admin_texto_secundario"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#9CA3AF"
+                    android:textSize="28sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Usuários bloqueados -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardBloqueados"
+            style="@style/AdminCard"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="16dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AdminAvatar"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:backgroundTint="#FFEBEE"
+                    android:text="🚫"
+                    android:textSize="18sp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/AdminTitulo"
+                        android:text="Usuários bloqueados"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ver e desbloquear"
+                        android:textColor="@color/admin_texto_secundario"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#9CA3AF"
+                    android:textSize="28sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
     </LinearLayout>
 </ScrollView>
