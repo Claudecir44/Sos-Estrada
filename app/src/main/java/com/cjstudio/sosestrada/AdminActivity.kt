@@ -291,7 +291,9 @@ class AdminActivity : AppCompatActivity() {
         binding.quadroMotoristas.alpha = if (pode(Admin.PERM_MOTORISTAS)) 1f else 0.4f
         binding.quadroPrestadores.alpha = if (pode(Admin.PERM_PRESTADORES)) 1f else 0.4f
         binding.quadroPedidos.alpha = if (pode(Admin.PERM_SOLICITACOES)) 1f else 0.4f
-        // Seleção atual escondida: passa pra primeira seção liberada.
+        // Seleção atual escondida: passa pra primeira seção liberada. O Chat
+        // Admin é aberto a todos (não está em "secoes"): fica onde está.
+        if (binding.grupoListas.checkedChipId == R.id.chipChatAdmin) return
         val atual = secoes.firstOrNull { it.first.id == binding.grupoListas.checkedChipId }
         if (atual == null || !pode(atual.second)) secoes.firstOrNull { pode(it.second) }?.first?.isChecked = true
     }
