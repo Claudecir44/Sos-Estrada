@@ -765,8 +765,13 @@ exports.removerPrestadoresInativos = onSchedule("every day 05:00", async () => {
     await doc.ref.delete();
     await db.collection("fcmTokens").doc(uid).delete();
     // Sem a conta, o e-mail fica livre pra um cadastro novo. Quem também é
-    // motorista (conta antiga com os dois perfis) mantém a conta.
-    if (!(await db.collection("motoristas").doc(uid).get()).exists) {
+    // motorista (conta antiga com os dois perfis) ou admin (o master,
+    // sobretudo) mantém a conta.
+    const [comoMotorista, comoAdmin] = await Promise.all([
+      db.collection("motoristas").doc(uid).get(),
+      db.collection("admins").doc(uid).get(),
+    ]);
+    if (!comoMotorista.exists && !comoAdmin.exists) {
       await getAuth().deleteUser(uid).catch((erro) => {
         if (erro.code !== "auth/user-not-found") logger.warn(`Erro ao apagar a conta ${uid}:`, erro.message);
       });

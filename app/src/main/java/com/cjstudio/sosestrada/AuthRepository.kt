@@ -119,6 +119,10 @@ class AuthRepository @Inject constructor(
 
     override suspend fun excluirConta(): Result<Unit> = runCatching {
         val usuario = auth.currentUser ?: throw IllegalStateException("Não há sessão ativa.")
+        // Conta que também é admin (o admin master, sobretudo) mantém o login:
+        // excluir o cadastro de motorista/prestador não pode derrubar o acesso
+        // ao painel. Mesma regra do servidor (apagarLoginSeSobrouNada).
+        if (db.collection("admins").document(usuario.uid).get().await().exists()) return@runCatching
         try {
             usuario.delete().await()
         } catch (e: FirebaseAuthInvalidUserException) {

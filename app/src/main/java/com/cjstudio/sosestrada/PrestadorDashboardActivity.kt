@@ -19,6 +19,7 @@ import javax.inject.Inject
 class PrestadorDashboardActivity : AppCompatActivity() {
 
     private var avisoSexoAberto = false
+    private var avisoTermosAberto = false
 
     companion object {
         // Notificação de solicitação/mensagem/localização: abre com as
@@ -41,6 +42,9 @@ class PrestadorDashboardActivity : AppCompatActivity() {
 
     @Inject
     lateinit var assinaturaRepository: IAssinaturaRepository
+
+    @Inject
+    lateinit var termosRepository: ITermosRepository
 
     private lateinit var binding: ActivityPrestadorDashboardBinding
 
@@ -185,6 +189,19 @@ class PrestadorDashboardActivity : AppCompatActivity() {
                 irParaLogin()
                 finish()
                 return@launch
+            }
+            // Primeira entrada como prestador: aceite dos termos (por perfil).
+            if (prestador != null && !avisoTermosAberto) {
+                avisoTermosAberto = true
+                TermosAceiteDialogUtil.exigir(this@PrestadorDashboardActivity, ITermosRepository.PERFIL_PRESTADOR, termosRepository) {
+                    lifecycleScope.launch {
+                        notificacaoRepository.removerToken(authRepository.uidLogado())
+                        SessaoUtil.limpar(this@PrestadorDashboardActivity)
+                        authRepository.sair()
+                        irParaLogin()
+                        finish()
+                    }
+                }
             }
             FotoUtil.mostrar(binding.ivFotoPrestadorPainel, prestador?.logo)
             val primeiroNome = prestador?.nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }

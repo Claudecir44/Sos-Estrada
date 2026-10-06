@@ -112,7 +112,7 @@
                     android:paddingEnd="10dp"
                     android:text="Meu Perfil"
                     android:textAllCaps="false"
-                    android:textColor="@color/admin_vermelho"
+                    android:textColor="@color/admin_cinza_escuro"
                     android:textSize="11sp"
                     app:cornerRadius="15dp" />
 

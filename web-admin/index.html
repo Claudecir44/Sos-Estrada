@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Painel Web SOS Estrada</title>
 <!-- ?v= força o navegador a buscar a versão nova (sem ele, usava o estilo antigo em cache) -->
-<link rel="stylesheet" href="style.css?v=5" />
+<link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
 
@@ -138,6 +138,21 @@
   <div class="carregando" id="carregando" style="display:none;">Carregando…</div>
 </div>
 
-<script type="module" src="app.js?v=5"></script>
+<!-- Aceite dos termos na primeira entrada (por perfil: este é o de admin/colaborador) -->
+<div class="modal-overlay" id="modalTermos" style="display:none;">
+  <div class="modal-caixa">
+    <h3>Termos de uso e privacidade</h3>
+    <p class="termos-texto">Para usar o painel do SOS Estrada como administração, leia e aceite os Termos de uso e a Política de privacidade. Cada perfil (motorista, prestador e administração) aceita separadamente, mesmo usando o mesmo e-mail.</p>
+    <p class="termos-texto"><a href="privacidade.html" target="_blank" rel="noopener">📄 Ler os Termos de uso e privacidade</a></p>
+    <label class="termos-caixa"><input type="checkbox" id="cbAceitarTermos" /> Li e aceito os Termos de uso e a Política de privacidade</label>
+    <div class="login-erro" id="termosErro"></div>
+    <div class="modal-botoes">
+      <button id="btnRecusarTermos" class="btn-secundario">Recusar e sair</button>
+      <button id="btnAceitarTermos" disabled>Aceitar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>

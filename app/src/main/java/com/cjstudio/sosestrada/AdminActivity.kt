@@ -25,11 +25,18 @@ class AdminActivity : AppCompatActivity() {
     @Inject
     lateinit var adminRepository: IAdminRepository
 
+    @Inject
+    lateinit var termosRepository: ITermosRepository
+
     private lateinit var binding: ActivityAdminBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAdminBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // Barra de status no cinza do cabeçalho, em vez do roxo do tema.
+        // (No Android 15+ a barra é transparente e isso é ignorado.)
+        @Suppress("DEPRECATION")
+        window.statusBarColor = getColor(R.color.admin_cinza)
 
         // Sessão de um login anterior: mantém o admin logado entre aberturas.
         lifecycleScope.launch {
@@ -139,6 +146,13 @@ class AdminActivity : AppCompatActivity() {
         // ver), depois as listas permitidas.
         lifecycleScope.launch {
             carregarSaudacao()
+            // Primeira entrada como admin/colaborador: aceite dos termos (por perfil).
+            if (perfil != null) {
+                TermosAceiteDialogUtil.exigir(this@AdminActivity, ITermosRepository.PERFIL_ADMIN, termosRepository) {
+                    adminRepository.sair()
+                    recreate()
+                }
+            }
             painelIniciado = true
             carregarTudo()
         }

@@ -25,7 +25,19 @@ data class Admin(
 
     fun pode(secao: String): Boolean = !ehColaborador || permissoes?.get(secao) == true
 
+    // Administrador master: o mesmo CPF do Caronas e do Match. Essa conta
+    // nunca pode ser excluída (nem pelo "Meu Perfil", nem junto com um
+    // cadastro de motorista/prestador da mesma conta, nem por outro admin):
+    // sem ela o projeto fica sem ninguém com acesso total. As regras do
+    // Firestore (match /admins) e as functions conferem o mesmo CPF.
+    @get:Exclude
+    val ehMaster: Boolean
+        get() = cpf == CPF_ADMIN_MASTER
+
     companion object {
+        const val CPF_ADMIN_MASTER = "56413025034"
+        const val MENSAGEM_MASTER_NAO_EXCLUIVEL = "Esta é a conta do administrador master e não pode ser excluída."
+
         const val ROLE_COLABORADOR = "colaborador"
 
         const val PERM_MOTORISTAS = "motoristas"

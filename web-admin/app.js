@@ -19,6 +19,8 @@ import {
   orderBy,
   onSnapshot,
   deleteDoc,
+  updateDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import {
   getStorage,
@@ -108,6 +110,42 @@ function mostrarAba(nome) {
 
 document.querySelectorAll(".aba-botao").forEach((b) => b.addEventListener("click", () => mostrarAba(b.dataset.aba)));
 
+// ---------- Termos de uso e privacidade ----------
+
+// Mesmo aceite do app admin (ITermosRepository.kt): fica em admins/{uid}
+// (termosVersao/termosAceitosEm), separado do aceite como motorista ou
+// prestador da mesma conta. Sem aceitar, não entra no painel.
+const VERSAO_TERMOS = "1";
+
+function exigirTermos(user, admin) {
+  if (admin.termosVersao === VERSAO_TERMOS) return mostrarPainel(admin);
+  document.getElementById("login").style.display = "none";
+  const modal = document.getElementById("modalTermos");
+  const caixa = document.getElementById("cbAceitarTermos");
+  const aceitar = document.getElementById("btnAceitarTermos");
+  const erro = document.getElementById("termosErro");
+  caixa.checked = false;
+  aceitar.disabled = true;
+  erro.textContent = "";
+  modal.style.display = "flex";
+  caixa.onchange = () => { aceitar.disabled = !caixa.checked; };
+  aceitar.onclick = async () => {
+    aceitar.disabled = true;
+    try {
+      await updateDoc(doc(db, "admins", user.uid), { termosVersao: VERSAO_TERMOS, termosAceitosEm: serverTimestamp() });
+      modal.style.display = "none";
+      mostrarPainel({ ...admin, termosVersao: VERSAO_TERMOS });
+    } catch (e) {
+      erro.textContent = "Não foi possível registrar o aceite: " + e.message;
+      aceitar.disabled = !caixa.checked;
+    }
+  };
+  document.getElementById("btnRecusarTermos").onclick = async () => {
+    modal.style.display = "none";
+    await signOut(auth);
+  };
+}
+
 // ---------- Login ----------
 
 // Durante o clique em "Entrar" quem decide é o próprio login (que ainda
@@ -122,7 +160,7 @@ onAuthStateChanged(auth, async (user) => {
     await signOut(auth);
     return;
   }
-  mostrarPainel(admin);
+  exigirTermos(user, admin);
 });
 
 document.getElementById("btnEntrar").addEventListener("click", entrar);
@@ -195,7 +233,7 @@ async function entrar() {
       await signOut(auth);
       return;
     }
-    mostrarPainel(admin);
+    exigirTermos(user, admin);
   } catch (e) {
     erroEl.textContent = mensagemErroLogin(e);
   } finally {

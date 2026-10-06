@@ -34,7 +34,8 @@ interface IAuthRepository {
     suspend fun reautenticar(senha: String): Result<Unit>
 
     // Apaga a conta do Firebase Auth do usuário logado (os dados no
-    // Firestore são apagados antes, pelo repositório de cada perfil).
+    // Firestore são apagados antes, pelo repositório de cada perfil). Se a
+    // conta também é admin, o login fica (só o perfil sai).
     suspend fun excluirConta(): Result<Unit>
 
     fun sair()

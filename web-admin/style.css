@@ -19,7 +19,7 @@ body {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.10);
   margin-top: 20px;
 }
-h1 { color: #B71C1C; font-weight: 700; font-size: 26px; text-align: center; }
+h1 { color: #1F2937; font-weight: 700; font-size: 26px; text-align: center; }
 
 /* ---------- Login ---------- */
 #login { display: flex; justify-content: center; margin: 60px auto; width: 100%; }
@@ -30,14 +30,14 @@ h1 { color: #B71C1C; font-weight: 700; font-size: 26px; text-align: center; }
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
 }
 .login-logo { font-size: 40px; text-align: center; }
-.login-box h2 { text-align: center; color: #B71C1C; margin-bottom: 6px; }
+.login-box h2 { text-align: center; color: #1F2937; margin-bottom: 6px; }
 .login-box input { padding: 12px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
-.login-box input:focus { border-color: #D32F2F; outline: none; }
+.login-box input:focus { border-color: #374151; outline: none; }
 .login-box button {
-  padding: 12px; background: #D32F2F; color: #fff; border: none; border-radius: 8px;
+  padding: 12px; background: #374151; color: #fff; border: none; border-radius: 8px;
   font-weight: 700; font-size: 16px; cursor: pointer;
 }
-.login-box button:hover { background: #B71C1C; }
+.login-box button:hover { background: #1F2937; }
 .campo-senha { position: relative; }
 .campo-senha input { width: 100%; padding-right: 46px; }
 .ver-senha {
@@ -56,11 +56,11 @@ h1 { color: #B71C1C; font-weight: 700; font-size: 26px; text-align: center; }
   margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
 }
 .admin-info { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 90px; }
-.admin-info img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: #E8E8E8; border: 2px solid #FFCDD2; }
+.admin-info img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: #E8E8E8; border: 2px solid #D1D5DB; }
 .admin-info span { font-weight: 600; color: #333; font-size: 13px; }
 .badge-papel {
   font-size: 10px !important; font-weight: 700 !important; text-transform: uppercase;
-  padding: 2px 8px; border-radius: 6px; background: #FFEBEE; color: #B71C1C !important;
+  padding: 2px 8px; border-radius: 6px; background: #E5E7EB; color: #1F2937 !important;
 }
 .badge-papel.colaborador { background: #E3F2FD; color: #0D47A1 !important; }
 #btnSair {
@@ -75,7 +75,7 @@ h1 { color: #B71C1C; font-weight: 700; font-size: 26px; text-align: center; }
   padding: 10px 20px; border: none; border-radius: 8px; background: #F2F2F7;
   color: #455A64; font-weight: 600; cursor: pointer; font-size: 14px;
 }
-.aba-botao.ativa { background: #D32F2F; color: #fff; }
+.aba-botao.ativa { background: #374151; color: #fff; }
 .badge-tab {
   display: inline-block; min-width: 16px; height: 16px; line-height: 16px; border-radius: 8px;
   background: #0D47A1; color: #fff; font-size: 10px; font-weight: 700; text-align: center;
@@ -119,11 +119,11 @@ td img.foto-linha { width: 34px; height: 34px; border-radius: 50%; object-fit: c
   cursor: pointer; font-size: 13px; background: #fff;
 }
 .conversa:hover { background: #FFF8F8; }
-.conversa.ativa { border-color: #D32F2F; background: #FFF5F5; }
+.conversa.ativa { border-color: #374151; background: #F3F4F6; }
 .conversa .partes { font-weight: 600; color: #333; }
 .conversa .detalhe { color: #777; font-size: 12px; margin-top: 3px; }
 .chat-caixa { display: flex; flex-direction: column; background: #F7F7FA; border-radius: 12px; overflow: hidden; }
-.chat-titulo { padding: 12px 16px; font-weight: 700; color: #fff; background: #D32F2F; }
+.chat-titulo { padding: 12px 16px; font-weight: 700; color: #fff; background: #374151; }
 #chatMensagens { flex: 1; padding: 14px; overflow-y: auto; max-height: 64vh; display: flex; flex-direction: column; gap: 8px; }
 .bolha { max-width: 75%; padding: 8px 12px; border-radius: 12px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
 .bolha img { max-width: 220px; border-radius: 8px; display: block; margin-bottom: 4px; }
@@ -135,7 +135,7 @@ td img.foto-linha { width: 34px; height: 34px; border-radius: 50%; object-fit: c
 .bolha-prestador .remetente { color: #2E7D32; }
 
 /* ---------- Financeiro (mesmo formato do Caronas) ---------- */
-.titulo-aba { color: #B71C1C; margin-bottom: 12px; }
+.titulo-aba { color: #1F2937; margin-bottom: 12px; }
 .filtro-financeiro {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background: #FAFAFA; border-radius: 8px; padding: 14px; margin-bottom: 16px;
@@ -145,7 +145,7 @@ td img.foto-linha { width: 34px; height: 34px; border-radius: 50%; object-fit: c
   padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px;
 }
 .filtro-financeiro button, .modal-botoes button {
-  background: #D32F2F; color: #fff; border: none; border-radius: 6px;
+  background: #374151; color: #fff; border: none; border-radius: 6px;
   padding: 8px 16px; font-weight: 600; font-size: 13px; cursor: pointer;
 }
 button.btn-relatorio { background: #00897B; }
@@ -154,14 +154,20 @@ button.btn-secundario { background: #ECEFF1; color: #455A64; }
 @media (max-width: 640px) { .stat-grid { grid-template-columns: 1fr; } }
 .stat-card { background: #FAFAFA; border: 1px solid #E0E0E0; border-radius: 8px; padding: 14px; }
 .stat-card .stat-label { font-size: 12px; color: #555; }
-.stat-card .stat-valor { font-size: 22px; font-weight: 700; color: #B71C1C; margin-top: 2px; }
+.stat-card .stat-valor { font-size: 22px; font-weight: 700; color: #1F2937; margin-top: 2px; }
 .stat-card .stat-valor.verde { color: #2E7D32; }
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
   display: flex; align-items: center; justify-content: center; z-index: 1000;
 }
 .modal-caixa { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 360px; }
-.modal-caixa h3 { color: #B71C1C; margin-bottom: 8px; }
+.modal-caixa h3 { color: #1F2937; margin-bottom: 8px; }
 .modal-caixa label { display: block; font-size: 12px; color: #777; font-weight: 700; margin-top: 12px; margin-bottom: 4px; }
 .modal-caixa select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
 .modal-botoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+/* Aceite dos termos */
+.termos-texto { font-size: 14px; color: #374151; line-height: 1.45; margin-top: 8px; }
+.termos-texto a { color: #2563EB; font-weight: 600; }
+.modal-caixa label.termos-caixa { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: #1F2937; font-weight: 600; margin-top: 14px; text-transform: none; }
+.modal-botoes button:disabled { opacity: .45; cursor: not-allowed; }

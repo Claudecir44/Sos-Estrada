@@ -9,6 +9,9 @@
     <color name="white">#FFFFFFFF</color>
 
     <!-- Painel administrativo -->
+    <!-- Identidade do painel admin: cinza escuro (antes era vermelho). -->
+    <color name="admin_cinza">#4B5563</color>
+    <color name="admin_cinza_escuro">#1F2937</color>
     <color name="admin_vermelho">#D32F2F</color>
     <color name="admin_vermelho_escuro">#8E1B1B</color>
     <color name="admin_fundo">#F3F4F8</color>

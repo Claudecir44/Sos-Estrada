@@ -127,6 +127,10 @@ class AdminRepository @Inject constructor(
 
     override suspend fun excluirMeuCadastro(senha: String): Result<Unit> = runCatching {
         val uid = auth.currentUser?.uid ?: throw IllegalStateException("Não há sessão ativa.")
+        // Checado antes de tudo, pra não deixar exclusão pela metade.
+        if (documentoAdmin(uid).get().await().toObject(Admin::class.java)?.ehMaster == true) {
+            throw IllegalStateException(Admin.MENSAGEM_MASTER_NAO_EXCLUIVEL)
+        }
         authRepository.reautenticar(senha).getOrElse { throw IllegalArgumentException("Senha incorreta.") }
         // A mesma conta pode ser também motorista/prestador: nesse caso só o
         // acesso de admin sai, e o login continua valendo pro outro perfil.

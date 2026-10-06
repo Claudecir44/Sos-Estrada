@@ -124,6 +124,10 @@ service cloud.firestore {
     //   sed -i "s|__HASH_SENHA_MASTER__|$HASH|" firestore.rules
     //   npx --yes firebase-tools deploy --only firestore:rules --project sos-estrada-dc55d
     //   git checkout -- firestore.rules
+    function ehCpfMaster(dados) {
+      return dados.get('cpf', '') == '56413025034';
+    }
+
     match /admins/{adminId} {
       allow read: if ehDono(adminId) || ehAdmin();
       allow create: if ehDono(adminId)
@@ -140,10 +144,13 @@ service cloud.firestore {
       // poder recolocar "autorizacao".
       allow update: if ehDono(adminId)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['autorizacao', 'nome', 'sobrenome', 'telefone', 'cpf', 'foto'])
-        && !('autorizacao' in request.resource.data);
-      // "Meu Perfil" > Excluir (o próprio acesso) ou outro admin.
-      allow delete: if ehDono(adminId) || ehAdminCompleto();
+             .hasOnly(['autorizacao', 'nome', 'sobrenome', 'telefone', 'cpf', 'foto', 'termosVersao', 'termosAceitosEm'])
+        && !('autorizacao' in request.resource.data)
+        // O master não troca o próprio CPF (seria o jeito de desarmar a trava abaixo).
+        && (!ehCpfMaster(resource.data) || request.resource.data.get('cpf', '') == resource.data.get('cpf', ''));
+      // "Meu Perfil" > Excluir (o próprio acesso) ou outro admin — nunca o
+      // admin master (Admin.CPF_ADMIN_MASTER no app, mesmo CPF do Caronas/Match).
+      allow delete: if (ehDono(adminId) || ehAdminCompleto()) && !ehCpfMaster(resource.data);
     }
 
     // ---------------- motoristas ----------------

@@ -16,6 +16,7 @@ import javax.inject.Inject
 class MotoristaDashboardActivity : AppCompatActivity() {
 
     private var avisoSexoAberto = false
+    private var avisoTermosAberto = false
 
     companion object {
         // Notificação "Prestador respondeu"/"Mensagem Sos Estrada": abre com
@@ -35,6 +36,9 @@ class MotoristaDashboardActivity : AppCompatActivity() {
 
     @Inject
     lateinit var notificacaoRepository: INotificacaoRepository
+
+    @Inject
+    lateinit var termosRepository: ITermosRepository
 
     private lateinit var binding: ActivityMotoristaDashboardBinding
 
@@ -163,6 +167,19 @@ class MotoristaDashboardActivity : AppCompatActivity() {
                 irParaLogin()
                 finish()
                 return@launch
+            }
+            // Primeira entrada como motorista: aceite dos termos (por perfil).
+            if (motorista != null && !avisoTermosAberto) {
+                avisoTermosAberto = true
+                TermosAceiteDialogUtil.exigir(this@MotoristaDashboardActivity, ITermosRepository.PERFIL_MOTORISTA, termosRepository) {
+                    lifecycleScope.launch {
+                        notificacaoRepository.removerToken(authRepository.uidLogado())
+                        SessaoUtil.limpar(this@MotoristaDashboardActivity)
+                        authRepository.sair()
+                        irParaLogin()
+                        finish()
+                    }
+                }
             }
             FotoUtil.mostrar(binding.ivFotoMotoristaPainel, motorista?.foto)
             val primeiroNome = motorista?.nome?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotEmpty() }

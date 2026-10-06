@@ -53,4 +53,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSegurancaRepository(impl: SegurancaRepository): ISegurancaRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindTermosRepository(impl: TermosRepository): ITermosRepository
 }
