@@ -171,3 +171,33 @@ button.btn-secundario { background: #ECEFF1; color: #455A64; }
 .termos-texto a { color: #2563EB; font-weight: 600; }
 .modal-caixa label.termos-caixa { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: #1F2937; font-weight: 600; margin-top: 14px; text-transform: none; }
 .modal-botoes button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---------- 💬 Chat Admin ---------- */
+.btn-nova-conversa {
+  width: 100%; margin-bottom: 10px; padding: 10px; border: none; border-radius: 8px;
+  background: #1F2937; color: #fff; font-weight: 700; cursor: pointer;
+}
+.nova-conversa-box { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; padding: 10px; background: #F3F4F6; border-radius: 8px; }
+.nova-conversa-box select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
+.nova-conversa-box button { padding: 8px; border: none; border-radius: 6px; background: #374151; color: #fff; font-weight: 600; cursor: pointer; }
+.conversa-admin { display: flex; align-items: center; gap: 10px; }
+.conversa-admin img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #E5E7EB; }
+.conversa-admin .meio { flex: 1; min-width: 0; }
+.conversa-admin .previa { color: #777; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conversa-admin .nao-lidas { background: #E53935; color: #fff; border-radius: 10px; min-width: 20px; padding: 1px 6px; font-size: 11px; font-weight: 700; text-align: center; }
+.conversa-admin .excluir { opacity: .45; cursor: pointer; font-size: 13px; }
+.conversa-admin .excluir:hover { opacity: 1; }
+#chatAdminMensagens { flex: 1; padding: 14px; overflow-y: auto; max-height: 58vh; min-height: 300px; display: flex; flex-direction: column; gap: 8px; }
+.bolha-minha { align-self: flex-end; background: #DCF8C6; }
+.bolha-outro { align-self: flex-start; background: #fff; }
+.bolha-outro .remetente { color: #1F2937; }
+.bolha .apagar { cursor: pointer; opacity: .5; margin-left: 6px; }
+.bolha .apagar:hover { opacity: 1; }
+.bolha.apagada { opacity: .6; font-style: italic; }
+.chat-envio { display: flex; gap: 8px; padding: 10px; background: #fff; border-top: 1px solid #eee; }
+.chat-envio input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+.chat-envio button { padding: 0 16px; border: none; border-radius: 8px; background: #1F2937; color: #fff; font-size: 16px; cursor: pointer; }
+.badge.nova { background: #FFF3E0; color: #E65100; }
+.badge.respondida { background: #E8F5E9; color: #2E7D32; }
+.badge.arquivada { background: #ECEFF1; color: #546E7A; }
+.msg-reclamacao { max-width: 360px; white-space: pre-wrap; }

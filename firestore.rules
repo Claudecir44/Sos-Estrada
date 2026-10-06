@@ -144,7 +144,7 @@ service cloud.firestore {
       // poder recolocar "autorizacao".
       allow update: if ehDono(adminId)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['autorizacao', 'nome', 'sobrenome', 'telefone', 'cpf', 'foto', 'termosVersao', 'termosAceitosEm'])
+             .hasOnly(['autorizacao', 'nome', 'sobrenome', 'telefone', 'cpf', 'foto', 'termosVersao', 'termosAceitosEm', 'fcmToken'])
         && !('autorizacao' in request.resource.data)
         // O master não troca o próprio CPF (seria o jeito de desarmar a trava abaixo).
         && (!ehCpfMaster(resource.data) || request.resource.data.get('cpf', '') == resource.data.get('cpf', ''));
@@ -466,6 +466,63 @@ service cloud.firestore {
         && request.resource.data.origem == 'web'
         && request.resource.data.criadoEm == request.time;
       allow read, update, delete: if ehAdminCompleto();
+    }
+
+    // ---------------- conversasAdmin + mensagens (💬 Chat Admin) ----------------
+    // Chat 1-a-1 entre admins e colaboradores, mesmo esquema do Caronas
+    // (ChatAdminRepository no app e o painel web). O "conteudo" das
+    // mensagens já chega cifrado (ChatAdminCryptoUtil); aqui só se decide
+    // QUEM lê e escreve cada documento: os dois participantes.
+    match /conversasAdmin/{conversaId} {
+      allow read: if ehAdmin() && request.auth.uid in resource.data.participantes;
+
+      // Id = os dois uids em ordem, separados por "_", e o outro também é admin.
+      allow create: if ehAdmin()
+        && request.auth.uid in request.resource.data.participantes
+        && request.resource.data.participantes.size() == 2
+        && request.resource.data.participantes.hasAll([request.resource.data.admin1Id, request.resource.data.admin2Id])
+        && request.resource.data.admin1Id < request.resource.data.admin2Id
+        && conversaId == request.resource.data.admin1Id + '_' + request.resource.data.admin2Id
+        && exists(/databases/$(database)/documents/admins/$(request.resource.data.admin1Id))
+        && exists(/databases/$(database)/documents/admins/$(request.resource.data.admin2Id));
+
+      allow update: if ehAdmin() && request.auth.uid in resource.data.participantes
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['ultimaMensagem', 'ultimoTimestamp', 'ultimoRemetenteId', 'naoLidas1', 'naoLidas2']);
+
+      allow delete: if ehAdmin() && request.auth.uid in resource.data.participantes;
+
+      match /mensagens/{mensagemId} {
+        function participantesDaConversaAdmin() {
+          return get(/databases/$(database)/documents/conversasAdmin/$(conversaId)).data.participantes;
+        }
+        function souParticipanteAdmin() {
+          return ehAdmin() && request.auth.uid in participantesDaConversaAdmin();
+        }
+
+        allow read: if souParticipanteAdmin();
+
+        allow create: if souParticipanteAdmin()
+          && request.resource.data.remetenteId == request.auth.uid
+          && request.resource.data.destinatarioId != request.auth.uid
+          && participantesDaConversaAdmin().hasAll([request.resource.data.remetenteId, request.resource.data.destinatarioId]);
+
+        // Lida (quem recebeu), apagar pra mim (cada um o seu lado) e apagar
+        // pra todos (só quem mandou: sobrescreve conteúdo e tipo).
+        allow update: if souParticipanteAdmin() && (
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida'])
+            && resource.data.destinatarioId == request.auth.uid)
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletadoParaRemetente'])
+            && resource.data.remetenteId == request.auth.uid)
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletadoParaDestinatario'])
+            && resource.data.destinatarioId == request.auth.uid)
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletadoParaTodos', 'conteudo', 'tipo'])
+            && resource.data.remetenteId == request.auth.uid
+            && resource.data.deletadoParaTodos != true
+            && request.resource.data.deletadoParaTodos == true));
+
+        allow delete: if souParticipanteAdmin();
+      }
     }
 
     // Qualquer coleção não listada acima fica bloqueada por padrão.

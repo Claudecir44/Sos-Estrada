@@ -57,4 +57,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindTermosRepository(impl: TermosRepository): ITermosRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindChatAdminRepository(impl: ChatAdminRepository): IChatAdminRepository
 }

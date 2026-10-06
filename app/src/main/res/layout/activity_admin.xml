@@ -258,7 +258,13 @@
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipSugestoes"
                 style="@style/AdminChipSeletor"
-                android:text="📝 Sugestões" />
+                android:text="📝 Reclamações" />
+
+            <!-- Chat entre admins e colaboradores (igual ao Caronas e ao painel web) -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipChatAdmin"
+                style="@style/AdminChipSeletor"
+                android:text="💬 Chat Admin" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipFinanceiro"
@@ -311,6 +317,21 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone" />
+
+        <!-- Chat Admin: nova conversa com outro admin/colaborador -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNovaConversaAdmin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="16dp"
+            android:backgroundTint="@color/admin_cinza_escuro"
+            android:paddingHorizontal="20dp"
+            android:text="+ Nova conversa"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:visibility="gone"
+            app:cornerRadius="24dp" />
     </FrameLayout>
 
 </LinearLayout>

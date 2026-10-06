@@ -1229,3 +1229,42 @@ exports.confirmarCompraGooglePlayPrestador = onCall(async (request) => {
       { googlePlayPurchaseToken: purchaseToken, googlePlayOrderId: compra.orderId || "" });
   return { success: true };
 });
+
+// ============================================================
+// 💬 Chat Admin: mensagem nova entre admins/colaboradores -> push pro app
+// admin de quem recebeu. O token do app admin fica em admins/{uid}.fcmToken
+// (ChatAdminRepository.registrarTokenAdmin), separado do fcmTokens/{uid}
+// do app de motorista/prestador da mesma conta. Nunca manda o texto (que
+// vai cifrado): só quem mandou.
+// ============================================================
+exports.notificarMensagemChatAdmin = onDocumentCreated(
+    { document: "conversasAdmin/{conversaId}/mensagens/{mensagemId}", region: REGIAO_FIRESTORE },
+    async (event) => {
+      const dados = event.data && event.data.data();
+      if (!dados || !dados.destinatarioId) return;
+      const db = getFirestore();
+      const ref = db.collection("admins").doc(dados.destinatarioId);
+      const snap = await ref.get();
+      const token = snap.exists ? snap.get("fcmToken") : null;
+      if (!token) return;
+      const remetenteNome = dados.remetenteNome || "Administrador";
+      try {
+        await getMessaging().send({
+          token,
+          data: {
+            tipo: "chatAdmin",
+            corpo: `Nova mensagem de ${remetenteNome}`,
+            id: event.params.mensagemId,
+            conversaId: event.params.conversaId,
+            destinatarioUid: dados.destinatarioId,
+          },
+          android: { priority: "high" },
+        });
+      } catch (erro) {
+        logger.warn("Erro ao enviar push do Chat Admin:", erro.message);
+        if (erro.code === "messaging/registration-token-not-registered") {
+          await ref.update({ fcmToken: FieldValue.delete() });
+        }
+      }
+    },
+);

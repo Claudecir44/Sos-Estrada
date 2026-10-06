@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Painel Web SOS Estrada</title>
 <!-- ?v= força o navegador a buscar a versão nova (sem ele, usava o estilo antigo em cache) -->
-<link rel="stylesheet" href="style.css?v=6" />
+<link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
 
@@ -43,6 +43,8 @@
     <button class="aba-botao" data-aba="prestadores">🔧 Prestadores<span id="contPrestadores" class="badge-tab"></span></button>
     <button class="aba-botao" data-aba="solicitacoes">📋 Solicitações<span id="contSolicitacoes" class="badge-tab"></span></button>
     <button class="aba-botao" data-aba="mensagens">💬 Mensagens</button>
+    <button class="aba-botao" data-aba="reclamacoes">📝 Reclamações<span id="contReclamacoes" class="badge-tab"></span></button>
+    <button class="aba-botao" data-aba="chatAdmin">💬 Chat Admin<span id="contChatAdmin" class="badge-tab"></span></button>
     <button class="aba-botao" data-aba="financeiro">💰 Financeiro</button>
   </div>
 
@@ -80,6 +82,39 @@
       <div class="chat-caixa">
         <div class="chat-titulo" id="chatTitulo">Escolha uma conversa ao lado</div>
         <div id="chatMensagens"><div class="vazio">As mensagens aparecem aqui (somente leitura).</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reclamações, sugestões e denúncias (mesmo chip "📝 Reclamações" do app admin) -->
+  <div class="aba-conteudo" id="abaReclamacoes">
+    <h3 class="titulo-aba">📝 Reclamações, Sugestões e Denúncias</h3>
+    <table>
+      <thead><tr><th>Data</th><th>Tipo</th><th>Quem enviou</th><th>Mensagem</th><th>Situação</th><th></th></tr></thead>
+      <tbody id="corpoReclamacoes"></tbody>
+    </table>
+    <div class="vazio" id="vazioReclamacoes" style="display:none;">Nenhuma reclamação, sugestão ou denúncia.</div>
+  </div>
+
+  <!-- 💬 Chat Admin: conversas entre admins e colaboradores, as mesmas do
+       app admin (conversasAdmin, mensagens cifradas). -->
+  <div class="aba-conteudo" id="abaChatAdmin">
+    <div class="mensagens-layout">
+      <div class="lista-conversas">
+        <button class="btn-nova-conversa" id="btnNovaConversaAdmin">+ Nova conversa</button>
+        <div id="novaConversaAdminBox" style="display:none;" class="nova-conversa-box">
+          <select id="selectContatoAdmin"></select>
+          <button id="btnIniciarConversaAdmin">Iniciar conversa</button>
+        </div>
+        <div id="listaChatAdmin"></div>
+      </div>
+      <div class="chat-caixa">
+        <div class="chat-titulo" id="chatAdminTitulo">Escolha uma conversa ao lado</div>
+        <div id="chatAdminMensagens"><div class="vazio">As mensagens aparecem aqui.</div></div>
+        <div class="chat-envio" id="chatAdminEnvio" style="display:none;">
+          <input id="chatAdminInput" placeholder="Digite uma mensagem..." maxlength="2000" />
+          <button id="btnEnviarChatAdmin" title="Enviar">➤</button>
+        </div>
       </div>
     </div>
   </div>
@@ -153,6 +188,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=6"></script>
+<script type="module" src="app.js?v=7"></script>
 </body>
 </html>

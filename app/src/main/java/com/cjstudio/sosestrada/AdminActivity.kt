@@ -1,6 +1,8 @@
 package com.cjstudio.sosestrada
 
 import android.app.AlertDialog
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -8,12 +10,15 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cjstudio.sosestrada.databinding.ActivityAdminBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -27,6 +32,9 @@ class AdminActivity : AppCompatActivity() {
 
     @Inject
     lateinit var termosRepository: ITermosRepository
+
+    @Inject
+    lateinit var chatAdminRepository: IChatAdminRepository
 
     private lateinit var binding: ActivityAdminBinding
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -156,6 +164,90 @@ class AdminActivity : AppCompatActivity() {
             painelIniciado = true
             carregarTudo()
         }
+        iniciarChatAdmin()
+    }
+
+    // ---- 💬 Chat Admin (admins e colaboradores) ----
+    private val chatAdminAdapter: ChatAdminConversaAdapter = ChatAdminConversaAdapter(
+        aoTocar = { c -> startActivity(ChatAdminActivity.intent(this, c, chatAdminAdapter.fotoDe(c))) },
+        aoSegurar = { c -> confirmarExclusaoConversa(c) }
+    )
+    private var contatosChat: List<ContatoAdmin> = emptyList()
+    private var erroChatAdmin: String? = null
+
+    private fun iniciarChatAdmin() {
+        chatAdminRepository.registrarTokenAdmin()
+        binding.btnNovaConversaAdmin.setOnClickListener { escolherContatoChat() }
+        lifecycleScope.launch {
+            chatAdminRepository.listarContatos().onSuccess { lista ->
+                contatosChat = lista
+                chatAdminAdapter.fotos = lista.associate { it.id to it.foto }
+            }
+        }
+        // Lista e total de não lidas em tempo real, enquanto o painel está aberto.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                chatAdminRepository.escutarMinhasConversas()
+                    .catch { e -> erroChatAdmin = e.message }
+                    .collect { conversas ->
+                        erroChatAdmin = null
+                        val meuId = chatAdminRepository.meuUid()
+                        chatAdminAdapter.atualizarLista(conversas, meuId)
+                        val naoLidas = conversas.sumOf { it.naoLidasParaMim(meuId) }
+                        binding.chipChatAdmin.text = if (naoLidas > 0) "💬 Chat Admin ($naoLidas)" else "💬 Chat Admin"
+                        if (binding.grupoListas.checkedChipId == R.id.chipChatAdmin) mostrarListaEscolhida()
+                    }
+            }
+        }
+        // Toque na notificação do chat: já abre nesta seção.
+        if (intent.getBooleanExtra(EXTRA_ABRIR_CHAT_ADMIN, false)) binding.chipChatAdmin.isChecked = true
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (::binding.isInitialized && intent.getBooleanExtra(EXTRA_ABRIR_CHAT_ADMIN, false)) binding.chipChatAdmin.isChecked = true
+    }
+
+    private fun escolherContatoChat() {
+        lifecycleScope.launch {
+            if (contatosChat.isEmpty()) contatosChat = chatAdminRepository.listarContatos().getOrDefault(emptyList())
+            if (contatosChat.isEmpty()) {
+                avisar("Não há outro administrador ou colaborador cadastrado.")
+                return@launch
+            }
+            val nomes = contatosChat.map { c ->
+                (if (c.colaborador) "🤝 " else "🛡️ ") + c.nome + (c.email?.let { "  ·  $it" } ?: "")
+            }
+            AlertDialog.Builder(this@AdminActivity)
+                .setTitle("Nova conversa")
+                .setItems(nomes.toTypedArray()) { _, i ->
+                    val contato = contatosChat[i]
+                    lifecycleScope.launch {
+                        chatAdminRepository.buscarOuCriarConversa(contato)
+                            .onSuccess { c -> startActivity(ChatAdminActivity.intent(this@AdminActivity, c, contato.foto)) }
+                            .onFailure { e -> avisar("Erro ao abrir a conversa: ${e.message}") }
+                    }
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
+    }
+
+    private fun confirmarExclusaoConversa(c: ConversaAdmin) {
+        val nome = c.nomeOutroAdmin(chatAdminRepository.meuUid()) ?: "Administrador"
+        AlertDialog.Builder(this)
+            .setTitle("Excluir conversa")
+            .setMessage("Excluir toda a conversa com $nome? As mensagens somem para os dois lados, sem volta.")
+            .setPositiveButton("Excluir") { _, _ ->
+                lifecycleScope.launch {
+                    chatAdminRepository.apagarConversa(c)
+                        .onSuccess { avisar("Conversa excluída.") }
+                        .onFailure { e -> avisar("Erro ao excluir: ${e.message}") }
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     // Volta do Meu Perfil: perfil excluído -> sem acesso, volta pro login;
@@ -240,7 +332,7 @@ class AdminActivity : AppCompatActivity() {
             manifestacoes.onSuccess { lista ->
                 manifestacaoAdapter.atualizarLista(lista)
                 val novas = lista.count { it.status == Manifestacao.STATUS_NOVA }
-                binding.chipSugestoes.text = if (novas > 0) "📝 Sugestões ($novas)" else "📝 Sugestões"
+                binding.chipSugestoes.text = if (novas > 0) "📝 Reclamações ($novas)" else "📝 Reclamações"
             }
             motoristas.onSuccess { motoristaAdapter.atualizarLista(it) }
             prestadores.onSuccess { prestadorAdapter.atualizarLista(it) }
@@ -257,7 +349,8 @@ class AdminActivity : AppCompatActivity() {
                 R.id.chipPrestadores to prestadores.exceptionOrNull()?.message,
                 R.id.chipSolicitacoes to solicitacoes.exceptionOrNull()?.message,
                 R.id.chipMensagens to solicitacoes.exceptionOrNull()?.message,
-                R.id.chipSugestoes to manifestacoes.exceptionOrNull()?.message
+                R.id.chipSugestoes to manifestacoes.exceptionOrNull()?.message,
+                R.id.chipChatAdmin to erroChatAdmin
             )
             // Seção bloqueada pro colaborador não é erro: não avisa.
             val erroSecaoPermitida = listOf(
@@ -322,6 +415,7 @@ class AdminActivity : AppCompatActivity() {
     private fun mostrarListaEscolhida() {
         val escolhido = binding.grupoListas.checkedChipId
         val noFinanceiro = escolhido == R.id.chipFinanceiro
+        binding.btnNovaConversaAdmin.visibility = if (escolhido == R.id.chipChatAdmin) View.VISIBLE else View.GONE
         binding.secaoFinanceiro.root.visibility = if (noFinanceiro) View.VISIBLE else View.GONE
         binding.rvLista.visibility = if (noFinanceiro) View.GONE else View.VISIBLE
         // Recarrega os pagamentos cada vez que o chip é escolhido.
@@ -339,6 +433,7 @@ class AdminActivity : AppCompatActivity() {
             R.id.chipSolicitacoes -> solicitacaoAdapter to "Nenhuma solicitação encontrada."
             R.id.chipMensagens -> conversaAdapter to "Nenhuma conversa encontrada."
             R.id.chipSugestoes -> manifestacaoAdapter to "Nenhuma reclamação, sugestão ou denúncia."
+            R.id.chipChatAdmin -> chatAdminAdapter to "Nenhuma conversa ainda.\nToque em \"+ Nova conversa\" para falar com outro administrador ou colaborador."
             else -> motoristaAdapter to "Nenhum motorista cadastrado ainda."
         }
         if (binding.rvLista.adapter !== adapter) binding.rvLista.adapter = adapter
@@ -347,5 +442,13 @@ class AdminActivity : AppCompatActivity() {
         val erro = erros[escolhido]
         binding.tvListaVazia.text = if (erro != null) "Erro ao carregar.\n$erro" else vazio
         binding.tvListaVazia.visibility = if (erro != null || adapter.itemCount == 0) View.VISIBLE else View.GONE
+    }
+
+    companion object {
+        // Notificação do Chat Admin -> abre o painel já no chip do chat.
+        const val EXTRA_ABRIR_CHAT_ADMIN = "abrirChatAdmin"
+
+        fun intentChatAdmin(context: Context) =
+            Intent(context, AdminActivity::class.java).putExtra(EXTRA_ABRIR_CHAT_ADMIN, true)
     }
 }

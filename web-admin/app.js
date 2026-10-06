@@ -21,7 +21,12 @@ import {
   deleteDoc,
   updateDoc,
   serverTimestamp,
+  setDoc,
+  addDoc,
+  writeBatch,
+  increment,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
 import {
   getStorage,
   ref,
@@ -40,6 +45,7 @@ const auth = getAuth(app);
 auth.languageCode = "pt-BR";
 const db = getFirestore(app);
 const storage = getStorage(app);
+const functions = getFunctions(app);
 
 // Silhueta cinza pra quem ainda não tem foto.
 const FOTO_PADRAO = "data:image/svg+xml;utf8," + encodeURIComponent(
@@ -54,11 +60,12 @@ let chatUnsubscribe = null;
 // (podeAdmin) aplicam o mesmo — aqui é só pra esconder o que não pode.
 let adminAtual = null;
 function pode(secao) {
-  if (!adminAtual || adminAtual.role !== "colaborador") return true;
+  // null = aberta pra todo admin e colaborador (Chat Admin).
+  if (secao === null || !adminAtual || adminAtual.role !== "colaborador") return true;
   return !!(adminAtual.permissoes && adminAtual.permissoes[secao]);
 }
 // Aba "mensagens" lista as conversas a partir das solicitações.
-const PERMISSAO_DA_ABA = { motoristas: "motoristas", prestadores: "prestadores", solicitacoes: "solicitacoes", mensagens: "mensagens", financeiro: "financeiro" };
+const PERMISSAO_DA_ABA = { motoristas: "motoristas", prestadores: "prestadores", solicitacoes: "solicitacoes", mensagens: "mensagens", reclamacoes: "mensagens", chatAdmin: null, financeiro: "financeiro" };
 
 async function dadosAdmin(user) {
   if (!user || user.isAnonymous || !user.emailVerified) return null;
@@ -74,6 +81,7 @@ async function dadosAdmin(user) {
 
 function mostrarLogin() {
   pararChat();
+  pararChatAdmin(true);
   adminAtual = null;
   document.getElementById("painel").style.display = "none";
   document.getElementById("login").style.display = "flex";
@@ -98,14 +106,16 @@ function mostrarPainel(admin) {
   const primeira = Object.keys(PERMISSAO_DA_ABA).find((aba) => pode(PERMISSAO_DA_ABA[aba]));
   if (primeira) mostrarAba(primeira);
   atualizarContadores();
+  iniciarBadgeChatAdmin();
 }
 
 function mostrarAba(nome) {
   if (nome !== "mensagens") pararChat();
+  if (nome !== "chatAdmin") pararChatAdmin(false);
   document.querySelectorAll(".aba-botao").forEach((b) => b.classList.toggle("ativa", b.dataset.aba === nome));
   document.querySelectorAll(".aba-conteudo").forEach((c) => c.classList.remove("ativa"));
   document.getElementById("aba" + nome.charAt(0).toUpperCase() + nome.slice(1)).classList.add("ativa");
-  ({ motoristas: carregarMotoristas, prestadores: carregarPrestadores, solicitacoes: carregarSolicitacoes, mensagens: carregarConversas, financeiro: carregarFinanceiro })[nome]();
+  ({ motoristas: carregarMotoristas, prestadores: carregarPrestadores, solicitacoes: carregarSolicitacoes, mensagens: carregarConversas, reclamacoes: carregarReclamacoes, chatAdmin: carregarChatAdmin, financeiro: carregarFinanceiro })[nome]();
 }
 
 document.querySelectorAll(".aba-botao").forEach((b) => b.addEventListener("click", () => mostrarAba(b.dataset.aba)));
@@ -275,6 +285,7 @@ async function atualizarContadores() {
   if (pode("motoristas")) contar("motoristas", "contMotoristas");
   if (pode("prestadores")) contar("prestadores", "contPrestadores");
   if (pode("solicitacoes")) contar("solicitacoes", "contSolicitacoes");
+  if (pode("mensagens")) contarReclamacoesNovas();
 }
 
 // ---------- Motoristas ----------
@@ -606,6 +617,410 @@ function gerarRelatorioMensal(mes, ano) {
   aba.document.write(html);
   aba.document.close();
   setTimeout(() => aba.print(), 300);
+}
+
+// ---------- 📝 Reclamações (mesmo chip do app admin) ----------
+
+const NOME_TIPO_MANIFESTACAO = { reclamacao: "😠 Reclamação", sugestao: "💡 Sugestão", denuncia: "🚩 Denúncia" };
+const NOME_STATUS_MANIFESTACAO = { nova: "Nova", respondida: "Respondida", arquivada: "Arquivada" };
+
+async function contarReclamacoesNovas() {
+  try {
+    const snap = await getDocs(query(collection(db, "manifestacoes"), where("status", "==", "nova")));
+    document.getElementById("contReclamacoes").textContent = snap.size || "";
+  } catch (_) { /* sem permissão: fica sem número */ }
+}
+
+async function carregarReclamacoes() {
+  const corpo = document.getElementById("corpoReclamacoes");
+  const vazio = document.getElementById("vazioReclamacoes");
+  await carregarTabela(corpo, vazio, "manifestacoes", (m, id) => {
+    const texto = m.tipo === "denuncia"
+      ? `Denunciado: ${m.denunciadoNome || "—"}\nMotivo: ${m.motivo || "—"}\n\n${m.mensagem || ""}`
+      : (m.mensagem || "(sem texto)");
+    const resposta = m.resposta ? `<br><span style="color:#2E7D32">Resposta: ${escapeHtml(m.resposta)}</span>` : "";
+    const arquivada = m.status === "arquivada";
+    return `
+      <td>${formatarDataHora(m.criadoEm)}</td>
+      <td>${escapeHtml(NOME_TIPO_MANIFESTACAO[m.tipo] || "📝 Mensagem")}</td>
+      <td><b>${escapeHtml(m.nome)}</b><br><span style="color:#888">${escapeHtml(m.email)}</span></td>
+      <td class="msg-reclamacao">${escapeHtml(texto)}${resposta}</td>
+      <td><span class="badge ${escapeHtml(m.status)}">${escapeHtml(NOME_STATUS_MANIFESTACAO[m.status] || m.status)}</span></td>
+      <td>
+        <button class="btn-acao" data-responder="${escapeHtml(id)}" data-email="${escapeHtml(m.email)}">✉️ Responder</button>
+        <button class="btn-acao" style="background:#546E7A" data-arquivar="${escapeHtml(id)}" data-arquivada="${arquivada}">${arquivada ? "Desarquivar" : "Arquivar"}</button>
+      </td>`;
+  }, (a, b) => tempo(b.criadoEm) - tempo(a.criadoEm));
+
+  corpo.querySelectorAll("[data-responder]").forEach((b) => b.addEventListener("click", async () => {
+    const resposta = prompt("Resposta (vai por e-mail para " + (b.dataset.email || "quem enviou") + "):");
+    if (!resposta || !resposta.trim()) return;
+    try {
+      const r = await httpsCallable(functions, "responderManifestacao")({ id: b.dataset.responder, resposta: resposta.trim() });
+      alert(r.data && r.data.enviadoPorEmail ? "Resposta enviada por e-mail." : "Resposta gravada, mas o e-mail do servidor não está configurado.");
+      carregarReclamacoes();
+      contarReclamacoesNovas();
+    } catch (e) {
+      alert("Não foi possível responder: " + e.message);
+    }
+  }));
+  corpo.querySelectorAll("[data-arquivar]").forEach((b) => b.addEventListener("click", async () => {
+    try {
+      await updateDoc(doc(db, "manifestacoes", b.dataset.arquivar), { status: b.dataset.arquivada === "true" ? "nova" : "arquivada" });
+      carregarReclamacoes();
+      contarReclamacoesNovas();
+    } catch (e) {
+      alert("Não foi possível alterar: " + e.message);
+    }
+  }));
+}
+
+// ---------- 💬 Chat Admin (igual ao do Caronas e ao app admin) ----------
+// Conversas 1-a-1 entre admins e colaboradores em conversasAdmin, com o
+// conteúdo cifrado (AES-256-GCM) com a MESMA chave do app
+// (ChatAdminCryptoUtil.kt): a conversa continua de um lado pro outro.
+
+const CHAT_ADMIN_CHAVE_BASE64 = "Ugj2YVu36MvXnPYbylsDwXzTKyXakyl+XR2iUqmFuS0=";
+const CHAT_ADMIN_PREFIXO = "ENC1:";
+let chaveChatAdminPromise = null;
+
+function base64ParaBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function bytesParaBase64(bytes) {
+  let bin = "";
+  bytes.forEach((b) => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+
+function chaveChatAdmin() {
+  if (!chaveChatAdminPromise) {
+    chaveChatAdminPromise = crypto.subtle.importKey("raw", base64ParaBytes(CHAT_ADMIN_CHAVE_BASE64), "AES-GCM", false, ["encrypt", "decrypt"]);
+  }
+  return chaveChatAdminPromise;
+}
+
+async function cifrarChatAdmin(texto) {
+  if (!texto) return texto;
+  try {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const cifrado = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, tagLength: 128 }, await chaveChatAdmin(), new TextEncoder().encode(texto)));
+    const junto = new Uint8Array(iv.length + cifrado.length);
+    junto.set(iv, 0);
+    junto.set(cifrado, iv.length);
+    return CHAT_ADMIN_PREFIXO + bytesParaBase64(junto);
+  } catch (e) {
+    console.error("Erro ao cifrar mensagem do Chat Admin", e);
+    return texto;
+  }
+}
+
+async function decifrarChatAdmin(armazenado) {
+  if (!armazenado || !armazenado.startsWith(CHAT_ADMIN_PREFIXO)) return armazenado;
+  try {
+    const dados = base64ParaBytes(armazenado.slice(CHAT_ADMIN_PREFIXO.length));
+    const texto = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dados.slice(0, 12), tagLength: 128 }, await chaveChatAdmin(), dados.slice(12));
+    return new TextDecoder().decode(texto);
+  } catch (e) {
+    console.error("Erro ao decifrar mensagem do Chat Admin", e);
+    return armazenado;
+  }
+}
+
+// Mesmo id do app: os dois uids em ordem, separados por "_".
+function idConversaAdminEntre(a, b) {
+  return [a, b].sort().join("_");
+}
+
+function nomeAdmin(a) {
+  return [a.nome, a.sobrenome].filter(Boolean).join(" ").trim() || a.email || "Administrador";
+}
+
+let conversasAdminCache = [];
+let contatosAdmin = [];
+let conversaAdminAtual = null;
+let unsubConversasAdmin = null;
+let unsubMensagensAdmin = null;
+let unsubBadgeChatAdmin = null;
+
+// tudo=true também desliga o contador da aba (logout).
+function pararChatAdmin(tudo) {
+  if (unsubConversasAdmin) { unsubConversasAdmin(); unsubConversasAdmin = null; }
+  if (unsubMensagensAdmin) { unsubMensagensAdmin(); unsubMensagensAdmin = null; }
+  conversaAdminAtual = null;
+  if (tudo && unsubBadgeChatAdmin) { unsubBadgeChatAdmin(); unsubBadgeChatAdmin = null; }
+}
+
+function naoLidasParaMim(c) {
+  const eu = auth.currentUser && auth.currentUser.uid;
+  return (c.admin1Id === eu ? c.naoLidas1 : c.naoLidas2) || 0;
+}
+
+// Número de não lidas na aba, em qualquer aba do painel.
+function iniciarBadgeChatAdmin() {
+  if (unsubBadgeChatAdmin || !auth.currentUser) return;
+  unsubBadgeChatAdmin = onSnapshot(
+    query(collection(db, "conversasAdmin"), where("participantes", "array-contains", auth.currentUser.uid)),
+    (snap) => {
+      const total = snap.docs.reduce((s, d) => s + naoLidasParaMim(d.data()), 0);
+      document.getElementById("contChatAdmin").textContent = total || "";
+    },
+    () => {},
+  );
+}
+
+async function carregarContatosAdmin() {
+  const snap = await getDocs(collection(db, "admins"));
+  contatosAdmin = snap.docs
+    .filter((d) => d.id !== auth.currentUser.uid)
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => nomeAdmin(a).localeCompare(nomeAdmin(b)));
+}
+
+async function carregarChatAdmin() {
+  pararChatAdmin(false);
+  document.getElementById("chatAdminTitulo").textContent = "Escolha uma conversa ao lado";
+  document.getElementById("chatAdminMensagens").innerHTML = '<div class="vazio">As mensagens aparecem aqui.</div>';
+  document.getElementById("chatAdminEnvio").style.display = "none";
+  document.getElementById("novaConversaAdminBox").style.display = "none";
+  const lista = document.getElementById("listaChatAdmin");
+  lista.innerHTML = '<div class="carregando">Carregando…</div>';
+  try { await carregarContatosAdmin(); } catch (_) { contatosAdmin = []; }
+  const eu = auth.currentUser.uid;
+  unsubConversasAdmin = onSnapshot(
+    query(collection(db, "conversasAdmin"), where("participantes", "array-contains", eu), orderBy("ultimoTimestamp", "desc")),
+    (snap) => {
+      conversasAdminCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      desenharConversasAdmin();
+    },
+    (e) => { lista.innerHTML = `<div class="vazio">Erro ao carregar: ${escapeHtml(e.message)}</div>`; },
+  );
+}
+
+function fotoContato(id) {
+  const c = contatosAdmin.find((a) => a.id === id);
+  return c && c.foto ? srcFoto(c.foto) : FOTO_PADRAO;
+}
+
+function desenharConversasAdmin() {
+  const lista = document.getElementById("listaChatAdmin");
+  const eu = auth.currentUser.uid;
+  if (conversasAdminCache.length === 0) {
+    lista.innerHTML = '<div class="vazio">Nenhuma conversa ainda.<br>Clique em "+ Nova conversa".</div>';
+    return;
+  }
+  lista.innerHTML = "";
+  conversasAdminCache.forEach((c) => {
+    const outroId = c.admin1Id === eu ? c.admin2Id : c.admin1Id;
+    const outroNome = (c.admin1Id === eu ? c.admin2Nome : c.admin1Nome) || "Administrador";
+    const naoLidas = naoLidasParaMim(c);
+    const previa = c.ultimaMensagem ? (c.ultimoRemetenteId === eu ? "Você: " : "") + c.ultimaMensagem : "Nenhuma mensagem ainda";
+    const item = document.createElement("div");
+    item.className = "conversa" + (conversaAdminAtual && conversaAdminAtual.id === c.id ? " ativa" : "");
+    item.innerHTML = `
+      <div class="conversa-admin">
+        <img src="${escapeHtml(fotoContato(outroId))}" alt="">
+        <div class="meio">
+          <div class="partes">${escapeHtml(outroNome)}</div>
+          <div class="previa">${escapeHtml(previa)}</div>
+        </div>
+        ${naoLidas > 0 ? `<span class="nao-lidas">${naoLidas}</span>` : ""}
+        <span class="excluir" title="Excluir conversa">🗑️</span>
+      </div>`;
+    item.addEventListener("click", (ev) => {
+      if (ev.target.classList.contains("excluir")) return excluirConversaAdmin(c, outroNome);
+      abrirConversaAdmin(c);
+    });
+    lista.appendChild(item);
+  });
+}
+
+document.getElementById("btnNovaConversaAdmin").addEventListener("click", () => {
+  const box = document.getElementById("novaConversaAdminBox");
+  const abrir = box.style.display === "none";
+  box.style.display = abrir ? "flex" : "none";
+  if (!abrir) return;
+  const select = document.getElementById("selectContatoAdmin");
+  select.innerHTML = contatosAdmin.length
+    ? contatosAdmin.map((a) => `<option value="${escapeHtml(a.id)}">${a.role === "colaborador" ? "🤝" : "🛡️"} ${escapeHtml(nomeAdmin(a))} (${escapeHtml(a.email || "")})</option>`).join("")
+    : '<option value="">Nenhum outro administrador ou colaborador</option>';
+});
+
+document.getElementById("btnIniciarConversaAdmin").addEventListener("click", async () => {
+  const outroId = document.getElementById("selectContatoAdmin").value;
+  if (!outroId) return;
+  const outro = contatosAdmin.find((a) => a.id === outroId);
+  const eu = auth.currentUser.uid;
+  const id = idConversaAdminEntre(eu, outroId);
+  const ref = doc(db, "conversasAdmin", id);
+  try {
+    const existente = await getDoc(ref);
+    let conversa;
+    if (existente.exists()) {
+      conversa = { id, ...existente.data() };
+    } else {
+      const meuNome = nomeAdmin(adminAtual || {});
+      const souAdmin1 = [eu, outroId].sort()[0] === eu;
+      conversa = {
+        participantes: [eu, outroId],
+        admin1Id: souAdmin1 ? eu : outroId,
+        admin1Nome: souAdmin1 ? meuNome : nomeAdmin(outro),
+        admin2Id: souAdmin1 ? outroId : eu,
+        admin2Nome: souAdmin1 ? nomeAdmin(outro) : meuNome,
+        ultimaMensagem: "",
+        ultimoTimestamp: serverTimestamp(),
+        naoLidas1: 0,
+        naoLidas2: 0,
+      };
+      await setDoc(ref, conversa);
+      conversa = { id, ...conversa };
+    }
+    document.getElementById("novaConversaAdminBox").style.display = "none";
+    abrirConversaAdmin(conversa);
+  } catch (e) {
+    alert("Erro ao iniciar a conversa: " + e.message);
+  }
+});
+
+function abrirConversaAdmin(c) {
+  if (unsubMensagensAdmin) { unsubMensagensAdmin(); unsubMensagensAdmin = null; }
+  conversaAdminAtual = c;
+  desenharConversasAdmin();
+  const eu = auth.currentUser.uid;
+  const outroId = c.admin1Id === eu ? c.admin2Id : c.admin1Id;
+  const outroNome = (c.admin1Id === eu ? c.admin2Nome : c.admin1Nome) || "Administrador";
+  document.getElementById("chatAdminTitulo").innerHTML =
+    `<img src="${escapeHtml(fotoContato(outroId))}" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;">${escapeHtml(outroNome)}`;
+  document.getElementById("chatAdminEnvio").style.display = "flex";
+  const caixa = document.getElementById("chatAdminMensagens");
+  caixa.innerHTML = '<div class="carregando">Carregando…</div>';
+  unsubMensagensAdmin = onSnapshot(
+    query(collection(db, "conversasAdmin", c.id, "mensagens"), orderBy("timestamp", "asc")),
+    async (snap) => {
+      const mensagens = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      await desenharMensagensAdmin(mensagens);
+      marcarConversaAdminComoLida(c.id, mensagens);
+    },
+    (e) => { caixa.innerHTML = `<div class="vazio">Erro: ${escapeHtml(e.message)}</div>`; },
+  );
+}
+
+async function desenharMensagensAdmin(mensagens) {
+  const caixa = document.getElementById("chatAdminMensagens");
+  const eu = auth.currentUser.uid;
+  if (mensagens.length === 0) {
+    caixa.innerHTML = '<div class="vazio">Nenhuma mensagem ainda. Envie a primeira!</div>';
+    return;
+  }
+  const partes = await Promise.all(mensagens.map(async (m) => {
+    const minha = m.remetenteId === eu;
+    const apagadaPraMim = (minha && m.deletadoParaRemetente) || (!minha && m.deletadoParaDestinatario);
+    const texto = m.deletadoParaTodos ? "⚠️ Mensagem apagada"
+      : apagadaPraMim ? (minha ? "Você apagou esta mensagem" : "Mensagem apagada")
+        : await decifrarChatAdmin(m.conteudo);
+    const hora = m.timestamp && m.timestamp.toDate
+      ? m.timestamp.toDate().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+      : "";
+    const podeApagar = !m.deletadoParaTodos && !apagadaPraMim;
+    return `<div class="bolha ${minha ? "bolha-minha" : "bolha-outro"}${podeApagar ? "" : " apagada"}">
+      ${minha ? "" : `<div class="remetente">${escapeHtml(m.remetenteNome || "Administrador")}</div>`}
+      <div style="white-space:pre-wrap">${escapeHtml(texto)}</div>
+      <div class="hora">${hora}${minha && podeApagar ? (m.lida ? " ✓✓" : " ✓") : ""}${podeApagar ? `<span class="apagar" data-msg="${escapeHtml(m.id)}" data-minha="${minha}" title="Apagar">🗑️</span>` : ""}</div>
+    </div>`;
+  }));
+  caixa.innerHTML = partes.join("");
+  caixa.querySelectorAll("[data-msg]").forEach((el) => el.addEventListener("click", () => apagarMensagemAdmin(el.dataset.msg, el.dataset.minha === "true")));
+  caixa.scrollTop = caixa.scrollHeight;
+}
+
+async function marcarConversaAdminComoLida(conversaId, mensagens) {
+  const eu = auth.currentUser.uid;
+  const c = conversaAdminAtual;
+  if (!c || c.id !== conversaId) return;
+  const pendentes = mensagens.filter((m) => m.destinatarioId === eu && !m.lida);
+  const campo = c.admin1Id === eu ? "naoLidas1" : "naoLidas2";
+  try {
+    if (pendentes.length) {
+      const lote = writeBatch(db);
+      pendentes.forEach((m) => lote.update(doc(db, "conversasAdmin", conversaId, "mensagens", m.id), { lida: true }));
+      await lote.commit();
+    }
+    if (naoLidasParaMim(conversasAdminCache.find((x) => x.id === conversaId) || c) > 0) {
+      await updateDoc(doc(db, "conversasAdmin", conversaId), { [campo]: 0 });
+    }
+  } catch (_) { /* tenta de novo na próxima mudança */ }
+}
+
+async function enviarMensagemAdmin() {
+  const input = document.getElementById("chatAdminInput");
+  const c = conversaAdminAtual;
+  const texto = input.value.trim();
+  if (!c || !texto) return;
+  input.value = "";
+  const eu = auth.currentUser.uid;
+  const souAdmin1 = c.admin1Id === eu;
+  try {
+    await addDoc(collection(db, "conversasAdmin", c.id, "mensagens"), {
+      remetenteId: eu,
+      remetenteNome: nomeAdmin(adminAtual || {}),
+      destinatarioId: souAdmin1 ? c.admin2Id : c.admin1Id,
+      destinatarioNome: souAdmin1 ? c.admin2Nome : c.admin1Nome,
+      conteudo: await cifrarChatAdmin(texto),
+      tipo: "texto",
+      timestamp: serverTimestamp(),
+      lida: false,
+      deletadoParaTodos: false,
+      deletadoParaRemetente: false,
+      deletadoParaDestinatario: false,
+    });
+    await updateDoc(doc(db, "conversasAdmin", c.id), {
+      ultimaMensagem: texto.slice(0, 120),
+      ultimoTimestamp: serverTimestamp(),
+      ultimoRemetenteId: eu,
+      [souAdmin1 ? "naoLidas2" : "naoLidas1"]: increment(1),
+    });
+  } catch (e) {
+    input.value = texto;
+    alert("Erro ao enviar: " + e.message);
+  }
+}
+
+document.getElementById("btnEnviarChatAdmin").addEventListener("click", enviarMensagemAdmin);
+document.getElementById("chatAdminInput").addEventListener("keydown", (e) => { if (e.key === "Enter") enviarMensagemAdmin(); });
+
+async function apagarMensagemAdmin(msgId, minha) {
+  const c = conversaAdminAtual;
+  if (!c) return;
+  const ref = doc(db, "conversasAdmin", c.id, "mensagens", msgId);
+  try {
+    if (minha && confirm("Apagar para TODOS? (Cancelar = apagar só para você)")) {
+      await updateDoc(ref, { deletadoParaTodos: true, conteudo: await cifrarChatAdmin("Mensagem apagada"), tipo: "deletada" });
+    } else if (minha || confirm("Apagar esta mensagem só para você?")) {
+      await updateDoc(ref, { [minha ? "deletadoParaRemetente" : "deletadoParaDestinatario"]: true });
+    }
+  } catch (e) {
+    alert("Erro ao apagar: " + e.message);
+  }
+}
+
+async function excluirConversaAdmin(c, nome) {
+  if (!confirm(`Excluir toda a conversa com ${nome}? As mensagens somem para os dois lados, sem volta.`)) return;
+  try {
+    const snap = await getDocs(collection(db, "conversasAdmin", c.id, "mensagens"));
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const lote = writeBatch(db);
+      snap.docs.slice(i, i + 400).forEach((d) => lote.delete(d.ref));
+      await lote.commit();
+    }
+    await deleteDoc(doc(db, "conversasAdmin", c.id));
+    if (conversaAdminAtual && conversaAdminAtual.id === c.id) carregarChatAdmin();
+  } catch (e) {
+    alert("Erro ao excluir: " + e.message);
+  }
 }
 
 // ---------- Util ----------

@@ -21,6 +21,7 @@ import javax.inject.Inject
 // - respostaPrestador  -> "Prestador respondeu"     (motorista: Preciso de socorro)
 // - localizacaoMotorista -> "Localização Sos Estrada" (prestador: Atender solicitações)
 // - assinatura         -> "Plano Sos Estrada"      (prestador: plano termina em 5/2 dias)
+// - chatAdmin          -> "Chat Admin Sos Estrada" (app admin: abre o chip 💬 Chat Admin)
 @AndroidEntryPoint
 class SosFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -30,9 +31,17 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
     @Inject
     lateinit var notificacaoRepository: INotificacaoRepository
 
+    @Inject
+    lateinit var chatAdminRepository: IChatAdminRepository
+
+    // O app admin (pacote ".admin") guarda o token em admins/{uid}, separado
+    // do app de motorista/prestador da mesma conta (fcmTokens/{uid}).
+    private val ehAppAdmin get() = packageName.endsWith(".admin")
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        notificacaoRepository.registrarToken(authRepository.uidLogado())
+        if (ehAppAdmin) chatAdminRepository.registrarTokenAdmin()
+        else notificacaoRepository.registrarToken(authRepository.uidLogado())
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
@@ -47,6 +56,17 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
         // "motorista" ou "prestador": qual lado recebe, pra abrir a tela certa.
         val paraPrestador = dados["destino"] == IChatRepository.PRESTADOR
 
+        if (dados["tipo"] == "chatAdmin") {
+            // Só no app admin; nunca traz o texto da mensagem, só quem mandou.
+            if (!ehAppAdmin) return
+            mostrarNotificacao(
+                "chat_admin_sos", "Chat Admin", "Chat Admin Sos Estrada", corpo,
+                dados["conversaId"]?.hashCode() ?: System.currentTimeMillis().toInt(),
+                destino = AdminActivity.intentChatAdmin(this)
+            )
+            return
+        }
+
         val (titulo, canalId, canalNome) = when (dados["tipo"]) {
             "mensagemSos" -> Triple("Mensagem Sos Estrada", "mensagens_sos", "Mensagens")
             "novaSolicitacao" -> Triple("Solicitação Sos Estrada", "solicitacoes_sos", "Novas solicitações")
@@ -57,7 +77,7 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
         }
         val idNotificacao = dados["id"]?.hashCode() ?: System.currentTimeMillis().toInt()
         // Aviso do plano abre só o painel; os outros já abrem a lista.
-        mostrarNotificacao(canalId, canalNome, titulo, corpo, idNotificacao, paraPrestador, abrirLista = dados["tipo"] != "assinatura")
+        mostrarNotificacao(canalId, canalNome, titulo, corpo, idNotificacao, paraPrestador = paraPrestador, abrirLista = dados["tipo"] != "assinatura")
     }
 
     private fun mostrarNotificacao(
@@ -66,14 +86,14 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
         titulo: String,
         corpo: String,
         idNotificacao: Int,
-        paraPrestador: Boolean,
-        abrirLista: Boolean
+        paraPrestador: Boolean = false,
+        abrirLista: Boolean = false,
+        destino: Intent? = null
     ) {
         // Abre o painel do lado certo já com a lista aberta embaixo do cartão
         // (a lista agora fica dentro do painel, não numa tela separada).
         val painel = if (paraPrestador) PrestadorDashboardActivity::class.java else MotoristaDashboardActivity::class.java
-        val abrir = Intent(this, painel)
-            .putExtra(MotoristaDashboardActivity.EXTRA_ABRIR_LISTA, abrirLista)
+        val abrir = (destino ?: Intent(this, painel).putExtra(MotoristaDashboardActivity.EXTRA_ABRIR_LISTA, abrirLista))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pendingIntent = PendingIntent.getActivity(
             this, idNotificacao, abrir, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -97,7 +117,7 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
 
         val notificacao = NotificationCompat.Builder(this, canalId)
             .setSmallIcon(R.drawable.ic_notificacao)
-            .setColor(0xFFD32F2F.toInt())
+            .setColor(if (ehAppAdmin) 0xFF1F2937.toInt() else 0xFFD32F2F.toInt())
             .setContentTitle(titulo)
             .setContentText(corpo)
             .setStyle(NotificationCompat.BigTextStyle().bigText(corpo))
