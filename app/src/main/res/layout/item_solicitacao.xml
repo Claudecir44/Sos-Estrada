@@ -23,6 +23,13 @@
             android:textColor="#333" />
 
         <TextView
+            android:id="@+id/tvAvaliacaoMotorista"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textColor="#F57C00" />
+
+        <TextView
             android:id="@+id/tvMotoristaVeiculo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -165,6 +172,19 @@
                 android:id="@+id/badgeLocalizacaoMotorista"
                 style="@style/BadgeNotificacao" />
         </FrameLayout>
+
+        <!-- Só depois de aceitar e enquanto não avaliou. -->
+        <Button
+            android:id="@+id/btnAvaliarMotorista"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="⭐ Avaliar motorista"
+            android:textAllCaps="false"
+            android:backgroundTint="#F9A825"
+            android:textColor="#FFFFFF"
+            android:visibility="gone"
+            app:cornerRadius="8dp" />
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

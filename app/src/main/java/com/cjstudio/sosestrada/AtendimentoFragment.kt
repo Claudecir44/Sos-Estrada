@@ -25,6 +25,9 @@ class AtendimentoFragment : Fragment() {
     @Inject
     lateinit var solicitacaoRepository: ISolicitacaoRepository
 
+    @Inject
+    lateinit var avaliacaoRepository: IAvaliacaoRepository
+
     private lateinit var binding: FragmentAtendimentoBinding
     private lateinit var adapter: SolicitacaoAdapter
 
@@ -40,7 +43,8 @@ class AtendimentoFragment : Fragment() {
             aoAceitar = { s -> s.id?.let { aceitar(it) } },
             aoRecusar = { s -> s.id?.let { atualizarStatus(it, RECUSADO) } },
             aoExcluir = { s -> s.id?.let { excluir(it) } },
-            aoVerLocalizacao = { s -> s.id?.let { id -> viewLifecycleOwner.lifecycleScope.launch { solicitacaoRepository.marcarLocalizacaoComoVista(id) } } }
+            aoVerLocalizacao = { s -> s.id?.let { id -> viewLifecycleOwner.lifecycleScope.launch { solicitacaoRepository.marcarLocalizacaoComoVista(id) } } },
+            aoAvaliar = ::avaliarMotorista
         )
         binding.rvAtendimento.layoutManager = LinearLayoutManager(requireContext())
         binding.rvAtendimento.adapter = adapter
@@ -57,12 +61,44 @@ class AtendimentoFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 solicitacaoRepository.escutarRecebidasPeloPrestador().collect { lista ->
+                    val motoristasMudaram = lista.map { it.motoristaUid }.toSet() != solicitacoes.map { it.motoristaUid }.toSet()
                     solicitacoes = lista
                     binding.progressBarAtendimento.visibility = View.GONE
                     adapter.atualizarLista(lista)
+                    if (motoristasMudaram || !avaliacoesCarregadas) carregarAvaliacoes()
                     binding.tvEmptyAtendimento.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
                     marcarNovasVistasSeVisivel()
                 }
+            }
+        }
+    }
+
+    private var avaliacoesCarregadas = false
+
+    // Nota de cada motorista da lista + atendimentos que este prestador já
+    // avaliou (escondem o botão Avaliar).
+    private fun carregarAvaliacoes() {
+        avaliacoesCarregadas = true
+        viewLifecycleOwner.lifecycleScope.launch {
+            val notas = avaliacaoRepository.notasDe(solicitacoes.mapNotNull { it.motoristaUid }).getOrDefault(emptyMap())
+            val jaAvaliadas = avaliacaoRepository.solicitacoesJaAvaliadas().getOrDefault(emptySet())
+            adapter.atualizarAvaliacoes(notas, jaAvaliadas)
+        }
+    }
+
+    private fun avaliarMotorista(solicitacao: Solicitacao) {
+        val solicitacaoId = solicitacao.id ?: return
+        val motoristaUid = solicitacao.motoristaUid ?: return
+        AvaliacaoDialogUtil.mostrar(requireContext(), solicitacao.motoristaNome) { nota, comentario ->
+            viewLifecycleOwner.lifecycleScope.launch {
+                avaliacaoRepository.avaliar(solicitacaoId, motoristaUid, nota, comentario)
+                    .onSuccess {
+                        Toast.makeText(requireContext(), "Obrigado pela avaliação!", Toast.LENGTH_SHORT).show()
+                        carregarAvaliacoes()
+                    }
+                    .onFailure { e ->
+                        Toast.makeText(requireContext(), "Não foi possível avaliar: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
             }
         }
     }

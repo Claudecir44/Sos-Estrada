@@ -19,8 +19,20 @@ import java.util.Locale
 class PrestadorAdapter(
     private val aoSolicitar: (Prestador) -> Unit,
     private val aoSegurar: (Prestador) -> Unit,
-    private val aoEnviarLocalizacao: (Prestador) -> Unit
+    private val aoEnviarLocalizacao: (Prestador) -> Unit,
+    private val aoAvaliar: (Prestador) -> Unit
 ) : RecyclerView.Adapter<PrestadorAdapter.ViewHolder>() {
+
+    // Nota de cada prestador (uid -> média/total) e solicitações que o
+    // motorista já avaliou (escondem o botão Avaliar).
+    private var notas: Map<String, NotaUsuario> = emptyMap()
+    private var jaAvaliadas: Set<String> = emptySet()
+
+    fun atualizarAvaliacoes(notas: Map<String, NotaUsuario>, jaAvaliadas: Set<String>) {
+        this.notas = notas
+        this.jaAvaliadas = jaAvaliadas
+        notifyDataSetChanged()
+    }
 
     private var todos: List<Prestador> = emptyList()
     private var visiveis: List<Prestador> = emptyList()
@@ -40,6 +52,10 @@ class PrestadorAdapter(
 
         b.tvNomePrestador.text = p.nome
         b.tvServicoPrestador.text = "🔧 ${p.servico ?: ""}"
+        b.tvAvaliacaoPrestador.text = AvaliacaoDialogUtil.textoNota(p.uid?.let { notas[it] })
+        val podeAvaliar = p.statusSolicitacao == ACEITO && !p.solicitacaoId.isNullOrEmpty() && p.solicitacaoId !in jaAvaliadas
+        b.btnAvaliarPrestador.visibility = if (podeAvaliar) View.VISIBLE else View.GONE
+        b.btnAvaliarPrestador.setOnClickListener { aoAvaliar(p) }
         b.tvLocalizacaoPrestador.text = "📍 ${p.enderecoCompleto}"
         b.tvTelefonePrestador.text = "📞 ${p.telefone ?: ""}"
         b.tvDistanciaPrestador.text = "📏 Distância: " + when {

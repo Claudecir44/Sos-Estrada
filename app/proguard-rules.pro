@@ -24,3 +24,4 @@
 # ShortcutBadger (número no ícone do app) instancia a implementação de
 # cada fabricante por reflection.
 -keep class me.leolin.shortcutbadger.impl.** { <init>(); }
+-keep class com.cjstudio.sosestrada.Avaliacao { *; }

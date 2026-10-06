@@ -25,8 +25,20 @@ class SolicitacaoAdapter(
     private val aoRecusar: (Solicitacao) -> Unit,
     private val aoExcluir: (Solicitacao) -> Unit,
     // Prestador abriu a localização que o motorista enviou: apaga o alerta.
-    private val aoVerLocalizacao: (Solicitacao) -> Unit
+    private val aoVerLocalizacao: (Solicitacao) -> Unit,
+    private val aoAvaliar: (Solicitacao) -> Unit
 ) : RecyclerView.Adapter<SolicitacaoAdapter.ViewHolder>() {
+
+    // Nota de cada motorista (uid -> média/total) e solicitações que o
+    // prestador já avaliou.
+    private var notas: Map<String, NotaUsuario> = emptyMap()
+    private var jaAvaliadas: Set<String> = emptySet()
+
+    fun atualizarAvaliacoes(notas: Map<String, NotaUsuario>, jaAvaliadas: Set<String>) {
+        this.notas = notas
+        this.jaAvaliadas = jaAvaliadas
+        notifyDataSetChanged()
+    }
 
     private var solicitacoes: List<Solicitacao> = emptyList()
 
@@ -48,6 +60,10 @@ class SolicitacaoAdapter(
         val context = b.root.context
 
         b.tvMotoristaNome.text = "Motorista: ${s.motoristaNome ?: ""}"
+        b.tvAvaliacaoMotorista.text = AvaliacaoDialogUtil.textoNota(s.motoristaUid?.let { notas[it] })
+        val podeAvaliar = s.status == ACEITO && !s.id.isNullOrEmpty() && s.id !in jaAvaliadas
+        b.btnAvaliarMotorista.visibility = if (podeAvaliar) View.VISIBLE else View.GONE
+        b.btnAvaliarMotorista.setOnClickListener { aoAvaliar(s) }
         b.tvMotoristaVeiculo.text = "🚗 Veículo: ${s.motoristaVeiculo ?: ""}"
         b.tvMotoristaPlaca.text = "🔢 Placa: ${s.motoristaPlaca ?: ""}"
         b.tvMotoristaTelefone.text = "📞 Telefone: ${s.motoristaTelefone ?: ""}"

@@ -354,6 +354,40 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Avaliações de atendimento (Avaliacao.kt), nos dois sentidos. Só quem
+    // participou da solicitação, depois que o prestador ACEITOU, avaliando
+    // o outro lado; uma vez por pessoa por atendimento (id fixo
+    // solicitacaoId_avaliador, sem update). Todo logado lê (média nos cartões).
+    match /avaliacoes/{avaliacaoId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['solicitacaoId', 'avaliadorUid', 'avaliadoUid', 'nota', 'comentario', 'criadoEm'])
+        && request.resource.data.avaliadorUid == request.auth.uid
+        && avaliacaoId == request.resource.data.solicitacaoId + '_' + request.auth.uid
+        && request.resource.data.nota is int
+        && request.resource.data.nota >= 1 && request.resource.data.nota <= 5
+        && (request.resource.data.get('comentario', null) == null
+            || (request.resource.data.comentario is string && request.resource.data.comentario.size() <= 500))
+        && request.resource.data.criadoEm == request.time
+        && avaliacaoDoAtendimentoValida(request.resource.data.solicitacaoId, request.resource.data.avaliadoUid);
+      allow update: if false;
+      allow delete: if ehAdminCompleto();
+    }
+
+    function avaliacaoDoAtendimentoValida(solicitacaoId, avaliadoUid) {
+      let sol = get(/databases/$(database)/documents/solicitacoes/$(solicitacaoId)).data;
+      return sol.get('status', '') == 'aceito'
+        && ((sol.motoristaUid == request.auth.uid && avaliadoUid == sol.prestadorUid)
+            || (sol.prestadorUid == request.auth.uid && avaliadoUid == sol.motoristaUid));
+    }
+
+    // Média e total de avaliações de cada usuário — só o servidor grava
+    // (atualizarNotaUsuario em functions/index.js).
+    match /notasUsuarios/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // Pedido de exclusão de conta pela página web (excluir-conta.html, exigida
     // pelo Google Play) — qualquer pessoa envia, sem login; só o admin lê.
     match /solicitacoesExclusaoConta/{id} {

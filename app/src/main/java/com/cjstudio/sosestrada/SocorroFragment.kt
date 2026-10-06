@@ -47,6 +47,9 @@ class SocorroFragment : Fragment() {
     @Inject
     lateinit var localizacaoRepository: ILocalizacaoRepository
 
+    @Inject
+    lateinit var avaliacaoRepository: IAvaliacaoRepository
+
     private lateinit var binding: FragmentSocorroBinding
     private lateinit var adapter: PrestadorAdapter
 
@@ -87,7 +90,8 @@ class SocorroFragment : Fragment() {
         adapter = PrestadorAdapter(
             aoSolicitar = ::solicitarServico,
             aoSegurar = ::aoSegurarPrestador,
-            aoEnviarLocalizacao = ::aoEnviarLocalizacao
+            aoEnviarLocalizacao = ::aoEnviarLocalizacao,
+            aoAvaliar = ::avaliarPrestador
         )
         binding.rvPrestadoresSocorro.layoutManager = LinearLayoutManager(requireContext())
         binding.rvPrestadoresSocorro.adapter = adapter
@@ -182,10 +186,40 @@ class SocorroFragment : Fragment() {
             if (temLocalizacao) calcularDistancias(prestadores)
 
             this@SocorroFragment.prestadores = prestadores
+            carregarAvaliacoes()
             binding.progressBarSocorro.visibility = View.GONE
             binding.tvEmptySocorro.visibility = if (prestadores.isEmpty()) View.VISIBLE else View.GONE
             // Status das solicitações: os últimos recebidos em tempo real.
             aplicarSolicitacoes()
+        }
+    }
+
+    // Nota de cada prestador da lista + atendimentos que este motorista já
+    // avaliou (escondem o botão Avaliar).
+    private fun carregarAvaliacoes() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val notas = avaliacaoRepository.notasDe(prestadores.mapNotNull { it.uid }).getOrDefault(emptyMap())
+            val jaAvaliadas = avaliacaoRepository.solicitacoesJaAvaliadas().getOrDefault(emptySet())
+            adapter.atualizarAvaliacoes(notas, jaAvaliadas)
+        }
+    }
+
+    // Só depois que o prestador aceitou (o botão só aparece assim; as regras
+    // também conferem).
+    private fun avaliarPrestador(prestador: Prestador) {
+        val solicitacaoId = prestador.solicitacaoId ?: return
+        val prestadorUid = prestador.uid ?: return
+        AvaliacaoDialogUtil.mostrar(requireContext(), prestador.nome) { nota, comentario ->
+            viewLifecycleOwner.lifecycleScope.launch {
+                avaliacaoRepository.avaliar(solicitacaoId, prestadorUid, nota, comentario)
+                    .onSuccess {
+                        Toast.makeText(requireContext(), "Obrigado pela avaliação!", Toast.LENGTH_SHORT).show()
+                        carregarAvaliacoes()
+                    }
+                    .onFailure { e ->
+                        Toast.makeText(requireContext(), "Não foi possível avaliar: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+            }
         }
     }
 

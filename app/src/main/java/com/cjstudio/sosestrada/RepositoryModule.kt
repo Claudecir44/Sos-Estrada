@@ -45,4 +45,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindNotificacaoRepository(impl: NotificacaoRepository): INotificacaoRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAvaliacaoRepository(impl: AvaliacaoRepository): IAvaliacaoRepository
 }

@@ -1015,3 +1015,26 @@ exports.apagarLoginPrestadorExcluido = onDocumentDeleted(
     { document: "prestadores/{uid}", region: REGIAO_FIRESTORE },
     (event) => apagarLoginSeSobrouNada(event.params.uid),
 );
+
+// ============================================================
+// Avaliação nova -> recalcula a média de quem foi avaliado em
+// notasUsuarios/{uid} (o app lê pra mostrar "⭐ 4,8 (12 avaliações)" nos
+// cartões sem somar tudo de novo). Recalcula do zero a cada avaliação:
+// idempotente e corrige sozinho se uma avaliação for apagada pelo admin.
+// ============================================================
+async function recalcularNotaUsuario(uid) {
+  const db = getFirestore();
+  const snap = await db.collection("avaliacoes").where("avaliadoUid", "==", uid).get();
+  const notas = snap.docs.map((d) => d.get("nota")).filter((n) => typeof n === "number");
+  const total = notas.length;
+  const media = total ? Math.round((notas.reduce((a, b) => a + b, 0) / total) * 10) / 10 : 0;
+  await db.collection("notasUsuarios").doc(uid).set({ media, total, atualizadoEm: FieldValue.serverTimestamp() });
+}
+
+exports.atualizarNotaUsuario = onDocumentWritten(
+    { document: "avaliacoes/{avaliacaoId}", region: REGIAO_FIRESTORE },
+    async (event) => {
+      const dados = event.data?.after?.data() || event.data?.before?.data();
+      if (dados?.avaliadoUid) await recalcularNotaUsuario(dados.avaliadoUid);
+    },
+);
