@@ -174,6 +174,107 @@ const PLANOS = {
 };
 const PLANO_PADRAO = "trimestral";
 
+// ============================================================
+// Google Play Billing (igual Caronas): os planos também são vendidos como
+// produtos avulsos no Google Play, e com o "faturamento alternativo"
+// (User Choice) o prestador escolhe Google Play ou Mercado Pago. O app só
+// manda o produto/token; preço e prazo saem de PLANOS.
+//  - confirmarCompraGooglePlayPrestador: confere a compra na API do Google,
+//    concede o plano e CONSOME (pra poder comprar de novo na renovação).
+//  - Pagamento pelo Mercado Pago escolhido na tela do Google: o webhook
+//    reporta a transação externa ao Google (reportarTransacaoExterna).
+// Precisa em functions/.env: GOOGLE_PLAY_PACKAGE_NAME e
+// GOOGLE_PLAY_SERVICE_ACCOUNT_JSON (a mesma conta de serviço do Caronas,
+// com acesso ao app SOS Estrada no Play Console).
+// ============================================================
+const PRODUTOS_GOOGLE_PLAY = {
+  plano_prestador_trimestral: "trimestral",
+  plano_prestador_semestral: "semestral",
+};
+const GOOGLE_PLAY_PACKAGE_NAME = process.env.GOOGLE_PLAY_PACKAGE_NAME || "";
+const GOOGLE_PLAY_SERVICE_ACCOUNT_JSON = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || "";
+let androidPublisherCliente = null;
+
+function obterAndroidPublisher() {
+  if (androidPublisherCliente) return androidPublisherCliente;
+  if (!GOOGLE_PLAY_PACKAGE_NAME || !GOOGLE_PLAY_SERVICE_ACCOUNT_JSON) return null;
+  const { google } = require("googleapis");
+  const auth = new google.auth.GoogleAuth({
+    credentials: JSON.parse(GOOGLE_PLAY_SERVICE_ACCOUNT_JSON),
+    scopes: ["https://www.googleapis.com/auth/androidpublisher"],
+  });
+  androidPublisherCliente = google.androidpublisher({ version: "v3", auth });
+  return androidPublisherCliente;
+}
+
+async function reportarTransacaoExterna({ externalTransactionToken, valor, paymentId }) {
+  const androidpublisher = obterAndroidPublisher();
+  if (!androidpublisher) {
+    logger.warn("Google Play não configurado — transação externa não reportada:", paymentId);
+    return;
+  }
+  const externalTransactionId = `mp_${paymentId}`;
+  try {
+    await androidpublisher.externaltransactions.createexternaltransaction({
+      parent: `applications/${GOOGLE_PLAY_PACKAGE_NAME}`,
+      externalTransactionId,
+      requestBody: {
+        originalPreTaxAmount: { priceMicros: String(Math.round(valor * 1e6)), currency: "BRL" },
+        originalTaxAmount: { priceMicros: "0", currency: "BRL" },
+        transactionTime: new Date().toISOString(),
+        userTaxAddress: { regionCode: "BR" },
+        oneTimeTransaction: { externalTransactionToken },
+      },
+    });
+    logger.info("Transação externa reportada ao Google Play:", externalTransactionId);
+  } catch (e) {
+    logger.error("Falha ao reportar transação externa ao Google Play:", externalTransactionId, e.message);
+  }
+}
+
+// Ativa/renova o plano (renovação antes de vencer soma o que restava) e
+// registra no histórico (Financeiro). referencia: { mercadoPagoPaymentId }
+// ou { googlePlayPurchaseToken, googlePlayOrderId }.
+async function concederAssinaturaPrestador(prestadorId, chavePlano, valor, referencia) {
+  const db = getFirestore();
+  const plano = PLANOS[chavePlano] || PLANOS[PLANO_PADRAO];
+  const agora = Date.now();
+  const atual = await db.collection("prestadores").doc(prestadorId).get();
+  const expiraAtual = atual.exists && atual.get("assinaturaStatus") === "ativa" && atual.get("assinaturaExpiraEm") ?
+    atual.get("assinaturaExpiraEm").toMillis() : 0;
+  const expiraEm = Math.max(agora, expiraAtual) + plano.diasValidade * DIA_MS;
+
+  await db.collection("prestadores").doc(prestadorId).update({
+    ativo: true,
+    assinaturaStatus: "ativa",
+    assinaturaExpiraEm: Timestamp.fromMillis(expiraEm),
+    assinaturaUltimoPagamento: Timestamp.fromMillis(agora),
+    // "Plano pago 00/90 dias" no painel: o total inclui dias que sobraram
+    // de antes (renovação antecipada soma).
+    assinaturaDiasTotal: Math.round((expiraEm - agora) / DIA_MS),
+    inativoDesde: FieldValue.delete(),
+    avisosVencimento: FieldValue.delete(),
+  });
+  logger.info(`Assinatura ativada para prestador ${prestadorId}, expira em ${new Date(expiraEm).toISOString()}`);
+
+  try {
+    const dados = (await db.collection("prestadores").doc(prestadorId).get()).data() || {};
+    await db.collection("pagamentos").add({
+      prestadorId,
+      prestadorNome: dados.nome || "",
+      prestadorEmail: dados.email || "",
+      valor,
+      plano: chavePlano,
+      diasValidade: plano.diasValidade,
+      dataCompra: agora,
+      expiraEm,
+      ...referencia,
+    });
+  } catch (histError) {
+    logger.error("Erro ao registrar histórico de pagamento:", histError);
+  }
+}
+
 // CPF (11 dígitos) ou CNPJ (14) com os dígitos verificadores conferidos —
 // mesma conta do app (DocumentoUtil).
 function somenteDigitos(valor) {
@@ -406,6 +507,9 @@ exports.criarPreferenciaPagamentoPrestador = onCall(async (request) => {
         prestadorId,
         plano: chavePlano,
         diasValidade: plano.diasValidade,
+        // Token da tela de escolha do Google (User Choice): o webhook reporta
+        // a transação externa ao Google Play com ele.
+        externalTransactionToken: (request.data && request.data.externalTransactionToken) || null,
       },
       statement_descriptor: "SOS ESTRADA",
     };
@@ -476,46 +580,13 @@ exports.paymentWebhookPrestador = onRequest(async (req, res) => {
       }
 
       const chavePlano = (payment.metadata && payment.metadata.plano) || PLANO_PADRAO;
-      const diasValidade = (payment.metadata && payment.metadata.dias_validade) ||
-        (payment.metadata && payment.metadata.diasValidade) ||
-        (PLANOS[chavePlano] || PLANOS[PLANO_PADRAO]).diasValidade;
-      const agora = Date.now();
-      // Renovação antes de vencer: soma ao prazo que ainda restava (não perde dias).
-      const atual = await db.collection("prestadores").doc(prestadorId).get();
-      const expiraAtual = atual.exists && atual.get("assinaturaStatus") === "ativa" && atual.get("assinaturaExpiraEm") ?
-        atual.get("assinaturaExpiraEm").toMillis() : 0;
-      const expiraEm = Math.max(agora, expiraAtual) + diasValidade * DIA_MS;
+      const valor = payment.transaction_amount || 0;
+      await concederAssinaturaPrestador(prestadorId, PLANOS[chavePlano] ? chavePlano : PLANO_PADRAO, valor, { mercadoPagoPaymentId: payment.id });
 
-      await db.collection("prestadores").doc(prestadorId).update({
-        ativo: true,
-        assinaturaStatus: "ativa",
-        assinaturaExpiraEm: Timestamp.fromMillis(expiraEm),
-        assinaturaUltimoPagamento: Timestamp.fromMillis(agora),
-        // "Plano pago 00/90 dias" no painel: o total inclui dias que sobraram
-        // de antes (renovação antecipada soma).
-        assinaturaDiasTotal: Math.round((expiraEm - agora) / DIA_MS),
-        inativoDesde: FieldValue.delete(),
-        avisosVencimento: FieldValue.delete(),
-      });
-
-      logger.info(`Assinatura ativada para prestador ${prestadorId}, expira em ${new Date(expiraEm).toISOString()}`);
-
-      try {
-        const prestadorDoc = await db.collection("prestadores").doc(prestadorId).get();
-        const prestadorData = prestadorDoc.exists ? prestadorDoc.data() : {};
-        await db.collection("pagamentos").add({
-          prestadorId,
-          prestadorNome: prestadorData.nome || "",
-          prestadorEmail: prestadorData.email || "",
-          valor: payment.transaction_amount || 0,
-          plano: chavePlano,
-          diasValidade,
-          dataCompra: agora,
-          expiraEm,
-          mercadoPagoPaymentId: payment.id,
-        });
-      } catch (histError) {
-        logger.error("Erro ao registrar histórico de pagamento:", histError);
+      // Pago fora do Google Play pela escolha do usuário: reporta ao Google.
+      const tokenExterno = payment.metadata && (payment.metadata.external_transaction_token || payment.metadata.externalTransactionToken);
+      if (tokenExterno) {
+        await reportarTransacaoExterna({ externalTransactionToken: tokenExterno, valor, paymentId: payment.id });
       }
     } else {
       logger.info(`Pagamento ${payment.id} com status ${payment.status} para prestador ${prestadorId} — nenhuma ação.`);
@@ -1092,4 +1163,60 @@ exports.responderManifestacao = onCall(async (request) => {
     respostaEnviadaPorEmail: enviadoPorEmail,
   });
   return { enviadoPorEmail };
+});
+
+
+exports.confirmarCompraGooglePlayPrestador = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Usuário não autenticado.");
+  const prestadorId = request.auth.uid;
+  const { purchaseToken, productId } = request.data || {};
+  if (!purchaseToken || !productId) throw new HttpsError("invalid-argument", "Dados incompletos.");
+  const chavePlano = PRODUTOS_GOOGLE_PLAY[productId];
+  if (!chavePlano) throw new HttpsError("invalid-argument", "Produto desconhecido: " + productId);
+  const androidpublisher = obterAndroidPublisher();
+  if (!androidpublisher) {
+    throw new HttpsError("failed-precondition", "Integração com o Google Play não configurada no servidor.");
+  }
+
+  let compra;
+  try {
+    compra = (await androidpublisher.purchases.products.get({
+      packageName: GOOGLE_PLAY_PACKAGE_NAME, productId, token: purchaseToken,
+    })).data;
+  } catch (e) {
+    logger.error("Erro ao verificar compra no Google Play:", e.message);
+    throw new HttpsError("internal", "Não foi possível verificar a compra junto ao Google Play.");
+  }
+  // purchaseState: 0 comprado, 1 cancelado, 2 pendente (Pix/boleto).
+  if (compra.purchaseState === 2) return { success: false, pendente: true };
+  if (compra.purchaseState !== 0) {
+    throw new HttpsError("failed-precondition", "Compra não concluída (purchaseState=" + compra.purchaseState + ").");
+  }
+  // A compra tem que ser desta conta (o app manda o uid como obfuscatedAccountId).
+  if (compra.obfuscatedExternalAccountId && compra.obfuscatedExternalAccountId !== prestadorId) {
+    throw new HttpsError("permission-denied", "Esta compra pertence a outra conta.");
+  }
+
+  // O mesmo token só concede uma vez (só depois de confirmar "comprado").
+  const idempotenciaRef = getFirestore().collection("pagamentosProcessados").doc(`gp_${purchaseToken}`);
+  try {
+    await idempotenciaRef.create({ prestadorId, processadoEm: Date.now() });
+  } catch (e) {
+    if (e.code === 6) return { success: true, jaProcessado: true };
+    throw e;
+  }
+
+  // CONSUMIR: o plano é comprado de novo a cada período; só reconhecido,
+  // o Google dá "item já comprado" na renovação. Consumir também reconhece.
+  if (compra.consumptionState !== 1) {
+    try {
+      await androidpublisher.purchases.products.consume({ packageName: GOOGLE_PLAY_PACKAGE_NAME, productId, token: purchaseToken });
+    } catch (e) {
+      logger.error("Erro ao consumir compra (plano concedido mesmo assim):", e.message);
+    }
+  }
+
+  await concederAssinaturaPrestador(prestadorId, chavePlano, PLANOS[chavePlano].valor,
+      { googlePlayPurchaseToken: purchaseToken, googlePlayOrderId: compra.orderId || "" });
+  return { success: true };
 });

@@ -16,6 +16,7 @@ espresso-core = "3.6.1"
 ksp = "1.9.0-1.0.13"
 hilt = "2.51.1"
 shortcutbadger = "6d4ce808b0"
+billing = "7.1.1"
 
 [libraries]
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
@@ -30,6 +31,7 @@ firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore
 firebase-functions = { group = "com.google.firebase", name = "firebase-functions" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+billing = { group = "com.android.billingclient", name = "billing", version.ref = "billing" }
 shortcutbadger = { group = "com.github.leolin310148", name = "ShortcutBadger", version.ref = "shortcutbadger" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }

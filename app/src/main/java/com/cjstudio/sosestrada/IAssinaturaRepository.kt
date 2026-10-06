@@ -3,7 +3,7 @@ package com.cjstudio.sosestrada
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.ceil
 
-// Assinatura do prestador (Mercado Pago). Os campos vivem no próprio
+// Assinatura do prestador (Google Play ou Mercado Pago). Os campos vivem no próprio
 // prestadores/{uid} e só as Cloud Functions gravam neles.
 interface IAssinaturaRepository {
     suspend fun buscarMinhaAssinatura(): Result<StatusAssinatura>
@@ -15,11 +15,23 @@ interface IAssinaturaRepository {
     // Cria a preferência de pagamento no servidor pro plano escolhido
     // (PLANO_TRIMESTRAL ou PLANO_SEMESTRAL — preço e duração são decididos
     // lá, em PLANOS de functions/index.js) e devolve o link do checkout.
-    suspend fun criarCheckout(plano: String): Result<String>
+    // externalTransactionToken: veio da tela de escolha do Google (User Choice)
+    // — o servidor reporta a transação ao Google Play depois do pagamento.
+    suspend fun criarCheckout(plano: String, externalTransactionToken: String? = null): Result<String>
+
+    // Confirma no servidor uma compra feita pelo Google Play
+    // (confirmarCompraGooglePlayPrestador). true = ainda pendente (Pix/boleto).
+    suspend fun confirmarCompraGooglePlay(purchaseToken: String, productId: String): Result<Boolean>
 
     companion object {
         const val PLANO_TRIMESTRAL = "trimestral"
         const val PLANO_SEMESTRAL = "semestral"
+        // Produtos avulsos no Play Console — mesmos IDs de
+        // PRODUTOS_GOOGLE_PLAY em functions/index.js.
+        val PRODUTOS_GOOGLE_PLAY = mapOf(
+            PLANO_TRIMESTRAL to "plano_prestador_trimestral",
+            PLANO_SEMESTRAL to "plano_prestador_semestral"
+        )
         // Mesmo prazo de TRIAL_DIAS em functions/index.js.
         const val TRIAL_DIAS = 60
     }

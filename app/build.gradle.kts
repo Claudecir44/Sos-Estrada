@@ -116,6 +116,8 @@ dependencies {
     // Push de mensagem/solicitação/resposta (SosFirebaseMessagingService).
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.crashlytics)
+    // Google Play Billing com "User Choice" (escolha Google Play x Mercado Pago) — GooglePlayBillingManager.
+    implementation(libs.billing)
     // Número no ícone do app na tela inicial (AppIconBadgeUtil) — quem
     // desenha é o launcher de cada fabricante; a biblioteca fala com cada um.
     implementation(libs.shortcutbadger)

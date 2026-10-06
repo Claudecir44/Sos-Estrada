@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.android.billingclient.api.Purchase
 import com.cjstudio.sosestrada.databinding.ActivityAssinaturaBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
@@ -29,7 +30,14 @@ import javax.inject.Inject
 // escuta a assinatura em vez de assumir sucesso ao voltar do checkout
 // (mesmo desenho do AssinaturaActivity do Match).
 @AndroidEntryPoint
-class AssinaturaActivity : AppCompatActivity() {
+class AssinaturaActivity : AppCompatActivity(), GooglePlayBillingCallback {
+
+    // Google Play Billing (User Choice): a tela do Google oferece pagar pelo
+    // Google Play ou pelo Mercado Pago. Sem o produto no Google Play (app
+    // instalado fora da loja ou produto ainda não criado), vai direto pro
+    // Mercado Pago.
+    private lateinit var billing: GooglePlayBillingManager
+    private var planoEmAndamento: String? = null
 
     @Inject
     lateinit var authRepository: IAuthRepository
@@ -60,6 +68,7 @@ class AssinaturaActivity : AppCompatActivity() {
         binding.btnVoltarAssinatura.setOnClickListener { finish() }
         binding.btnAssinarTrimestral.setOnClickListener { iniciarPagamento(IAssinaturaRepository.PLANO_TRIMESTRAL) }
         binding.btnAssinarSemestral.setOnClickListener { iniciarPagamento(IAssinaturaRepository.PLANO_SEMESTRAL) }
+        billing = GooglePlayBillingManager(this, this)
 
         carregarStatus()
     }
@@ -124,11 +133,68 @@ class AssinaturaActivity : AppCompatActivity() {
         binding.btnAssinarSemestral.isEnabled = sim
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Pix/boleto pago enquanto a tela estava fechada.
+        if (::billing.isInitialized) billing.conectar { billing.verificarComprasPendentes() }
+    }
+
+    override fun onDestroy() {
+        if (::billing.isInitialized) billing.encerrar()
+        super.onDestroy()
+    }
+
     private fun iniciarPagamento(plano: String) {
+        val produto = IAssinaturaRepository.PRODUTOS_GOOGLE_PLAY.getValue(plano)
+        val uid = authRepository.uidLogado() ?: return
+        planoEmAndamento = plano
+        habilitarBotoes(false)
+        billing.conectar {
+            runOnUiThread {
+                habilitarBotoes(true)
+                if (billing.temProduto(produto)) billing.iniciarCompra(this, produto, uid)
+                else abrirMercadoPago(plano, null)
+            }
+        }
+    }
+
+    // ---- GooglePlayBillingCallback ----
+    override fun onGooglePlayPurchaseCompleted(purchase: Purchase) {
+        val produto = purchase.products.firstOrNull() ?: return
+        lifecycleScope.launch {
+            binding.progressBarAssinatura.visibility = View.VISIBLE
+            assinaturaRepository.confirmarCompraGooglePlay(purchase.purchaseToken, produto)
+                .onSuccess { pendente ->
+                    if (pendente) {
+                        Toast.makeText(this@AssinaturaActivity, "Pagamento em processamento. O plano é ativado assim que o Google confirmar.", Toast.LENGTH_LONG).show()
+                    } else {
+                        esperarConfirmacao()
+                    }
+                }
+                .onFailure { e ->
+                    Toast.makeText(this@AssinaturaActivity, "Não foi possível confirmar a compra: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            binding.progressBarAssinatura.visibility = View.GONE
+        }
+    }
+
+    override fun onUserChoseAlternativeBilling(externalTransactionToken: String) {
+        val plano = planoEmAndamento ?: return
+        runOnUiThread { abrirMercadoPago(plano, externalTransactionToken) }
+    }
+
+    override fun onBillingError(mensagem: String) {
+        runOnUiThread {
+            habilitarBotoes(true)
+            Toast.makeText(this, "Pagamento pelo Google Play: $mensagem", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun abrirMercadoPago(plano: String, externalTransactionToken: String?) {
         binding.progressBarAssinatura.visibility = View.VISIBLE
         habilitarBotoes(false)
         lifecycleScope.launch {
-            assinaturaRepository.criarCheckout(plano)
+            assinaturaRepository.criarCheckout(plano, externalTransactionToken)
                 .onSuccess { initPoint ->
                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(initPoint)))
                     esperarConfirmacao()
