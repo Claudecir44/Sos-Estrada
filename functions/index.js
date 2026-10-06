@@ -426,6 +426,10 @@ exports.migrarAssinaturaPrestadores = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Usuário não autenticado.");
   }
+  // Só admin: antes qualquer usuário logado conseguia disparar.
+  if (!(await isAdmin(request.auth.uid))) {
+    throw new HttpsError("permission-denied", "Apenas administradores.");
+  }
 
   const db = getFirestore();
   const snapshot = await db.collection("prestadores").get();
