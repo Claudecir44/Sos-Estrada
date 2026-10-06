@@ -176,15 +176,10 @@ class CadastroAdminActivity : AppCompatActivity() {
                 .onSuccess {
                     ocupado(false)
                     val email = admin.email.orEmpty()
-                    AlertDialog.Builder(this@CadastroAdminActivity)
-                        .setTitle(if (admin.ehColaborador) "✅ Colaborador cadastrado!" else "✅ Admin cadastrado!")
-                        .setMessage("Enviamos um e-mail de verificação para $email.\n\nAbra o link do e-mail (confira também o spam) e depois entre com seu e-mail e senha.")
-                        .setCancelable(false)
-                        .setPositiveButton("OK") { _, _ ->
-                            setResult(RESULT_OK, Intent().putExtra(EXTRA_EMAIL, email))
-                            finish()
-                        }
-                        .show()
+                    VerificarEmailDialogUtil.mostrar(this@CadastroAdminActivity, email) {
+                        setResult(RESULT_OK, Intent().putExtra(EXTRA_EMAIL, email))
+                        finish()
+                    }
                 }
                 .onFailure { e ->
                     ocupado(false)

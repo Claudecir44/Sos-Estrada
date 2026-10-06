@@ -1,3 +1,21 @@
 <resources>
     <string name="app_name">SOS Estrada</string>
+
+    <!-- Aviso de confirmação de e-mail (VerificarEmailDialogUtil), igual ao Caronas -->
+    <string name="verificar_email_titulo">Cadastro criado!</string>
+    <string name="verificar_email_subtitulo">Falta só um passo: confirmar seu e-mail</string>
+    <string name="verificar_email_enviado_para">Enviamos um e-mail de confirmação para:</string>
+    <string name="verificar_email_passo1"><b>1.</b> Abra o seu e-mail (Gmail, Outlook, Hotmail…) neste celular ou no computador.</string>
+    <string name="verificar_email_passo2"><b>2.</b> Procure a mensagem <b>Confirme seu e-mail para usar o SOS Estrada</b>.</string>
+    <string name="verificar_email_passo3"><b>3.</b> Toque no link azul dentro do e-mail. Vai abrir uma página confirmando que deu certo.</string>
+    <string name="verificar_email_passo4"><b>4.</b> Volte ao app e entre com seu e-mail e senha.</string>
+    <string name="verificar_email_nao_achou_titulo">⚠ Não achou o e-mail?</string>
+    <string name="verificar_email_nao_achou_texto">Olhe na pasta <b>Spam</b> ou <b>Lixo eletrônico</b>. No Gmail, veja também as abas <b>Promoções</b> e <b>Atualizações</b>. Pode levar alguns minutos para chegar.</string>
+    <string name="verificar_email_mais_recente">⏱ Use sempre o e-mail <b>mais recente</b>: se pedir outro, o link antigo deixa de valer.</string>
+    <string name="verificar_email_botao">ENTENDI, VOU CONFIRMAR</string>
+    <string name="verificar_email_login_titulo">Confirme seu e-mail</string>
+    <string name="verificar_email_login_subtitulo">Para entrar, falta confirmar o seu e-mail</string>
+    <string name="verificar_email_login_enviado_para">O e-mail de confirmação foi enviado para:</string>
+    <string name="verificar_email_login_passo4"><b>4.</b> Volte aqui e toque em <b>ENTRAR</b> de novo.</string>
+    <string name="verificar_email_login_botao">OK, ENTENDI</string>
 </resources>

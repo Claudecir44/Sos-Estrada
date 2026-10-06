@@ -107,7 +107,11 @@ class AdminActivity : AppCompatActivity() {
                     inicializarPainel()
                 }
                 .onFailure { e ->
-                    val mensagem = if (e is EmailNaoVerificadoException || e is IllegalStateException) {
+                    if (e is EmailNaoVerificadoException) {
+                        VerificarEmailDialogUtil.mostrarLogin(this@AdminActivity, email, e.message.orEmpty().removePrefix("Valide seu cadastro pelo e-mail para poder entrar. "))
+                        return@onFailure
+                    }
+                    val mensagem = if (e is IllegalStateException) {
                         e.message
                     } else {
                         "❌ E-mail ou senha incorretos."

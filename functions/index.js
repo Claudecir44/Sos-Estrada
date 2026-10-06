@@ -842,3 +842,140 @@ exports.notificarLocalizacaoMotorista = onDocumentUpdated(
           `${nome} enviou a localização atual. Toque para ver no mapa.`, event.params.id);
     },
 );
+
+// ============================================================
+// E-mail de verificação próprio do SOS Estrada (mesmo modelo do Caronas).
+//
+// O link vem de getAuth().generateEmailVerificationLink — o mesmo link
+// oficial do Firebase, só que o e-mail em volta é nosso, em português e com
+// passo a passo. Cada link novo invalida o anterior; por isso o login só
+// pede outro e-mail se o último tiver mais de 1 hora (controle aqui no
+// servidor, em controleVerificacaoEmail/{uid}, que não se perde ao
+// reinstalar o app). Sem SOS_EMAIL_USER/SOS_EMAIL_PASSWORD devolve
+// usarPadrao e o app manda o e-mail padrão do Firebase.
+// ============================================================
+const NOME_APP = "SOS Estrada";
+const UMA_HORA_MS = 60 * 60 * 1000;
+
+function escaparHtml(valor) {
+  return String(valor || "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+async function primeiroNomeDaConta(uid, nomeInformado) {
+  let nome = String(nomeInformado || "").trim();
+  if (!nome) {
+    const db = getFirestore();
+    const [mot, pre, adm] = await Promise.all([
+      db.collection("motoristas").doc(uid).get(),
+      db.collection("prestadores").doc(uid).get(),
+      db.collection("admins").doc(uid).get(),
+    ]);
+    nome = (mot.exists && mot.get("nome")) || (pre.exists && pre.get("nome")) || (adm.exists && adm.get("nome")) || "";
+  }
+  return String(nome).split(/\s+/)[0] || "";
+}
+
+function montarEmailVerificacao(primeiroNome, email, link) {
+  const saudacao = primeiroNome ? `Olá, ${escaparHtml(primeiroNome)}!` : "Olá!";
+  const assunto = `Confirme seu e-mail para usar o ${NOME_APP}`;
+  const html = `
+<div style="background:#F2F2F7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#222;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;">
+    <div style="background:#0D47A1;padding:22px 24px;text-align:center;">
+      <div style="font-size:26px;font-weight:bold;color:#FFB300;">SOS Estrada</div>
+      <div style="font-size:13px;color:#BBDEFB;margin-top:2px;">Socorro na estrada</div>
+    </div>
+    <div style="padding:26px 24px 8px;">
+      <h1 style="font-size:22px;color:#0D47A1;margin:0 0 10px;">${saudacao}</h1>
+      <p style="font-size:16px;line-height:1.55;margin:0 0 6px;">Seu cadastro no <b>${NOME_APP}</b> está quase pronto.</p>
+      <p style="font-size:16px;line-height:1.55;margin:0 0 22px;">Falta só <b>confirmar que este e-mail é seu</b>. É rápido:</p>
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="${link}" style="display:inline-block;background:#1565C0;color:#ffffff;text-decoration:none;font-size:18px;font-weight:bold;padding:15px 30px;border-radius:28px;">CONFIRMAR MEU E-MAIL</a>
+      </div>
+      <div style="background:#E3F2FD;border-radius:12px;padding:14px 16px;margin:0 0 18px;">
+        <div style="font-size:16px;font-weight:bold;color:#0D47A1;margin-bottom:6px;">Como fazer</div>
+        <div style="font-size:15px;line-height:1.6;color:#0D47A1;">
+          <b>1.</b> Toque no botão <b>CONFIRMAR MEU E-MAIL</b> acima.<br>
+          <b>2.</b> Vai abrir uma página dizendo que o seu e-mail foi verificado.<br>
+          <b>3.</b> Volte ao app SOS Estrada e entre com seu e-mail e senha.
+        </div>
+      </div>
+      <div style="background:#FFF3E0;border-radius:12px;padding:14px 16px;margin:0 0 18px;font-size:14px;line-height:1.55;color:#7A4100;">
+        <b>Importante:</b> abra este link assim que puder. Se você pedir outro e-mail de confirmação, <b>este link deixa de valer</b> — use sempre o e-mail mais recente.
+      </div>
+      <p style="font-size:13px;line-height:1.5;color:#555;margin:0 0 6px;">O botão não funcionou? Copie o endereço abaixo e cole no navegador:</p>
+      <p style="font-size:12px;line-height:1.4;word-break:break-all;margin:0 0 20px;"><a href="${link}" style="color:#1565C0;">${link}</a></p>
+      <p style="font-size:13px;line-height:1.5;color:#555;margin:0 0 22px;">Não fez cadastro no SOS Estrada com <b>${escaparHtml(email)}</b>? É só ignorar este e-mail — nada será ativado.</p>
+    </div>
+    <div style="border-top:1px solid #E5E5EA;padding:14px 24px;font-size:12px;color:#888;text-align:center;">
+      ${NOME_APP} · CJ Studio Technology<br>Este é um e-mail automático, não precisa responder.
+    </div>
+  </div>
+</div>`;
+  const texto = `${primeiroNome ? `Olá, ${primeiroNome}!` : "Olá!"}\n\n` +
+    `Seu cadastro no ${NOME_APP} está quase pronto. Falta só confirmar que este e-mail é seu.\n\n` +
+    `1. Abra este link: ${link}\n` +
+    "2. Vai abrir uma página dizendo que o seu e-mail foi verificado.\n" +
+    "3. Volte ao app SOS Estrada e entre com seu e-mail e senha.\n\n" +
+    "Importante: se você pedir outro e-mail de confirmação, este link deixa de valer — use sempre o mais recente.\n\n" +
+    `Não fez cadastro no SOS Estrada com ${email}? É só ignorar este e-mail.\n\n` +
+    `${NOME_APP} · CJ Studio Technology`;
+  return { assunto, html, texto };
+}
+
+async function msDesdeUltimoEnvioVerificacao(uid) {
+  const snap = await getFirestore().collection("controleVerificacaoEmail").doc(uid).get();
+  const ultimo = snap.exists ? snap.get("ultimoEnvio") : null;
+  return ultimo ? Date.now() - ultimo.toMillis() : Infinity;
+}
+
+async function registrarEnvioVerificacao(uid) {
+  await getFirestore().collection("controleVerificacaoEmail").doc(uid)
+      .set({ ultimoEnvio: FieldValue.serverTimestamp() })
+      .catch((e) => logger.warn("Não gravou controleVerificacaoEmail", e.message));
+}
+
+// origem "cadastro": logo depois de criar a conta (intervalo mínimo de 1
+// min, só contra toque duplo). origem "login": conta ainda não confirmada
+// tentando entrar — só manda outro se o último tiver mais de 1 hora.
+// Respostas: {enviado} | {recente} | {jaVerificado} | {usarPadrao} (o app
+// manda o e-mail padrão do Firebase e avisa com registrarEnvioPadrao).
+exports.enviarVerificacaoEmailPropria = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Faça login para continuar.");
+  const uid = request.auth.uid;
+  const dados = request.data || {};
+  const origem = dados.origem === "cadastro" ? "cadastro" : "login";
+
+  const conta = await getAuth().getUser(uid);
+  if (conta.emailVerified) return { jaVerificado: true };
+
+  const intervaloMinimo = origem === "cadastro" ? 60 * 1000 : UMA_HORA_MS;
+  if (await msDesdeUltimoEnvioVerificacao(uid) < intervaloMinimo) return { recente: true };
+
+  if (dados.registrarEnvioPadrao === true) {
+    await registrarEnvioVerificacao(uid);
+    return { registrado: true };
+  }
+  if (!transporteEmail || !conta.email) return { usarPadrao: true };
+
+  try {
+    let link = await getAuth().generateEmailVerificationLink(conta.email);
+    if (!/[?&]lang=/.test(link)) link += "&lang=pt-BR";
+    const primeiroNome = await primeiroNomeDaConta(uid, dados.nome);
+    const { assunto, html, texto } = montarEmailVerificacao(primeiroNome, conta.email, link);
+    await transporteEmail.sendMail({
+      from: `"${NOME_APP}" <${SOS_EMAIL_USER}>`,
+      to: conta.email,
+      subject: assunto,
+      html,
+      text: texto,
+    });
+    await registrarEnvioVerificacao(uid);
+    return { enviado: true };
+  } catch (e) {
+    logger.error("Falha no e-mail de verificação próprio — app usa o padrão", e);
+    return { usarPadrao: true };
+  }
+});

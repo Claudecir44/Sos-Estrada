@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aviso fixo pós-cadastro (VerificarEmailDialogUtil). O ScrollView com
+     wrap_content + weight encolhe em telas pequenas e o botão fica sempre
+     visível embaixo, fora da rolagem. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="20dp">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:paddingEnd="8dp"
+        android:scrollbarStyle="outsideOverlay"
+        android:fadeScrollbars="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_icone_verificar_email"
+                android:gravity="center"
+                android:text="✉"
+                android:textColor="#1E90FF"
+                android:textSize="38sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:id="@+id/tvTituloVerificar"
+                android:text="@string/verificar_email_titulo"
+                android:textColor="#0D47A1"
+                android:textSize="26sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:id="@+id/tvSubtituloVerificar"
+                android:text="@string/verificar_email_subtitulo"
+                android:textColor="#333333"
+                android:textSize="18sp" />
+
+            <!-- Só no login: o que aconteceu com o e-mail agora (reenviado
+                 ou já enviado há menos de 1 hora). -->
+            <TextView
+                android:id="@+id/tvSituacaoVerificar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:lineSpacingExtra="2dp"
+                android:textColor="#1B5E20"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_caixa_azul_clara"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:id="@+id/tvEnviadoParaVerificar"
+                    android:text="@string/verificar_email_enviado_para"
+                    android:textColor="#0D47A1"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvEmailVerificar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textColor="#0D47A1"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvPasso1"
+                style="@style/PassoVerificarEmail"
+                android:layout_marginTop="16dp"
+                android:text="@string/verificar_email_passo1" />
+
+            <TextView
+                android:id="@+id/tvPasso2"
+                style="@style/PassoVerificarEmail"
+                android:text="@string/verificar_email_passo2" />
+
+            <TextView
+                android:id="@+id/tvPasso3"
+                style="@style/PassoVerificarEmail"
+                android:text="@string/verificar_email_passo3" />
+
+            <TextView
+                android:id="@+id/tvPasso4"
+                style="@style/PassoVerificarEmail"
+                android:text="@string/verificar_email_passo4" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_caixa_laranja_clara"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/verificar_email_nao_achou_titulo"
+                    android:textColor="#7A4100"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:lineSpacingExtra="2dp"
+                    android:text="@string/verificar_email_nao_achou_texto"
+                    android:textColor="#7A4100"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:lineSpacingExtra="2dp"
+                android:text="@string/verificar_email_mais_recente"
+                android:textColor="#555555"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnEntendiVerificar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_botao_verificar_email"
+        android:text="@string/verificar_email_botao"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+</LinearLayout>

@@ -216,12 +216,8 @@ class CadastroMotoristaActivity : AppCompatActivity() {
     private suspend fun concluirCadastroNovo(email: String) {
         authRepository.enviarVerificacaoEmail()
         authRepository.sair()
-        AlertDialog.Builder(this)
-            .setTitle("✅ Cadastro realizado!")
-            .setMessage("Enviamos um e-mail de verificação para $email.\n\nAbra o link do e-mail (confira também o spam) e depois entre com seu e-mail e senha.")
-            .setCancelable(false)
-            .setPositiveButton("OK") { _, _ -> finish() }
-            .show()
+        // Aviso grande e fixo com o passo a passo (igual ao Caronas).
+        VerificarEmailDialogUtil.mostrar(this@CadastroMotoristaActivity, email) { finish() }
     }
 
     // "Excluir meu cadastro" (só no Meu Perfil): senha confirmada -> apaga o

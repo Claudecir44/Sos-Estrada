@@ -23,7 +23,14 @@ class LocalizacaoRepository @Inject constructor(
     private val fusedLocationClient by lazy { LocationServices.getFusedLocationProviderClient(context) }
 
     @Suppress("DEPRECATION")
-    private val geocoder by lazy { Geocoder(context, Locale.getDefault()) }
+    private val geocoder by lazy { Geocoder(context, Locale("pt", "BR")) }
+
+    private companion object {
+        const val BRASIL_SUL = -34.0
+        const val BRASIL_OESTE = -74.0
+        const val BRASIL_NORTE = 5.5
+        const val BRASIL_LESTE = -34.0
+    }
 
     // A permissão é pedida pela tela antes de chamar; sem ela o
     // SecurityException vira Result.failure.
@@ -51,10 +58,20 @@ class LocalizacaoRepository @Inject constructor(
     override suspend fun distanciaKmAte(latitude: Double, longitude: Double, endereco: String): Double? =
         withContext(Dispatchers.IO) {
             try {
-                // Os cadastros costumam não ter o país; sem ele o geocoder erra de cidade.
+                // Os cadastros costumam não ter o país; sem ele o geocoder erra
+                // de cidade. Só aceita resultado no Brasil (retângulo do mapa +
+                // país BR): no Caronas, "Montenegro" (RS) virava o país
+                // Montenegro, na Europa — melhor "não encontrado" que errado.
                 val consulta = if (endereco.lowercase().contains("brasil")) endereco else "$endereco, Brasil"
                 @Suppress("DEPRECATION")
-                val destino = geocoder.getFromLocationName(consulta, 1)?.firstOrNull() ?: return@withContext null
+                val resultados = runCatching {
+                    geocoder.getFromLocationName(consulta, 5, BRASIL_SUL, BRASIL_OESTE, BRASIL_NORTE, BRASIL_LESTE)
+                }.getOrNull().orEmpty().ifEmpty {
+                    @Suppress("DEPRECATION")
+                    runCatching { geocoder.getFromLocationName(consulta, 5) }.getOrNull().orEmpty()
+                }
+                val destino = resultados.firstOrNull { it.countryCode.equals("BR", ignoreCase = true) }
+                    ?: return@withContext null
                 val resultado = FloatArray(1)
                 Location.distanceBetween(latitude, longitude, destino.latitude, destino.longitude, resultado)
                 resultado[0] / 1000.0

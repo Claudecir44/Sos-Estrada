@@ -84,6 +84,7 @@ class LoginPrestadorActivity : AppCompatActivity() {
                     binding.btnEntrar.isEnabled = true
                     if (e is EmailNaoVerificadoException) {
                         mostrarMensagem("📧 ${e.message}", erro = false)
+                        VerificarEmailDialogUtil.mostrarLogin(this@LoginPrestadorActivity, email, e.message.orEmpty().removePrefix("Valide seu cadastro pelo e-mail para poder entrar. "))
                     } else {
                         mostrarMensagem("❌ Falha no login: ${e.message ?: "Erro desconhecido"}", erro = true)
                     }

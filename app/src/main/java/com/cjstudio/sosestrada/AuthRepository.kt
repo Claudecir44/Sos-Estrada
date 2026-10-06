@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -15,6 +16,7 @@ import javax.inject.Singleton
 class AuthRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val db: FirebaseFirestore,
+    private val functions: FirebaseFunctions,
     @ApplicationContext private val context: Context
 ) : IAuthRepository {
 
@@ -67,9 +69,11 @@ class AuthRepository @Inject constructor(
         resultado.user?.uid ?: throw IllegalStateException("Conta criada sem usuário.")
     }
 
+    // Primeiro e-mail, logo depois do cadastro. Grava a hora pra o login em
+    // seguida não mandar outro (o link novo invalidaria este).
     override suspend fun enviarVerificacaoEmail(): Result<Unit> = runCatching {
         val usuario = auth.currentUser ?: throw IllegalStateException("Não há sessão ativa.")
-        usuario.sendEmailVerification().await()
+        enviarVerificacao(usuario, ORIGEM_CADASTRO)
         prefs.edit().putLong(KEY_ULTIMO_ENVIO, System.currentTimeMillis()).apply()
         Unit
     }
@@ -90,7 +94,7 @@ class AuthRepository @Inject constructor(
             if (usuario.isEmailVerified) {
                 "Este cadastro já está validado. Pode entrar normalmente."
             } else {
-                reenviarVerificacaoComIntervalo(usuario)
+                reenviarVerificacaoComIntervalo(usuario, INTERVALO_SUPORTE_MS, ORIGEM_CADASTRO)
                     .replace("Valide seu cadastro pelo e-mail para poder entrar. ", "")
             }
         } finally {
@@ -120,19 +124,28 @@ class AuthRepository @Inject constructor(
 
     override fun sair() = auth.signOut()
 
-    // Mesmo cuidado do Caronas (VerificacaoEmailUtil): sem um intervalo
-    // mínimo, logins repetidos estouravam o limite de envio do Firebase e a
-    // tela continuava dizendo "reenviamos" sem nenhum e-mail sair. A
-    // mensagem devolvida diz o que realmente aconteceu.
-    private suspend fun reenviarVerificacaoComIntervalo(usuario: FirebaseUser): String {
+    // Mesmo cuidado do Caronas (VerificacaoEmailUtil): cada e-mail novo gera
+    // um link novo e o Firebase invalida o anterior. Com o reenvio a cada 1
+    // minuto, quem tentava entrar antes de abrir o e-mail recebia outro, abria
+    // o primeiro e via "link expirado" (erro real no Caronas). Agora o login
+    // só manda outro depois de 1 hora (aqui e no servidor, que não se perde
+    // ao reinstalar); o Suporte, que é pedido explícito, depois de 2 min.
+    private suspend fun reenviarVerificacaoComIntervalo(
+        usuario: FirebaseUser,
+        intervaloMs: Long = INTERVALO_REENVIO_MS,
+        origem: String = ORIGEM_LOGIN
+    ): String {
         val agora = System.currentTimeMillis()
-        if (agora - prefs.getLong(KEY_ULTIMO_ENVIO, 0L) < INTERVALO_REENVIO_MS) {
-            return "Valide seu cadastro pelo e-mail para poder entrar. Já enviamos um e-mail de verificação há pouco — confira a caixa de entrada e o spam antes de pedir outro."
-        }
+        if (agora - prefs.getLong(KEY_ULTIMO_ENVIO, 0L) < intervaloMs) return MENSAGEM_RECENTE
         return try {
-            usuario.sendEmailVerification().await()
-            prefs.edit().putLong(KEY_ULTIMO_ENVIO, agora).apply()
-            "Valide seu cadastro pelo e-mail para poder entrar. Reenviamos o e-mail de verificação — confira também a caixa de spam."
+            when (enviarVerificacao(usuario, origem)) {
+                ResultadoEnvio.RECENTE -> MENSAGEM_RECENTE
+                ResultadoEnvio.JA_VERIFICADO -> "Este cadastro já está validado. Pode entrar normalmente."
+                ResultadoEnvio.ENVIADO -> {
+                    prefs.edit().putLong(KEY_ULTIMO_ENVIO, agora).apply()
+                    "Valide seu cadastro pelo e-mail para poder entrar. Reenviamos o e-mail de verificação — confira também a caixa de spam e use sempre o e-mail mais recente."
+                }
+            }
         } catch (e: Exception) {
             val erro = e.message.orEmpty()
             if (erro.contains("TOO_MANY", ignoreCase = true) || erro.contains("too-many-requests", ignoreCase = true)) {
@@ -143,10 +156,39 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    private enum class ResultadoEnvio { ENVIADO, RECENTE, JA_VERIFICADO }
+
+    // E-mail próprio em português pelo servidor (enviarVerificacaoEmailPropria);
+    // se ele não puder mandar (sem configuração de e-mail ou fora do ar), cai
+    // no e-mail padrão do Firebase e avisa o servidor pra contar a hora.
+    private suspend fun enviarVerificacao(usuario: FirebaseUser, origem: String): ResultadoEnvio {
+        val resposta = runCatching {
+            functions.getHttpsCallable("enviarVerificacaoEmailPropria")
+                .call(mapOf("origem" to origem)).await().getData() as? Map<*, *>
+        }.getOrNull()
+        return when {
+            resposta?.get("enviado") == true -> ResultadoEnvio.ENVIADO
+            resposta?.get("recente") == true -> ResultadoEnvio.RECENTE
+            resposta?.get("jaVerificado") == true -> ResultadoEnvio.JA_VERIFICADO
+            else -> {
+                usuario.sendEmailVerification().await()
+                runCatching {
+                    functions.getHttpsCallable("enviarVerificacaoEmailPropria")
+                        .call(mapOf("origem" to origem, "registrarEnvioPadrao" to true)).await()
+                }
+                ResultadoEnvio.ENVIADO
+            }
+        }
+    }
+
     companion object {
         const val COLECAO_BLOQUEADOS = "bloqueados"
         private const val PREFS = "sos_estrada_auth"
         private const val KEY_ULTIMO_ENVIO = "ultimo_envio_verificacao"
-        private const val INTERVALO_REENVIO_MS = 60_000L
+        private const val INTERVALO_REENVIO_MS = 60 * 60_000L
+        private const val INTERVALO_SUPORTE_MS = 2 * 60_000L
+        private const val ORIGEM_CADASTRO = "cadastro"
+        private const val ORIGEM_LOGIN = "login"
+        private const val MENSAGEM_RECENTE = "Valide seu cadastro pelo e-mail para poder entrar. Já enviamos um e-mail de verificação há menos de 1 hora — abra o link dele (confira a caixa de entrada e o spam). Pedir outro agora faria o link anterior parar de funcionar."
     }
 }
