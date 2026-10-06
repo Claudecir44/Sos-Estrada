@@ -4,7 +4,7 @@ require("dotenv").config();
 
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten, onDocumentDeleted } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, Timestamp, FieldValue } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
@@ -979,3 +979,39 @@ exports.enviarVerificacaoEmailPropria = onCall(async (request) => {
     return { usarPadrao: true };
   }
 });
+
+// ============================================================
+// Cadastro excluído (pelo admin no painel, ou pelo próprio usuário) ->
+// apaga também o login (Firebase Auth), como no Caronas. Sem isso, a conta
+// excluída pelo admin continuava existindo e o e-mail ficava preso.
+// Não apaga se: a mesma conta ainda tem outro perfil (motorista, prestador
+// ou admin), ou se ela está BLOQUEADA — o bloqueio (bloqueados/{uid}) é
+// pelo login; apagar o login deixaria a pessoa se recadastrar.
+// ============================================================
+async function apagarLoginSeSobrouNada(uid) {
+  const db = getFirestore();
+  const [mot, pre, adm, bloq] = await Promise.all([
+    db.collection("motoristas").doc(uid).get(),
+    db.collection("prestadores").doc(uid).get(),
+    db.collection("admins").doc(uid).get(),
+    db.collection("bloqueados").doc(uid).get(),
+  ]);
+  if (mot.exists || pre.exists || adm.exists || bloq.exists) return;
+  try {
+    await getAuth().deleteUser(uid);
+    logger.info(`Login ${uid} apagado junto com o cadastro.`);
+  } catch (e) {
+    // O próprio app já apagou (exclusão pelo usuário) — nada a fazer.
+    if (e.code !== "auth/user-not-found") logger.error("Falha ao apagar login", uid, e);
+  }
+}
+
+exports.apagarLoginMotoristaExcluido = onDocumentDeleted(
+    { document: "motoristas/{uid}", region: REGIAO_FIRESTORE },
+    (event) => apagarLoginSeSobrouNada(event.params.uid),
+);
+
+exports.apagarLoginPrestadorExcluido = onDocumentDeleted(
+    { document: "prestadores/{uid}", region: REGIAO_FIRESTORE },
+    (event) => apagarLoginSeSobrouNada(event.params.uid),
+);

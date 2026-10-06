@@ -354,6 +354,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Pedido de exclusão de conta pela página web (excluir-conta.html, exigida
+    // pelo Google Play) — qualquer pessoa envia, sem login; só o admin lê.
+    match /solicitacoesExclusaoConta/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['email', 'motivo', 'status', 'criadoEm', 'origem'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 3 && request.resource.data.email.size() < 200
+        && (request.resource.data.motivo == null || (request.resource.data.motivo is string && request.resource.data.motivo.size() < 2000))
+        && request.resource.data.status == 'pendente'
+        && request.resource.data.origem == 'web'
+        && request.resource.data.criadoEm == request.time;
+      allow read, update, delete: if ehAdminCompleto();
+    }
+
     // Qualquer coleção não listada acima fica bloqueada por padrão.
     match /{document=**} {
       allow read, write: if false;

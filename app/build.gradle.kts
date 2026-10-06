@@ -1,5 +1,18 @@
+import java.util.Properties
+
 // Define o package name uma vez, como constante imutável
 val packageName = "com.cjstudio.sosestrada"
+
+// Chave de release em keystore.properties (fora do git), mesmo padrão do
+// Caronas. Enquanto ela não existir (o app ainda não foi publicado), o
+// release é assinado com a chave de debug — dá pra instalar e testar o R8,
+// mas NÃO serve pra Play Store.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+val temKeystoreDeRelease = keystorePropertiesFile.exists()
+if (temKeystoreDeRelease) {
+    keystoreProperties.load(keystorePropertiesFile.inputStream().reader(Charsets.UTF_8))
+}
 
 plugins {
     id("com.android.application")
@@ -7,6 +20,8 @@ plugins {
     alias(libs.plugins.google.services)   // Usa o version catalog
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
+    // Relatório de falhas + envio do mapeamento do R8 (desofusca as falhas).
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
@@ -42,9 +57,25 @@ android {
         viewBinding = true
     }
 
+    signingConfigs {
+        if (temKeystoreDeRelease) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: encolhe, otimiza e ofusca (o Play reclama de "otimização
+            // DEX abaixo do limite" sem isso). Modelos do Firestore e o que é
+            // usado por reflection ficam protegidos em proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = if (temKeystoreDeRelease) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -84,6 +115,7 @@ dependencies {
     implementation("com.google.firebase:firebase-storage:20.3.0")
     // Push de mensagem/solicitação/resposta (SosFirebaseMessagingService).
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics)
     // Número no ícone do app na tela inicial (AppIconBadgeUtil) — quem
     // desenha é o launcher de cada fabricante; a biblioteca fala com cada um.
     implementation(libs.shortcutbadger)

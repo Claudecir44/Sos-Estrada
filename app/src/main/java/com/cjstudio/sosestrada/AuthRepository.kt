@@ -3,6 +3,7 @@ package com.cjstudio.sosestrada
 import android.content.Context
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
@@ -118,7 +119,13 @@ class AuthRepository @Inject constructor(
 
     override suspend fun excluirConta(): Result<Unit> = runCatching {
         val usuario = auth.currentUser ?: throw IllegalStateException("Não há sessão ativa.")
-        usuario.delete().await()
+        try {
+            usuario.delete().await()
+        } catch (e: FirebaseAuthInvalidUserException) {
+            // O servidor apaga o login junto com o cadastro
+            // (apagarLogin*Excluido em functions/index.js) e às vezes chega
+            // antes daqui — o login já não existe, então está feito.
+        }
         Unit
     }
 

@@ -16,3 +16,8 @@ local.properties
 
 # Cache do Firebase CLI
 .firebase/
+
+# Chave de assinatura de release — NUNCA no git (repo público)
+keystore.properties
+*.jks
+*.keystore
