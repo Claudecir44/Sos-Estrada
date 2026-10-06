@@ -14,9 +14,10 @@ if (temKeystoreDeRelease) {
     keystoreProperties.load(keystorePropertiesFile.inputStream().reader(Charsets.UTF_8))
 }
 
+// AGP 9: o Kotlin vem embutido (sem o plugin org.jetbrains.kotlin.android),
+// igual ao Caronas.
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    alias(libs.plugins.android.application)
     alias(libs.plugins.google.services)   // Usa o version catalog
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
@@ -26,13 +27,16 @@ plugins {
 
 android {
     namespace = packageName
-    compileSdk = 35
+    compileSdk {
+        version = release(37)
+    }
 
     defaultConfig {
         applicationId = packageName
         minSdk = 24
-        targetSdk = 35
-        versionCode = 1
+        // O Play exige 36 desde 2026 (bloqueia o envio com 35).
+        targetSdk = 36
+        versionCode = 2
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -84,17 +88,17 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+}
 
-    kotlinOptions {
-        jvmTarget = "11"
-        // "enable" era o nome antigo dessa flag — o Kotlin Gradle Plugin
-        // 1.9 só aceita disable/all-compatibility/all. Nunca tinha dado
-        // erro porque não existia nenhum arquivo .kt no projeto até agora
-        // (compileKotlin sempre rodava como NO-SOURCE).
-        freeCompilerArgs += listOf("-Xjvm-default=all")
+configurations.all {
+    resolutionStrategy {
+        // Mesmo ajuste do Caronas/Match: o compilador Kotlin embutido no AGP 9
+        // é fixo numa versão; algumas libs mais novas puxam um kotlin-stdlib
+        // mais recente do que esse compilador entende.
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.2.10")
     }
 }
 
@@ -112,12 +116,12 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.functions)
-    implementation("com.google.firebase:firebase-storage:20.3.0")
+    implementation(libs.firebase.storage)
     // Push de mensagem/solicitação/resposta (SosFirebaseMessagingService).
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.crashlytics)
     // Google Play Billing com "User Choice" (escolha Google Play x Mercado Pago) — GooglePlayBillingManager.
-    implementation(libs.billing)
+    implementation(libs.billing.ktx)
     // Número no ícone do app na tela inicial (AppIconBadgeUtil) — quem
     // desenha é o launcher de cada fabricante; a biblioteca fala com cada um.
     implementation(libs.shortcutbadger)

@@ -93,11 +93,11 @@ class GooglePlayBillingManager(
                 .build()
         }
         val params = QueryProductDetailsParams.newBuilder().setProductList(produtos).build()
-        billingClient.queryProductDetailsAsync(params) { billingResult, detalhes ->
+        billingClient.queryProductDetailsAsync(params) { billingResult, resultado ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 produtosDisponiveis.clear()
-                detalhes.forEach { produtosDisponiveis[it.productId] = it }
-                if (detalhes.isEmpty()) {
+                resultado.productDetailsList.forEach { produtosDisponiveis[it.productId] = it }
+                if (resultado.productDetailsList.isEmpty()) {
                     Log.w(TAG, "Nenhum produto no Play Console (plano_prestador_trimestral/semestral).")
                 }
             } else {
