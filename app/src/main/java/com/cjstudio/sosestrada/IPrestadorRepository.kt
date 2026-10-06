@@ -19,4 +19,7 @@ interface IPrestadorRepository {
     // Prestadores visíveis na busca do motorista (ativo == true: dentro do
     // período grátis ou com assinatura em dia).
     suspend fun listarAtivos(): Result<List<Prestador>>
+
+    // Conta antiga completa o cadastro (uma vez só — ver SexoUtil.exigirSexo).
+    suspend fun definirSexo(sexo: String): Result<Unit>
 }

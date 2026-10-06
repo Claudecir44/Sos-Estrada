@@ -42,6 +42,8 @@ class PrestadorRepository @Inject constructor(
             "pais" to prestador.pais
         )
         if (!prestador.logo.isNullOrEmpty()) dados["logo"] = prestador.logo
+        if (prestador.sexo != null) dados["sexo"] = prestador.sexo
+        dados["atendeSexo"] = prestador.atendeSexo ?: SexoUtil.AMBOS
         // Depois de gravado o documento não muda (firestore.rules).
         if (!prestador.documento.isNullOrEmpty()) dados["documento"] = prestador.documento
 
@@ -78,5 +80,10 @@ class PrestadorRepository @Inject constructor(
                 doc.toObject(Prestador::class.java)?.apply { if (uid.isNullOrEmpty()) uid = doc.id }
             }
             .filter { !it.bloqueado && it.ativo != false }
+    }
+
+    override suspend fun definirSexo(sexo: String): Result<Unit> = runCatching {
+        db.collection("prestadores").document(uidLogado()).update("sexo", sexo).await()
+        Unit
     }
 }

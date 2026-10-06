@@ -84,6 +84,7 @@ class SolicitacaoRepository @Inject constructor(
             "motoristaTelefone" to motorista.telefone,
             "motoristaVeiculo" to motorista.veiculo,
             "motoristaPlaca" to motorista.placa,
+            "motoristaSexo" to motorista.sexo,
             "status" to PENDENTE,
             "timestamp" to Date(),
             "latitudeMotorista" to latitude,

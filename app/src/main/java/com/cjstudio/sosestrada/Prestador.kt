@@ -17,6 +17,10 @@ data class Prestador(
     var servico: String? = null,
     var preco: String? = null,
     var logo: String? = null,
+    // "homem"/"mulher" (SexoUtil); depois de gravado só o admin muda.
+    var sexo: String? = null,
+    // Quais motoristas atende: "homem"/"mulher"/"ambos" (nulo = ambos).
+    var atendeSexo: String? = null,
     // Bloqueado pelo admin: não entra e some da busca de socorro.
     var bloqueado: Boolean = false,
     // Gravado só pelas Cloud Functions de assinatura. null = cadastro anterior

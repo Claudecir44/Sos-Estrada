@@ -15,6 +15,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MotoristaDashboardActivity : AppCompatActivity() {
 
+    private var avisoSexoAberto = false
+
     companion object {
         // Notificação "Prestador respondeu"/"Mensagem Sos Estrada": abre com
         // a lista de prestadores já aberta (SosFirebaseMessagingService).
@@ -147,6 +149,11 @@ class MotoristaDashboardActivity : AppCompatActivity() {
             // Se o motorista confirmou um e-mail novo, acerta o cadastro.
             authRepository.emailLogado()?.let { motoristaRepository.sincronizarEmail(it) }
             val motorista = motoristaRepository.buscarMeuCadastro().getOrNull()
+            // Conta de antes do campo sexo: completa o cadastro agora.
+            if (motorista != null && motorista.sexo == null && !avisoSexoAberto) {
+                avisoSexoAberto = true
+                SexoUtil.exigirSexo(this@MotoristaDashboardActivity, { motoristaRepository.definirSexo(it) }) { bloco -> lifecycleScope.launch { bloco() } }
+            }
             if (motorista?.bloqueado == true || authRepository.contaBloqueada()) {
                 // Bloqueado pelo admin com a sessão já aberta: volta pro login.
                 Toast.makeText(this@MotoristaDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()

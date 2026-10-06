@@ -12,6 +12,8 @@ data class Motorista(
     var cor: String? = null,
     // JPEG pequeno em base64 (ver FotoUtil) — não há Firebase Storage.
     var foto: String? = null,
+    // "homem"/"mulher" (SexoUtil); depois de gravado só o admin muda.
+    var sexo: String? = null,
     // Bloqueado pelo admin: não entra, não edita e não pede socorro.
     var bloqueado: Boolean = false
 )

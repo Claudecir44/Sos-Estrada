@@ -12,6 +12,9 @@ data class Solicitacao(
     var motoristaTelefone: String? = null,
     var motoristaVeiculo: String? = null,
     var motoristaPlaca: String? = null,
+    // Cópia do sexo do motorista (o prestador não lê o cadastro dele);
+    // firestore.rules confere com o cadastro.
+    var motoristaSexo: String? = null,
     var status: String? = null, // pendente, aceito, recusado, finalizado
     var timestamp: Date? = null,
     var latitudeMotorista: Double = 0.0,

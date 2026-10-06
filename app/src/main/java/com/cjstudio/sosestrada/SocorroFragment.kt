@@ -53,6 +53,11 @@ class SocorroFragment : Fragment() {
     @Inject
     lateinit var segurancaRepository: ISegurancaRepository
 
+    @Inject
+    lateinit var motoristaRepository: IMotoristaRepository
+
+    private var meuSexo: String? = null
+
     private lateinit var binding: FragmentSocorroBinding
     private lateinit var adapter: PrestadorAdapter
 
@@ -99,6 +104,9 @@ class SocorroFragment : Fragment() {
         binding.rvPrestadoresSocorro.layoutManager = LinearLayoutManager(requireContext())
         binding.rvPrestadoresSocorro.adapter = adapter
         binding.edtPesquisa.doOnTextChanged { texto, _, _, _ -> adapter.filtrar(texto?.toString().orEmpty()) }
+        binding.rgFiltroSexo.setOnCheckedChangeListener { grupo, _ ->
+            adapter.filtrarSexo(SexoUtil.valorMarcado(grupo) ?: SexoUtil.AMBOS, meuSexo)
+        }
         escutarSolicitacoes()
 
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -178,6 +186,8 @@ class SocorroFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             val meuUid = authRepository.uidLogado()
+            meuSexo = motoristaRepository.buscarMeuCadastro().getOrNull()?.sexo
+            adapter.filtrarSexo(SexoUtil.valorMarcado(binding.rgFiltroSexo) ?: SexoUtil.AMBOS, meuSexo)
             val prestadores = prestadorRepository.listarAtivos().getOrElse { e ->
                 binding.progressBarSocorro.visibility = View.GONE
                 binding.tvEmptySocorro.visibility = View.VISIBLE

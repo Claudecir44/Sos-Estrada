@@ -58,13 +58,16 @@ object ConteudoSos {
         )),
         Secao("⚖️", "Uso adequado", listOf(
             "É proibido: fazer pedidos falsos ou de brincadeira; enviar mensagens ofensivas, ameaçadoras ou ilegais; usar os dados de outros usuários fora do atendimento; tentar burlar a segurança do app.",
-            "O descumprimento pode levar ao <b>bloqueio da conta</b>, que também impede um novo cadastro."
+            "O descumprimento pode levar ao <b>bloqueio da conta</b>, que também impede um novo cadastro.",
+            "Você pode <b>denunciar ou bloquear</b> outro usuário pelo chat (botão ⋮) e mandar reclamações e sugestões em Configurações."
         )),
         Secao("📊", "Dados que coletamos e para quê", listOf(
-            "<b>Cadastro:</b> nome, e-mail, telefone e foto; do motorista, veículo e placa; do prestador, CPF ou CNPJ, serviço, preço e endereço — para identificar você e aparecer para o outro lado do atendimento.",
+            "<b>Cadastro:</b> nome, e-mail, telefone, foto e sexo (homem ou mulher — usado só para o filtro de sexo do prestador e para o prestador escolher quem atende); do motorista, veículo e placa; do prestador, CPF ou CNPJ, serviço, preço e endereço — para identificar você e aparecer para o outro lado do atendimento.",
             "<b>Localização:</b> usada para calcular a distância até os prestadores. Só é compartilhada quando <b>você</b> toca em \"Enviar Minha Localização\", <b>somente</b> com o prestador que aceitou o seu pedido — e você pode parar de enviar quando quiser. O app não rastreia você em segundo plano.",
             "<b>Solicitações e chat:</b> guardados para o atendimento funcionar. Mensagens com mais de <b>6 meses</b> são apagadas automaticamente.",
-            "<b>Notificações:</b> um identificador do aparelho é guardado só para enviar os avisos do app.",
+            "<b>Avaliações:</b> as notas e comentários dados depois de um atendimento aparecem para os outros usuários.",
+            "<b>Denúncias, bloqueios e mensagens ao suporte:</b> guardados para segurança e para a equipe responder.",
+            "<b>Notificações e falhas:</b> um identificador do aparelho é guardado só para enviar os avisos do app, e relatórios de falha ajudam a corrigir erros.",
             "Não vendemos seus dados. Eles ficam armazenados nos serviços do Google Firebase."
         )),
         Secao("👀", "Quem vê seus dados", listOf(
@@ -89,7 +92,7 @@ object ConteudoSos {
     private val regrasMotorista = listOf(
         Secao("🚨", "Como pedir socorro", listOf(
             "<b>1.</b> No painel, toque em <b>Preciso de socorro</b>. A lista de prestadores abre logo abaixo, com a distância até cada um (com o GPS ligado).",
-            "<b>2.</b> Use a busca para filtrar por serviço, nome ou cidade.",
+            "<b>2.</b> Use a busca para filtrar por serviço, nome ou cidade, e escolha se quer prestador <b>homem</b>, <b>mulher</b> ou <b>ambos</b>.",
             "<b>3.</b> No prestador escolhido, toque em <b>Solicitar serviço</b>. Ele recebe um aviso na hora.",
             "<b>4.</b> Acompanhe o status no próprio cartão: <b>aguardando</b>, <b>aceito</b> (está a caminho) ou <b>recusado</b> (procure outro). A lista se atualiza sozinha."
         )),
@@ -116,7 +119,7 @@ object ConteudoSos {
             "Só peça socorro quando realmente precisar. Pedidos falsos são proibidos.",
             "Combine preço e forma de pagamento <b>diretamente com o prestador</b>, antes do serviço. O pagamento não passa pelo app.",
             "Mantenha telefone, veículo e placa atualizados em <b>Meu Perfil</b> — é o que o prestador usa para encontrar você.",
-            "Trate o prestador com respeito no chat e no atendimento.",
+            "Trate o prestador com respeito no chat e no atendimento. Depois que ele aceitar, você pode <b>avaliar</b> o atendimento.",
             "Em emergência com feridos: <b>192</b>, <b>193</b> ou <b>190</b> primeiro."
         )),
         Secao("✉️", "Dúvidas ou problemas", listOf(
@@ -145,6 +148,7 @@ object ConteudoSos {
             "Informe o preço <b>antes</b> de executar o serviço e cumpra o valor combinado. O pagamento é combinado diretamente com o motorista.",
             "Mantenha serviço, preço, telefone e endereço corretos em <b>Meu Perfil</b> — é o que os motoristas veem na busca.",
             "Use os dados do motorista somente para o atendimento.",
+            "Em <b>Meu Perfil</b> você escolhe quais motoristas atende: homens, mulheres ou ambos. Depois de aceitar, você pode <b>avaliar</b> o motorista.",
             "Você é o responsável pela execução do serviço e por cumprir as leis e normas da sua atividade.",
             "Atendimento desrespeitoso, cobranças abusivas ou pedidos aceitos e não atendidos podem levar ao <b>bloqueio</b> da conta."
         )),

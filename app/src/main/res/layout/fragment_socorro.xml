@@ -40,6 +40,54 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Filtro pelo sexo do prestador (SexoUtil.prestadorCombina). -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Prestador:"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/rgFiltroSexo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:checkedButton="@+id/rbFiltroAmbos"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rbFiltroHomem"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:tag="homem"
+                android:text="Homem" />
+
+            <RadioButton
+                android:id="@+id/rbFiltroMulher"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:tag="mulher"
+                android:text="Mulher" />
+
+            <RadioButton
+                android:id="@+id/rbFiltroAmbos"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:tag="ambos"
+                android:text="Ambos" />
+        </RadioGroup>
+    </LinearLayout>
+
     <ProgressBar
         android:id="@+id/progressBarSocorro"
         android:layout_width="wrap_content"

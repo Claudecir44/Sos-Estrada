@@ -74,6 +74,9 @@ class CadastroMotoristaActivity : AppCompatActivity() {
         binding.btnCadastrar.setOnClickListener { realizarCadastro() }
     }
 
+    private var sexoSalvo: String? = null
+    private var sexoEscolhido: String? = null
+
     private fun carregarCadastro() {
         // O e-mail do login vem na hora, mesmo antes do cadastro carregar.
         binding.edtEmail.setText(authRepository.emailLogado())
@@ -86,6 +89,13 @@ class CadastroMotoristaActivity : AppCompatActivity() {
                     binding.edtVeiculo.setText(motorista.veiculo)
                     binding.edtPlaca.setText(motorista.placa)
                     binding.edtCor.setText(motorista.cor)
+                    sexoSalvo = motorista.sexo
+                    SexoUtil.marcar(binding.rgSexo, motorista.sexo)
+                    // Já gravado: só o admin muda.
+                    if (motorista.sexo != null) {
+                        for (i in 0 until binding.rgSexo.childCount) binding.rgSexo.getChildAt(i).isEnabled = false
+                        binding.tvAvisoSexo.text = "Para alterar o sexo, fale com o suporte."
+                    }
                     temFotoSalva = !motorista.foto.isNullOrEmpty()
                     if (fotoNova == null) FotoUtil.mostrar(binding.ivFotoMotorista, motorista.foto)
                 }
@@ -103,6 +113,12 @@ class CadastroMotoristaActivity : AppCompatActivity() {
         val veiculo = binding.edtVeiculo.textoLimpo()
         val placa = binding.edtPlaca.textoLimpo().uppercase()
         val cor = binding.edtCor.textoLimpo()
+        val sexo = sexoSalvo ?: SexoUtil.valorMarcado(binding.rgSexo)
+        if (sexo == null) {
+            Toast.makeText(this, "Escolha o sexo (Homem ou Mulher).", Toast.LENGTH_SHORT).show()
+            return
+        }
+        sexoEscolhido = sexo
 
         // Obrigatória só no cadastro novo; na edição de um cadastro antigo
         // sem foto, dá pra salvar o resto e escolher a foto depois.
@@ -160,7 +176,8 @@ class CadastroMotoristaActivity : AppCompatActivity() {
             val emailDoCadastro = if (senhaParaTrocarEmail != null) authRepository.emailLogado() else email
             val motorista = Motorista(
                 nome = nome, telefone = telefone, email = emailDoCadastro,
-                veiculo = veiculo, placa = placa, cor = cor, foto = foto
+                veiculo = veiculo, placa = placa, cor = cor, foto = foto,
+                sexo = sexoEscolhido
             )
             motoristaRepository.salvarMeuCadastro(motorista, cadastroNovo = !editando)
                 .onSuccess {

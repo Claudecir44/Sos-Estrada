@@ -13,4 +13,7 @@ interface IMotoristaRepository {
     suspend fun sincronizarEmail(emailDoLogin: String)
 
     suspend fun excluirMeuCadastro(): Result<Unit>
+
+    // Conta antiga completa o cadastro (uma vez só — ver SexoUtil.exigirSexo).
+    suspend fun definirSexo(sexo: String): Result<Unit>
 }

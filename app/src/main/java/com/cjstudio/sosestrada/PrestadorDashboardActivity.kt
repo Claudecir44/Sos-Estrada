@@ -18,6 +18,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PrestadorDashboardActivity : AppCompatActivity() {
 
+    private var avisoSexoAberto = false
+
     companion object {
         // Notificação de solicitação/mensagem/localização: abre com as
         // solicitações já abertas (SosFirebaseMessagingService).
@@ -169,6 +171,11 @@ class PrestadorDashboardActivity : AppCompatActivity() {
     private fun carregarCabecalho() {
         lifecycleScope.launch {
             val prestador = prestadorRepository.buscarMeuCadastro().getOrNull()
+            // Conta de antes do campo sexo: completa o cadastro agora.
+            if (prestador != null && prestador.sexo == null && !avisoSexoAberto) {
+                avisoSexoAberto = true
+                SexoUtil.exigirSexo(this@PrestadorDashboardActivity, { prestadorRepository.definirSexo(it) }) { bloco -> lifecycleScope.launch { bloco() } }
+            }
             if (prestador?.bloqueado == true || authRepository.contaBloqueada()) {
                 // Bloqueado pelo admin com a sessão já aberta: volta pro login.
                 Toast.makeText(this@PrestadorDashboardActivity, MENSAGEM_BLOQUEADO, Toast.LENGTH_LONG).show()

@@ -36,7 +36,8 @@ class AcoesCadastroAdmin(
             Campo("Telefone", "telefone", motorista.telefone, InputType.TYPE_CLASS_PHONE),
             Campo("Veículo", "veiculo", motorista.veiculo, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS),
             Campo("Placa", "placa", motorista.placa, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS),
-            Campo("Cor", "cor", motorista.cor, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS)
+            Campo("Cor", "cor", motorista.cor, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS),
+            Campo(ROTULO_SEXO, "sexo", motorista.sexo)
         ),
         salvar = { uid, dados, senha -> adminRepository.editarMotorista(uid, dados, senha) }
     )
@@ -51,7 +52,8 @@ class AcoesCadastroAdmin(
             Campo("Telefone", "telefone", prestador.telefone, InputType.TYPE_CLASS_PHONE),
             Campo("Serviço", "servico", prestador.servico, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES),
             Campo("Preço", "preco", prestador.preco),
-            Campo("CPF/CNPJ", "cnpj", prestador.cnpj, InputType.TYPE_CLASS_NUMBER)
+            Campo("CPF/CNPJ", "cnpj", prestador.cnpj, InputType.TYPE_CLASS_NUMBER),
+            Campo(ROTULO_SEXO, "sexo", prestador.sexo)
         ),
         salvar = { uid, dados, senha -> adminRepository.editarPrestador(uid, dados, senha) }
     )
@@ -127,8 +129,17 @@ class AcoesCadastroAdmin(
                     edtNome.error = "${campoNome.rotulo} obrigatório"
                     return@setOnClickListener
                 }
+                // Sexo: só "homem" ou "mulher" (ou em branco, sem mudar).
+                val edtSexo = entradas.firstOrNull { it.first.chave == "sexo" }?.second
+                val sexo = edtSexo?.text?.toString()?.trim()?.lowercase().orEmpty()
+                if (edtSexo != null && sexo.isNotEmpty() && sexo != SexoUtil.HOMEM && sexo != SexoUtil.MULHER) {
+                    edtSexo.error = "Escreva homem ou mulher"
+                    return@setOnClickListener
+                }
                 val senha = lerSenha(edtSenha) ?: return@setOnClickListener
                 val dados = entradas.associate { (campo, edt) -> campo.chave to edt.text.toString().trim() }
+                    .mapValues { (chave, valor) -> if (chave == "sexo") valor.lowercase() else valor }
+                    .filterNot { (chave, valor) -> chave == "sexo" && valor.isEmpty() }
                 executar(dialogo, botao, edtSenha, "✅ Alterações salvas.") { salvar(uid, dados, senha) }
             }
         }
@@ -226,4 +237,8 @@ class AcoesCadastroAdmin(
     private fun dp(valor: Int) = (valor * activity.resources.displayMetrics.density).toInt()
 
     private fun avisar(mensagem: String) = Toast.makeText(activity, mensagem, Toast.LENGTH_LONG).show()
+
+    private companion object {
+        const val ROTULO_SEXO = "Sexo (homem ou mulher)"
+    }
 }

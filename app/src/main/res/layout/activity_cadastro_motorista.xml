@@ -106,6 +106,43 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Sexo (obrigatório): base do filtro de sexo do prestador (SexoUtil). -->
+            <TextView
+                android:id="@+id/tvRotuloSexo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Sexo *"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgSexo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/rgSexo_homem"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:tag="homem"
+                    android:text="Homem" />
+                <RadioButton
+                    android:id="@+id/rgSexo_mulher"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:tag="mulher"
+                    android:text="Mulher" />
+            </RadioGroup>
+
+            <TextView
+                android:id="@+id/tvAvisoSexo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Depois do cadastro, só o suporte altera."
+                android:textSize="11sp" />
+
             <!-- E-mail -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"

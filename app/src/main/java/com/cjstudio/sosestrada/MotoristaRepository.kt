@@ -35,8 +35,14 @@ class MotoristaRepository @Inject constructor(
             "cor" to motorista.cor
         )
         if (!motorista.foto.isNullOrEmpty()) dados["foto"] = motorista.foto
+        if (motorista.sexo != null) dados["sexo"] = motorista.sexo
         val documento = db.collection("motoristas").document(uid)
         if (cadastroNovo) documento.set(dados).await() else documento.set(dados, SetOptions.merge()).await()
+        Unit
+    }
+
+    override suspend fun definirSexo(sexo: String): Result<Unit> = runCatching {
+        meuDocumento().update("sexo", sexo).await()
         Unit
     }
 

@@ -37,6 +37,16 @@ class PrestadorAdapter(
     private var todos: List<Prestador> = emptyList()
     private var visiveis: List<Prestador> = emptyList()
     private var filtroAtual = ""
+    // Filtro "Prestador: Homem/Mulher/Ambos" e o sexo de quem busca (some
+    // quem não atende esse sexo — as regras também recusam o pedido).
+    private var filtroSexo = SexoUtil.AMBOS
+    private var sexoMotorista: String? = null
+
+    fun filtrarSexo(filtro: String, sexoDoMotorista: String?) {
+        filtroSexo = filtro
+        sexoMotorista = sexoDoMotorista
+        aplicarFiltro()
+    }
 
     class ViewHolder(val binding: ItemPrestadorSocorroBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -51,7 +61,7 @@ class PrestadorAdapter(
         val context = b.root.context
 
         b.tvNomePrestador.text = p.nome
-        b.tvServicoPrestador.text = "🔧 ${p.servico ?: ""}"
+        b.tvServicoPrestador.text = listOfNotNull("🔧 ${p.servico ?: ""}", SexoUtil.rotuloRestricao(p.atendeSexo)).joinToString("  ·  ")
         b.tvAvaliacaoPrestador.text = AvaliacaoDialogUtil.textoNota(p.uid?.let { notas[it] })
         val podeAvaliar = p.statusSolicitacao == ACEITO && !p.solicitacaoId.isNullOrEmpty() && p.solicitacaoId !in jaAvaliadas
         b.btnAvaliarPrestador.visibility = if (podeAvaliar) View.VISIBLE else View.GONE
@@ -179,10 +189,13 @@ class PrestadorAdapter(
     }
 
     private fun aplicarFiltro() {
+        val porSexo = todos.filter { p ->
+            SexoUtil.prestadorCombina(p, filtroSexo) && SexoUtil.prestadorAtende(p, sexoMotorista)
+        }
         visiveis = if (filtroAtual.isEmpty()) {
-            todos
+            porSexo
         } else {
-            todos.filter { p ->
+            porSexo.filter { p ->
                 val endereco = p.enderecoCompleto.takeIf { it != "Endereço não informado" }.orEmpty()
                 listOf(p.nome, p.servico, endereco).any { it.orEmpty().lowercase().contains(filtroAtual) }
             }

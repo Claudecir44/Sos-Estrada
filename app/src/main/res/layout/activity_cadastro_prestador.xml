@@ -460,6 +460,87 @@
                 android:paddingBottom="8dp" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Sexo do prestador (obrigatório) e quais motoristas atende (SexoUtil). -->
+        <LinearLayout
+            android:id="@+id/llSexoPrestador"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tilPreco">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sexo *"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgSexo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/rgSexo_homem"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:tag="homem"
+                    android:text="Homem" />
+                <RadioButton
+                    android:id="@+id/rgSexo_mulher"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:tag="mulher"
+                    android:text="Mulher" />
+            </RadioGroup>
+
+            <TextView
+                android:id="@+id/tvAvisoSexo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Depois do cadastro, só o suporte altera."
+                android:textSize="11sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Atender motoristas *"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgAtendeSexo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/rgAtendeSexo_homem"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:tag="homem"
+                    android:text="Homens" />
+                <RadioButton
+                    android:id="@+id/rgAtendeSexo_mulher"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:tag="mulher"
+                    android:text="Mulheres" />
+                <RadioButton
+                    android:id="@+id/rgAtendeSexo_ambos"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:tag="ambos"
+                    android:text="Ambos" />
+            </RadioGroup>
+        </LinearLayout>
+
         <!-- Botão Cadastrar -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCadastrar"
@@ -474,7 +555,7 @@
             app:cornerRadius="10dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tilPreco" />
+            app:layout_constraintTop_toBottomOf="@+id/llSexoPrestador" />
             <!-- Só no Meu Perfil -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnExcluir"

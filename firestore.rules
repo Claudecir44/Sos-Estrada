@@ -147,6 +147,13 @@ service cloud.firestore {
     }
 
     // ---------------- motoristas ----------------
+    // Sexo (SexoUtil): informado uma vez (no cadastro ou, em conta antiga,
+    // no próximo login); depois só o admin muda (acaoAdminAutorizada).
+    function sexoNaAtualizacao() {
+      return request.resource.data.get('sexo', null) == resource.data.get('sexo', null)
+        || (resource.data.get('sexo', null) == null && request.resource.data.get('sexo', null) in ['homem', 'mulher']);
+    }
+
     match /motoristas/{uid} {
       // Cadastro e edição do próprio perfil (CadastroMotoristaActivity,
       // MotoristaDashboardActivity) — sempre doc ID == uid. Sem leitura
@@ -159,10 +166,12 @@ service cloud.firestore {
       // e, bloqueado, não edita mais nada. Admin: só com a senha master.
       // Um e-mail = um perfil: conta que já é prestador não vira motorista.
       allow create: if ehDono(uid) && !('bloqueado' in request.resource.data) && !estaBloqueado(uid)
+        && request.resource.data.get('sexo', null) in [null, 'homem', 'mulher']
         && !exists(/databases/$(database)/documents/prestadores/$(uid));
       allow update: if acaoAdminAutorizada('motoristas', uid)
         || (ehDono(uid)
             && resource.data.get('bloqueado', false) != true
+            && sexoNaAtualizacao()
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['bloqueado']));
       allow delete: if ehDono(uid) || acaoAdminAutorizada('motoristas', uid);
     }
@@ -200,6 +209,8 @@ service cloud.firestore {
       // Um e-mail = um perfil: conta que já é motorista não vira prestador.
       allow create: if ehDono(uid) && !request.resource.data.keys().hasAny(camposDoServidorPrestador())
         && formatoDocumento(request.resource.data.get('documento', null))
+        && request.resource.data.get('sexo', null) in [null, 'homem', 'mulher']
+        && request.resource.data.get('atendeSexo', 'ambos') in ['homem', 'mulher', 'ambos']
         && !estaBloqueado(uid)
         && !exists(/databases/$(database)/documents/motoristas/$(uid));
       // Admin só com a senha master (editar/bloquear no painel). Dono
@@ -208,6 +219,8 @@ service cloud.firestore {
         || (ehDono(uid)
             && resource.data.get('bloqueado', false) != true
             && documentoMantido()
+            && sexoNaAtualizacao()
+            && request.resource.data.get('atendeSexo', 'ambos') in ['homem', 'mulher', 'ambos']
             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(camposDoServidorPrestador()));
       // "Excluir cadastro" (PrestadorDashboardActivity) — sem esta linha a
       // exclusão sempre falhava, porque não havia regra de delete.
@@ -251,7 +264,11 @@ service cloud.firestore {
         && request.resource.data.prestadorUid is string
         && request.resource.data.prestadorUid != request.auth.uid
         && !estaBloqueado(request.auth.uid)
-        && !temBloqueio(request.auth.uid, request.resource.data.prestadorUid);
+        && !temBloqueio(request.auth.uid, request.resource.data.prestadorUid)
+        // Cópia do sexo do motorista = a do cadastro, e o prestador atende esse sexo.
+        && request.resource.data.get('motoristaSexo', null) == get(/databases/$(database)/documents/motoristas/$(request.auth.uid)).data.get('sexo', null)
+        && get(/databases/$(database)/documents/prestadores/$(request.resource.data.prestadorUid)).data.get('atendeSexo', 'ambos')
+             in ['ambos', request.resource.data.get('motoristaSexo', '')];
 
       // Update é sempre parcial e feito por quem participa da solicitação:
       // - status: motorista cancela (SocorroFragment) ou prestador

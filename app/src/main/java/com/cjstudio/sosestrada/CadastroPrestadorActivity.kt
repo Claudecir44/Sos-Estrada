@@ -87,6 +87,8 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         binding.btnCadastrar.setOnClickListener { realizarCadastro() }
     }
 
+    private var sexoSalvo: String? = null
+
     private fun carregarCadastro() {
         // O e-mail é o do login (travado): vem preenchido na hora, mesmo que o
         // cadastro não tenha guardado o e-mail.
@@ -103,6 +105,14 @@ class CadastroPrestadorActivity : AppCompatActivity() {
                     binding.edtTelefone.setText(prestador.telefone)
                     binding.edtServico.setText(prestador.servico)
                     binding.edtPreco.setText(prestador.preco)
+                    sexoSalvo = prestador.sexo
+                    SexoUtil.marcar(binding.rgSexo, prestador.sexo)
+                    SexoUtil.marcar(binding.rgAtendeSexo, prestador.atendeSexo ?: SexoUtil.AMBOS)
+                    // Já gravado: só o admin muda.
+                    if (prestador.sexo != null) {
+                        for (i in 0 until binding.rgSexo.childCount) binding.rgSexo.getChildAt(i).isEnabled = false
+                        binding.tvAvisoSexo.text = "Para alterar o sexo, fale com o suporte."
+                    }
                     binding.edtRua.setText(prestador.rua)
                     binding.edtNumero.setText(prestador.numero)
                     binding.edtBairro.setText(prestador.bairro)
@@ -156,6 +166,16 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         val complemento = binding.edtComplemento.textoLimpo()
         val estado = binding.edtEstado.textoLimpo().uppercase()
         val pais = binding.edtPais.textoLimpo()
+        val sexo = sexoSalvo ?: SexoUtil.valorMarcado(binding.rgSexo)
+        val atendeSexo = SexoUtil.valorMarcado(binding.rgAtendeSexo)
+        if (sexo == null) {
+            Toast.makeText(this, "Escolha o sexo (Homem ou Mulher).", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (atendeSexo == null) {
+            Toast.makeText(this, "Escolha quais motoristas você atende.", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         // Endereço: tudo obrigatório, exceto complemento.
         when {
@@ -178,7 +198,7 @@ class CadastroPrestadorActivity : AppCompatActivity() {
         val prestador = Prestador(
             nome = nome, cnpj = DocumentoUtil.formatar(documento), documento = documento, telefone = telefone, email = email, servico = servico, preco = preco,
             rua = rua, numero = numero, bairro = bairro, cidade = cidade, complemento = complemento,
-            estado = estado, pais = pais
+            estado = estado, pais = pais, sexo = sexo, atendeSexo = atendeSexo
         )
 
         binding.btnCadastrar.isEnabled = false
